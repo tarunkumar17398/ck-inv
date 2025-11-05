@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Plus, Package, LogOut, Search, Upload } from "lucide-react";
+import { Plus, Package, LogOut, Search, Upload, BarChart3 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 interface CategoryStats {
@@ -148,7 +148,7 @@ const Dashboard = () => {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <Button
             variant="outline"
             className="h-24 text-lg"
@@ -170,6 +170,14 @@ const Dashboard = () => {
             onClick={() => navigate("/categories")}
           >
             Manage Categories
+          </Button>
+          <Button
+            variant="outline"
+            className="h-24 text-lg"
+            onClick={() => navigate("/reports")}
+          >
+            <BarChart3 className="w-6 h-6 mr-2" />
+            Business Reports
           </Button>
         </div>
       </main>
