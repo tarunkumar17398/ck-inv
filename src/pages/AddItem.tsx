@@ -1,0 +1,301 @@
+import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { ArrowLeft, Plus } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+
+interface Category {
+  id: string;
+  name: string;
+  prefix: string;
+}
+
+const AddItem = () => {
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [selectedCategory, setSelectedCategory] = useState("");
+  const [itemName, setItemName] = useState("");
+  const [particulars, setParticulars] = useState("");
+  const [size, setSize] = useState("");
+  const [weight, setWeight] = useState("");
+  const [colorCode, setColorCode] = useState("");
+  const [price, setPrice] = useState("");
+  const [loading, setLoading] = useState(false);
+  
+  const [newCategoryName, setNewCategoryName] = useState("");
+  const [newCategoryPrefix, setNewCategoryPrefix] = useState("");
+  const [showAddCategory, setShowAddCategory] = useState(false);
+
+  const navigate = useNavigate();
+  const { toast } = useToast();
+
+  useEffect(() => {
+    if (!sessionStorage.getItem("admin_logged_in")) {
+      navigate("/");
+      return;
+    }
+    loadCategories();
+  }, [navigate]);
+
+  const loadCategories = async () => {
+    const { data, error } = await supabase
+      .from("categories")
+      .select("*")
+      .order("name");
+
+    if (error) {
+      toast({
+        title: "Error loading categories",
+        description: error.message,
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setCategories(data || []);
+  };
+
+  const handleAddCategory = async () => {
+    if (!newCategoryName || !newCategoryPrefix) {
+      toast({
+        title: "Missing fields",
+        description: "Please provide both name and prefix",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const { data: newCat, error: catError } = await supabase
+      .from("categories")
+      .insert({ name: newCategoryName, prefix: newCategoryPrefix.toUpperCase() })
+      .select()
+      .single();
+
+    if (catError) {
+      toast({
+        title: "Error adding category",
+        description: catError.message,
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Initialize counter for new category
+    await supabase
+      .from("item_code_counters")
+      .insert({ category_id: newCat.id, current_number: 1, current_letter: null });
+
+    toast({
+      title: "Category added",
+      description: `${newCategoryName} (CK${newCategoryPrefix}) created successfully`,
+    });
+
+    setNewCategoryName("");
+    setNewCategoryPrefix("");
+    setShowAddCategory(false);
+    loadCategories();
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!selectedCategory || !itemName) {
+      toast({
+        title: "Missing required fields",
+        description: "Please select category and enter item name",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      // Generate item code
+      const { data: codeData, error: codeError } = await supabase
+        .rpc("generate_next_item_code", { p_category_id: selectedCategory });
+
+      if (codeError) throw codeError;
+
+      const itemCode = codeData;
+
+      // Insert item
+      const { error: insertError } = await supabase.from("items").insert({
+        item_code: itemCode,
+        category_id: selectedCategory,
+        item_name: itemName,
+        particulars: particulars || null,
+        size: size || null,
+        weight: weight || null,
+        color_code: colorCode || null,
+        price: price ? parseFloat(price) : null,
+        status: "in_stock",
+      });
+
+      if (insertError) throw insertError;
+
+      toast({
+        title: "Item added successfully",
+        description: `Item code: ${itemCode}`,
+      });
+
+      navigate("/inventory");
+    } catch (error: any) {
+      toast({
+        title: "Error adding item",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-background">
+      <header className="border-b bg-card shadow-sm">
+        <div className="container mx-auto px-4 py-4">
+          <Button variant="ghost" size="sm" onClick={() => navigate("/dashboard")}>
+            <ArrowLeft className="w-4 h-4 mr-2" />
+            Back to Dashboard
+          </Button>
+        </div>
+      </header>
+
+      <main className="container mx-auto px-4 py-8 max-w-2xl">
+        <h1 className="text-3xl font-bold text-foreground mb-6">Add New Item</h1>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Item Details</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div>
+                <Label>Category *</Label>
+                <div className="flex gap-2">
+                  <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select category" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {categories.map((cat) => (
+                        <SelectItem key={cat.id} value={cat.id}>
+                          {cat.name} (CK{cat.prefix})
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Dialog open={showAddCategory} onOpenChange={setShowAddCategory}>
+                    <DialogTrigger asChild>
+                      <Button type="button" variant="outline" size="icon">
+                        <Plus className="w-4 h-4" />
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent>
+                      <DialogHeader>
+                        <DialogTitle>Add New Category</DialogTitle>
+                      </DialogHeader>
+                      <div className="space-y-4">
+                        <div>
+                          <Label>Category Name</Label>
+                          <Input
+                            value={newCategoryName}
+                            onChange={(e) => setNewCategoryName(e.target.value)}
+                            placeholder="e.g., Brass"
+                          />
+                        </div>
+                        <div>
+                          <Label>Prefix (2 letters)</Label>
+                          <Input
+                            value={newCategoryPrefix}
+                            onChange={(e) => setNewCategoryPrefix(e.target.value.toUpperCase().slice(0, 2))}
+                            placeholder="e.g., BR"
+                            maxLength={2}
+                          />
+                        </div>
+                        <Button onClick={handleAddCategory} className="w-full">
+                          Add Category
+                        </Button>
+                      </div>
+                    </DialogContent>
+                  </Dialog>
+                </div>
+              </div>
+
+              <div>
+                <Label>Item Name *</Label>
+                <Input
+                  value={itemName}
+                  onChange={(e) => setItemName(e.target.value)}
+                  placeholder="Enter item name"
+                  required
+                />
+              </div>
+
+              <div>
+                <Label>Particulars</Label>
+                <Input
+                  value={particulars}
+                  onChange={(e) => setParticulars(e.target.value)}
+                  placeholder="Additional details"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label>Size</Label>
+                  <Input
+                    value={size}
+                    onChange={(e) => setSize(e.target.value)}
+                    placeholder="e.g., 10cm"
+                  />
+                </div>
+                <div>
+                  <Label>Weight</Label>
+                  <Input
+                    value={weight}
+                    onChange={(e) => setWeight(e.target.value)}
+                    placeholder="e.g., 500g"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label>Color Code</Label>
+                  <Input
+                    value={colorCode}
+                    onChange={(e) => setColorCode(e.target.value)}
+                    placeholder="Optional"
+                  />
+                </div>
+                <div>
+                  <Label>Price</Label>
+                  <Input
+                    type="number"
+                    step="0.01"
+                    value={price}
+                    onChange={(e) => setPrice(e.target.value)}
+                    placeholder="0.00"
+                  />
+                </div>
+              </div>
+
+              <Button type="submit" className="w-full" disabled={loading}>
+                {loading ? "Adding..." : "Add Item"}
+              </Button>
+            </form>
+          </CardContent>
+        </Card>
+      </main>
+    </div>
+  );
+};
+
+export default AddItem;
