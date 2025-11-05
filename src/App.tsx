@@ -9,6 +9,7 @@ import AddItem from "./pages/AddItem";
 import Inventory from "./pages/Inventory";
 import SoldItems from "./pages/SoldItems";
 import Categories from "./pages/Categories";
+import BulkImport from "./pages/BulkImport";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -21,11 +22,12 @@ const App = () => (
       <BrowserRouter>
         <Routes>
           <Route path="/" element={<Login />} />
-          <Route path="/dashboard" element={<Dashboard />} />
-          <Route path="/add-item" element={<AddItem />} />
-          <Route path="/inventory" element={<Inventory />} />
-          <Route path="/sold-items" element={<SoldItems />} />
-          <Route path="/categories" element={<Categories />} />
+        <Route path="/dashboard" element={<Dashboard />} />
+        <Route path="/add-item" element={<AddItem />} />
+        <Route path="/bulk-import" element={<BulkImport />} />
+        <Route path="/inventory" element={<Inventory />} />
+        <Route path="/sold-items" element={<SoldItems />} />
+        <Route path="/categories" element={<Categories />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>

@@ -144,37 +144,105 @@ const Inventory = () => {
           @page { size: 110mm 28mm; margin: 0; }
           body {
             margin: 0;
-            padding: 4mm;
+            padding: 0;
             font-family: Arial, sans-serif;
             width: 110mm;
             height: 28mm;
+            border: 1px solid #000;
+            box-sizing: border-box;
+          }
+          .container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            grid-template-rows: auto auto auto;
+            height: 100%;
+            width: 100%;
+          }
+          .left-section {
+            border-right: 1px solid #000;
             display: flex;
             flex-direction: column;
-            justify-content: space-between;
           }
-          .header { display: flex; justify-content: space-between; align-items: flex-start; }
-          .item-code { font-size: 16px; font-weight: bold; }
-          .category-prefix { font-size: 12px; color: #666; }
-          .item-name { font-size: 14px; font-weight: 600; margin: 2mm 0; }
-          .details { font-size: 10px; color: #444; }
-          .barcode-container { text-align: center; margin-top: 2mm; }
-          .barcode { font-family: 'Libre Barcode 128', cursive; font-size: 48px; letter-spacing: 0; }
+          .right-section {
+            display: flex;
+            flex-direction: column;
+          }
+          .row {
+            border-bottom: 1px solid #000;
+            padding: 2mm;
+            display: flex;
+            align-items: center;
+          }
+          .row:last-child {
+            border-bottom: none;
+          }
+          .label-text {
+            font-size: 8px;
+            font-weight: normal;
+            margin-right: 4px;
+          }
+          .value-text {
+            font-size: 10px;
+            font-weight: bold;
+          }
+          .barcode-section {
+            grid-column: 2;
+            grid-row: 1 / 3;
+            border-bottom: 1px solid #000;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 2mm;
+          }
+          .barcode {
+            font-family: 'Libre Barcode 128', cursive;
+            font-size: 40px;
+            letter-spacing: 0;
+            line-height: 1;
+          }
+          .barcode-label {
+            font-size: 8px;
+            margin-top: 1mm;
+          }
+          .bottom-left {
+            display: flex;
+            gap: 4mm;
+          }
         </style>
         <link href="https://fonts.googleapis.com/css2?family=Libre+Barcode+128&display=swap" rel="stylesheet">
       </head>
       <body>
-        <div class="header">
-          <div>
-            <div class="item-code">${item.item_code}</div>
-            <div class="category-prefix">CK${item.categories.prefix}</div>
+        <div class="container">
+          <div class="left-section">
+            <div class="row">
+              <span class="label-text">Sno</span>
+              <span class="label-text">ITEM CODE</span>
+              <span class="value-text">${item.item_code}</span>
+            </div>
+            <div class="row">
+              <span class="label-text">PARTICULARS</span>
+              <span class="value-text">${item.particulars || ""}</span>
+            </div>
+            <div class="row bottom-left">
+              <div>
+                <span class="label-text">Price</span>
+                <span class="value-text">${item.price ? "₹" + item.price : ""}</span>
+              </div>
+              <div>
+                <span class="label-text">SIZE</span>
+                <span class="value-text">${item.size || ""}</span>
+              </div>
+            </div>
           </div>
-        </div>
-        <div class="item-name">${item.item_name}</div>
-        <div class="details">
-          ${item.particulars || ""} ${item.size ? "• " + item.size : ""}
-        </div>
-        <div class="barcode-container">
-          <div class="barcode">${item.item_code}</div>
+          <div class="barcode-section">
+            <div class="barcode">${item.item_code}</div>
+            <div class="barcode-label">BARCODE</div>
+          </div>
+          <div class="row">
+            <span class="label-text">Weight</span>
+            <span class="value-text">${item.weight || ""}</span>
+          </div>
         </div>
       </body>
       </html>

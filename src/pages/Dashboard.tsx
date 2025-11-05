@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Plus, Package, LogOut, Search } from "lucide-react";
+import { Plus, Package, LogOut, Search, Upload } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 interface CategoryStats {
@@ -118,7 +118,11 @@ const Dashboard = () => {
           </Button>
           <Button onClick={() => navigate("/add-item")}>
             <Plus className="w-4 h-4 mr-2" />
-            Add New Item
+            Add Item
+          </Button>
+          <Button onClick={() => navigate("/bulk-import")} variant="outline">
+            <Upload className="w-4 h-4 mr-2" />
+            Bulk Import
           </Button>
         </div>
 
