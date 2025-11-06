@@ -5,11 +5,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, Search, Printer, Filter } from "lucide-react";
+import { ArrowLeft, Search, Printer, Filter, Pencil } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { formatPriceLabel, formatWeightLabel } from "@/lib/utils";
+import { Textarea } from "@/components/ui/textarea";
 
 interface Item {
   id: string;
@@ -41,6 +42,14 @@ const Inventory = () => {
   const [maxWeight, setMaxWeight] = useState("");
   const [minSize, setMinSize] = useState("");
   const [maxSize, setMaxSize] = useState("");
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [editingItem, setEditingItem] = useState<Item | null>(null);
+  const [editFormData, setEditFormData] = useState({
+    item_name: "",
+    size: "",
+    weight: "",
+    price: "",
+  });
   
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -121,6 +130,50 @@ const Inventory = () => {
     setMaxWeight("");
     setMinSize("");
     setMaxSize("");
+  };
+
+  const handleEditClick = (item: Item) => {
+    setEditingItem(item);
+    setEditFormData({
+      item_name: item.item_name || "",
+      size: item.size || "",
+      weight: item.weight || "",
+      price: item.price?.toString() || "",
+    });
+    setEditDialogOpen(true);
+  };
+
+  const handleEditSave = async () => {
+    if (!editingItem) return;
+
+    const { error } = await supabase
+      .from("items")
+      .update({
+        item_name: editFormData.item_name,
+        particulars: editFormData.item_name, // Keep particulars in sync with item_name
+        size: editFormData.size || null,
+        weight: editFormData.weight || null,
+        price: editFormData.price ? parseFloat(editFormData.price) : null,
+      })
+      .eq("id", editingItem.id);
+
+    if (error) {
+      toast({
+        title: "Error updating item",
+        description: error.message,
+        variant: "destructive",
+      });
+      return;
+    }
+
+    toast({
+      title: "Item updated",
+      description: "Item details have been updated successfully",
+    });
+
+    setEditDialogOpen(false);
+    setEditingItem(null);
+    loadItems(); // Refresh the list
   };
 
   const handlePrintLabel = (item: Item) => {
@@ -387,9 +440,9 @@ const Inventory = () => {
               <TableRow>
                 <TableHead>Item Code</TableHead>
                 <TableHead>Category</TableHead>
-                <TableHead>Name</TableHead>
-                <TableHead>Particulars</TableHead>
+                <TableHead>Item Name</TableHead>
                 <TableHead>Size</TableHead>
+                <TableHead>Weight</TableHead>
                 <TableHead>Price</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
@@ -400,17 +453,26 @@ const Inventory = () => {
                   <TableCell className="font-mono font-semibold">{item.item_code}</TableCell>
                   <TableCell>{item.categories.name}</TableCell>
                   <TableCell>{item.item_name}</TableCell>
-                  <TableCell className="text-muted-foreground">{item.particulars || "-"}</TableCell>
                   <TableCell className="text-muted-foreground">{item.size || "-"}</TableCell>
+                  <TableCell className="text-muted-foreground">{item.weight || "-"}</TableCell>
                   <TableCell>{item.price ? `₹${item.price}` : "-"}</TableCell>
                   <TableCell className="text-right">
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => handlePrintLabel(item)}
-                    >
-                      <Printer className="w-4 h-4" />
-                    </Button>
+                    <div className="flex gap-2 justify-end">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => handleEditClick(item)}
+                      >
+                        <Pencil className="w-4 h-4" />
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => handlePrintLabel(item)}
+                      >
+                        <Printer className="w-4 h-4" />
+                      </Button>
+                    </div>
                   </TableCell>
                 </TableRow>
               ))}
@@ -422,6 +484,97 @@ const Inventory = () => {
             </div>
           )}
         </div>
+
+        {/* Edit Item Dialog */}
+        <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+          <DialogContent className="sm:max-w-[500px]">
+            <DialogHeader>
+              <DialogTitle>Edit Item Details</DialogTitle>
+            </DialogHeader>
+            {editingItem && (
+              <div className="space-y-4">
+                <div>
+                  <Label>Item Code</Label>
+                  <Input
+                    value={editingItem.item_code}
+                    disabled
+                    className="bg-muted"
+                  />
+                </div>
+
+                <div>
+                  <Label>Category</Label>
+                  <Input
+                    value={editingItem.categories.name}
+                    disabled
+                    className="bg-muted"
+                  />
+                </div>
+
+                <div>
+                  <Label>Item Name *</Label>
+                  <Textarea
+                    value={editFormData.item_name}
+                    onChange={(e) =>
+                      setEditFormData({ ...editFormData, item_name: e.target.value })
+                    }
+                    placeholder="Enter item name"
+                    rows={2}
+                  />
+                </div>
+
+                <div>
+                  <Label>Size</Label>
+                  <Input
+                    value={editFormData.size}
+                    onChange={(e) =>
+                      setEditFormData({ ...editFormData, size: e.target.value })
+                    }
+                    placeholder='e.g., 6", 10"x8"'
+                  />
+                </div>
+
+                <div>
+                  <Label>Weight (kg)</Label>
+                  <Input
+                    type="number"
+                    step="0.01"
+                    value={editFormData.weight}
+                    onChange={(e) =>
+                      setEditFormData({ ...editFormData, weight: e.target.value })
+                    }
+                    placeholder="Enter weight in kg"
+                  />
+                </div>
+
+                <div>
+                  <Label>Price (₹)</Label>
+                  <Input
+                    type="number"
+                    step="0.01"
+                    value={editFormData.price}
+                    onChange={(e) =>
+                      setEditFormData({ ...editFormData, price: e.target.value })
+                    }
+                    placeholder="Enter price"
+                  />
+                </div>
+
+                <div className="flex gap-2 justify-end">
+                  <Button
+                    variant="outline"
+                    onClick={() => setEditDialogOpen(false)}
+                  >
+                    Cancel
+                  </Button>
+                  <Button onClick={handleEditSave}>
+                    Save Changes
+                  </Button>
+                </div>
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
       </main>
     </div>
   );
