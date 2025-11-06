@@ -4,8 +4,14 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Plus, Package, LogOut, Search, Upload, BarChart3 } from "lucide-react";
+import { Plus, Package, LogOut, Search, Upload, BarChart3, DollarSign, Calendar as CalendarIcon } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { cn } from "@/lib/utils";
+import { format } from "date-fns";
 
 interface CategoryStats {
   id: string;
@@ -17,6 +23,12 @@ interface CategoryStats {
 const Dashboard = () => {
   const [categories, setCategories] = useState<CategoryStats[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
+  const [salesDialogOpen, setSalesDialogOpen] = useState(false);
+  const [salesDate, setSalesDate] = useState<Date>(new Date());
+  const [itemCode, setItemCode] = useState("");
+  const [itemDetails, setItemDetails] = useState<any>(null);
+  const [soldPrice, setSoldPrice] = useState("");
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -74,6 +86,96 @@ const Dashboard = () => {
     }
   };
 
+  const handleFetchItemDetails = async () => {
+    if (!itemCode.trim()) return;
+
+    setLoading(true);
+    const { data, error } = await supabase
+      .from("items")
+      .select("*, categories(name, prefix)")
+      .eq("item_code", itemCode.trim().toUpperCase())
+      .eq("status", "in_stock")
+      .maybeSingle();
+
+    setLoading(false);
+
+    if (error) {
+      toast({
+        title: "Error fetching item",
+        description: error.message,
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!data) {
+      toast({
+        title: "Item not found",
+        description: "No in-stock item found with this code",
+        variant: "destructive",
+      });
+      setItemDetails(null);
+      return;
+    }
+
+    setItemDetails(data);
+    setSoldPrice(data.price?.toString() || "");
+  };
+
+  const handleSalesEntry = async () => {
+    if (!itemDetails) {
+      toast({
+        title: "No item selected",
+        description: "Please enter a valid item code first",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!soldPrice) {
+      toast({
+        title: "Missing price",
+        description: "Please enter the sold price",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setLoading(true);
+    const { error } = await supabase
+      .from("items")
+      .update({
+        status: "sold",
+        sold_price: parseFloat(soldPrice),
+        sold_date: salesDate.toISOString(),
+      })
+      .eq("id", itemDetails.id);
+
+    setLoading(false);
+
+    if (error) {
+      toast({
+        title: "Error recording sale",
+        description: error.message,
+        variant: "destructive",
+      });
+      return;
+    }
+
+    toast({
+      title: "Sale recorded",
+      description: `${itemDetails.item_code} marked as sold`,
+    });
+
+    // Reset form
+    setItemCode("");
+    setItemDetails(null);
+    setSoldPrice("");
+    setSalesDate(new Date());
+    setSalesDialogOpen(false);
+    loadCategories(); // Refresh stats
+  };
+
   return (
     <div className="min-h-screen bg-background">
       <header className="border-b bg-card shadow-sm">
@@ -123,6 +225,10 @@ const Dashboard = () => {
           <Button onClick={() => navigate("/bulk-import")} variant="outline">
             <Upload className="w-4 h-4 mr-2" />
             Bulk Import
+          </Button>
+          <Button onClick={() => setSalesDialogOpen(true)} variant="default">
+            <DollarSign className="w-4 h-4 mr-2" />
+            Sales Entry
           </Button>
         </div>
 
@@ -181,6 +287,102 @@ const Dashboard = () => {
           </Button>
         </div>
       </main>
+
+      <Dialog open={salesDialogOpen} onOpenChange={setSalesDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Sales Entry</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label>Date</Label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={cn(
+                      "w-full justify-start text-left font-normal",
+                      !salesDate && "text-muted-foreground"
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {salesDate ? format(salesDate, "PPP") : <span>Pick a date</span>}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={salesDate}
+                    onSelect={(date) => date && setSalesDate(date)}
+                    initialFocus
+                    className="pointer-events-auto"
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
+
+            <div>
+              <Label>Item Code</Label>
+              <div className="flex gap-2">
+                <Input
+                  value={itemCode}
+                  onChange={(e) => {
+                    setItemCode(e.target.value.toUpperCase());
+                    setItemDetails(null);
+                  }}
+                  placeholder="Enter item code"
+                  onKeyDown={(e) => e.key === "Enter" && handleFetchItemDetails()}
+                />
+                <Button 
+                  onClick={handleFetchItemDetails} 
+                  disabled={loading || !itemCode.trim()}
+                  variant="secondary"
+                >
+                  Fetch
+                </Button>
+              </div>
+            </div>
+
+            {itemDetails && (
+              <>
+                <div className="bg-muted p-3 rounded-md space-y-1">
+                  <p className="text-sm">
+                    <span className="font-semibold">Name:</span> {itemDetails.item_name}
+                  </p>
+                  <p className="text-sm">
+                    <span className="font-semibold">Category:</span> {itemDetails.categories.name}
+                  </p>
+                  <p className="text-sm">
+                    <span className="font-semibold">Particulars:</span> {itemDetails.particulars || "-"}
+                  </p>
+                  <p className="text-sm">
+                    <span className="font-semibold">Original Price:</span> ₹{itemDetails.price || "-"}
+                  </p>
+                </div>
+
+                <div>
+                  <Label>Sold Price *</Label>
+                  <Input
+                    type="number"
+                    step="0.01"
+                    value={soldPrice}
+                    onChange={(e) => setSoldPrice(e.target.value)}
+                    placeholder="Enter sold price"
+                  />
+                </div>
+
+                <Button 
+                  onClick={handleSalesEntry} 
+                  className="w-full"
+                  disabled={loading || !soldPrice}
+                >
+                  {loading ? "Recording..." : "Record Sale"}
+                </Button>
+              </>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

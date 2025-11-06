@@ -4,10 +4,14 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, TrendingUp, DollarSign, Package, ShoppingCart, Calendar } from "lucide-react";
+import { ArrowLeft, TrendingUp, DollarSign, Package, ShoppingCart, Calendar as CalendarIcon } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
 import { format, subMonths, startOfMonth, endOfMonth } from "date-fns";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { cn } from "@/lib/utils";
+import { Label } from "@/components/ui/label";
 
 interface SalesData {
   month: string;
@@ -41,6 +45,8 @@ const Reports = () => {
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [categories, setCategories] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [customStartDate, setCustomStartDate] = useState<Date | undefined>();
+  const [customEndDate, setCustomEndDate] = useState<Date | undefined>();
   
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -52,7 +58,7 @@ const Reports = () => {
     }
     loadCategories();
     loadReportData();
-  }, [navigate, dateRange, selectedCategory]);
+  }, [navigate, dateRange, selectedCategory, customStartDate, customEndDate]);
 
   const loadCategories = async () => {
     const { data } = await supabase.from("categories").select("*").order("name");
@@ -62,21 +68,30 @@ const Reports = () => {
   const loadReportData = async () => {
     setLoading(true);
     
-    const monthsToLoad = dateRange === "3months" ? 3 : dateRange === "6months" ? 6 : 12;
+    let startDate: Date;
+    let endDate: Date;
+    
+    // Handle custom date range
+    if (dateRange === "custom" && customStartDate && customEndDate) {
+      startDate = customStartDate;
+      endDate = customEndDate;
+    } else {
+      const monthsToLoad = dateRange === "3months" ? 3 : dateRange === "6months" ? 6 : 12;
+      startDate = subMonths(new Date(), monthsToLoad - 1);
+      endDate = new Date();
+    }
+    
     const monthsData: SalesData[] = [];
     
     // Generate monthly sales data
-    for (let i = monthsToLoad - 1; i >= 0; i--) {
-      const date = subMonths(new Date(), i);
-      const startDate = startOfMonth(date);
-      const endDate = endOfMonth(date);
-      
+    if (dateRange === "custom" && customStartDate && customEndDate) {
+      // For custom range, query once and group by month
       let query = supabase
         .from("items")
-        .select("sold_price, category_id")
+        .select("sold_price, sold_date, category_id")
         .eq("status", "sold")
-        .gte("sold_date", startDate.toISOString())
-        .lte("sold_date", endDate.toISOString());
+        .gte("sold_date", customStartDate.toISOString())
+        .lte("sold_date", customEndDate.toISOString());
       
       if (selectedCategory !== "all") {
         query = query.eq("category_id", selectedCategory);
@@ -84,14 +99,57 @@ const Reports = () => {
       
       const { data: soldItems } = await query;
       
-      const revenue = soldItems?.reduce((sum, item) => sum + (item.sold_price || 0), 0) || 0;
+      // Group by month
+      const monthsMap = new Map<string, { revenue: number; count: number }>();
       
-      monthsData.push({
-        month: format(date, "MMM yyyy"),
-        sales: soldItems?.length || 0,
-        items_sold: soldItems?.length || 0,
-        revenue: revenue,
+      soldItems?.forEach((item) => {
+        const month = format(new Date(item.sold_date!), "MMM yyyy");
+        const existing = monthsMap.get(month) || { revenue: 0, count: 0 };
+        monthsMap.set(month, {
+          revenue: existing.revenue + (item.sold_price || 0),
+          count: existing.count + 1,
+        });
       });
+      
+      monthsMap.forEach((value, month) => {
+        monthsData.push({
+          month,
+          sales: value.count,
+          items_sold: value.count,
+          revenue: value.revenue,
+        });
+      });
+    } else {
+      // Original monthly logic for predefined ranges
+      const monthsToLoad = dateRange === "3months" ? 3 : dateRange === "6months" ? 6 : 12;
+      
+      for (let i = monthsToLoad - 1; i >= 0; i--) {
+        const date = subMonths(new Date(), i);
+        const monthStart = startOfMonth(date);
+        const monthEnd = endOfMonth(date);
+        
+        let query = supabase
+          .from("items")
+          .select("sold_price, category_id")
+          .eq("status", "sold")
+          .gte("sold_date", monthStart.toISOString())
+          .lte("sold_date", monthEnd.toISOString());
+        
+        if (selectedCategory !== "all") {
+          query = query.eq("category_id", selectedCategory);
+        }
+        
+        const { data: soldItems } = await query;
+        
+        const revenue = soldItems?.reduce((sum, item) => sum + (item.sold_price || 0), 0) || 0;
+        
+        monthsData.push({
+          month: format(date, "MMM yyyy"),
+          sales: soldItems?.length || 0,
+          items_sold: soldItems?.length || 0,
+          revenue: revenue,
+        });
+      }
     }
     
     setMonthlyData(monthsData);
@@ -209,31 +267,92 @@ const Reports = () => {
         </div>
 
         {/* Filters */}
-        <div className="flex flex-col sm:flex-row gap-4 mb-8">
-          <Select value={dateRange} onValueChange={setDateRange}>
-            <SelectTrigger className="w-full sm:w-48">
-              <SelectValue placeholder="Select time range" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="3months">Last 3 Months</SelectItem>
-              <SelectItem value="6months">Last 6 Months</SelectItem>
-              <SelectItem value="12months">Last 12 Months</SelectItem>
-            </SelectContent>
-          </Select>
-          
-          <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-            <SelectTrigger className="w-full sm:w-48">
-              <SelectValue placeholder="Filter by category" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Categories</SelectItem>
-              {categories.map((cat) => (
-                <SelectItem key={cat.id} value={cat.id}>
-                  {cat.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+        <div className="flex flex-col gap-4 mb-8">
+          <div className="flex flex-col sm:flex-row gap-4">
+            <Select value={dateRange} onValueChange={setDateRange}>
+              <SelectTrigger className="w-full sm:w-48">
+                <SelectValue placeholder="Select time range" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="3months">Last 3 Months</SelectItem>
+                <SelectItem value="6months">Last 6 Months</SelectItem>
+                <SelectItem value="12months">Last 12 Months</SelectItem>
+                <SelectItem value="custom">Custom Date Range</SelectItem>
+              </SelectContent>
+            </Select>
+            
+            <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+              <SelectTrigger className="w-full sm:w-48">
+                <SelectValue placeholder="Filter by category" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Categories</SelectItem>
+                {categories.map((cat) => (
+                  <SelectItem key={cat.id} value={cat.id}>
+                    {cat.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {dateRange === "custom" && (
+            <div className="flex flex-col sm:flex-row gap-4 p-4 bg-muted rounded-lg">
+              <div className="flex-1">
+                <Label>Start Date</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className={cn(
+                        "w-full justify-start text-left font-normal",
+                        !customStartDate && "text-muted-foreground"
+                      )}
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {customStartDate ? format(customStartDate, "PPP") : <span>Pick start date</span>}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={customStartDate}
+                      onSelect={setCustomStartDate}
+                      initialFocus
+                      className="pointer-events-auto"
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
+
+              <div className="flex-1">
+                <Label>End Date</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className={cn(
+                        "w-full justify-start text-left font-normal",
+                        !customEndDate && "text-muted-foreground"
+                      )}
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {customEndDate ? format(customEndDate, "PPP") : <span>Pick end date</span>}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={customEndDate}
+                      onSelect={setCustomEndDate}
+                      initialFocus
+                      className="pointer-events-auto"
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
+            </div>
+          )}
         </div>
 
         {loading ? (

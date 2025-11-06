@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, Search, Printer, DollarSign } from "lucide-react";
+import { ArrowLeft, Search, Printer } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
@@ -35,9 +35,6 @@ const Inventory = () => {
   const [categories, setCategories] = useState<Category[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("all");
-  const [sellDialogOpen, setSellDialogOpen] = useState(false);
-  const [selectedItem, setSelectedItem] = useState<Item | null>(null);
-  const [soldPrice, setSoldPrice] = useState("");
   
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -99,42 +96,6 @@ const Inventory = () => {
 
     return matchesSearch && matchesCategory;
   });
-
-  const handleSellClick = (item: Item) => {
-    setSelectedItem(item);
-    setSoldPrice(item.price?.toString() || "");
-    setSellDialogOpen(true);
-  };
-
-  const handleSell = async () => {
-    if (!selectedItem) return;
-
-    const { error } = await supabase
-      .from("items")
-      .update({
-        status: "sold",
-        sold_price: soldPrice ? parseFloat(soldPrice) : null,
-        sold_date: new Date().toISOString(),
-      })
-      .eq("id", selectedItem.id);
-
-    if (error) {
-      toast({
-        title: "Error selling item",
-        description: error.message,
-        variant: "destructive",
-      });
-      return;
-    }
-
-    toast({
-      title: "Item marked as sold",
-      description: `${selectedItem.item_code} has been sold`,
-    });
-
-    setSellDialogOpen(false);
-    loadItems();
-  };
 
   const handlePrintLabel = (item: Item) => {
     const printWindow = window.open("", "_blank");
@@ -296,23 +257,13 @@ const Inventory = () => {
                   <TableCell className="text-muted-foreground">{item.size || "-"}</TableCell>
                   <TableCell>{item.price ? `₹${item.price}` : "-"}</TableCell>
                   <TableCell className="text-right">
-                    <div className="flex justify-end gap-2">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => handlePrintLabel(item)}
-                      >
-                        <Printer className="w-4 h-4" />
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="default"
-                        onClick={() => handleSellClick(item)}
-                      >
-                        <DollarSign className="w-4 h-4 mr-1" />
-                        Sell
-                      </Button>
-                    </div>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => handlePrintLabel(item)}
+                    >
+                      <Printer className="w-4 h-4" />
+                    </Button>
                   </TableCell>
                 </TableRow>
               ))}
@@ -325,37 +276,6 @@ const Inventory = () => {
           )}
         </div>
       </main>
-
-      <Dialog open={sellDialogOpen} onOpenChange={setSellDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Sell Item</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div>
-              <Label>Item Code</Label>
-              <Input value={selectedItem?.item_code || ""} disabled />
-            </div>
-            <div>
-              <Label>Item Name</Label>
-              <Input value={selectedItem?.item_name || ""} disabled />
-            </div>
-            <div>
-              <Label>Sold Price</Label>
-              <Input
-                type="number"
-                step="0.01"
-                value={soldPrice}
-                onChange={(e) => setSoldPrice(e.target.value)}
-                placeholder="Enter sold price"
-              />
-            </div>
-            <Button onClick={handleSell} className="w-full">
-              Mark as Sold
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 };
