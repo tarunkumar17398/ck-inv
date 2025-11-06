@@ -9,6 +9,7 @@ import { ArrowLeft, Search, Printer, DollarSign } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
+import { formatPriceLabel, formatWeightLabel } from "@/lib/utils";
 
 interface Item {
   id: string;
@@ -135,6 +136,9 @@ const Inventory = () => {
     const printWindow = window.open("", "_blank");
     if (!printWindow) return;
 
+    const priceLabel = item.price ? formatPriceLabel(item.price) : '-';
+    const weightLabel = item.weight ? formatWeightLabel(item.weight) : '-';
+    
     printWindow.document.write(`
       <!DOCTYPE html>
       <html>
@@ -144,114 +148,86 @@ const Inventory = () => {
           @page { size: 110mm 28mm; margin: 0; }
           body {
             margin: 0;
-            padding: 0;
+            padding: 2mm;
             font-family: Arial, sans-serif;
             width: 110mm;
             height: 28mm;
-            border: 1px solid #000;
             box-sizing: border-box;
           }
-          .container {
+          .label-container {
             display: grid;
-            grid-template-columns: 1fr 1fr;
-            grid-template-rows: auto auto auto;
+            grid-template-columns: 1fr 1fr 1fr;
+            grid-template-rows: repeat(3, 1fr);
+            gap: 1mm;
             height: 100%;
-            width: 100%;
+            font-size: 9pt;
           }
-          .left-section {
-            border-right: 1px solid #000;
+          .cell {
+            border: 1px solid #000;
+            padding: 1.5mm;
             display: flex;
-            flex-direction: column;
-          }
-          .right-section {
-            display: flex;
-            flex-direction: column;
-          }
-          .row {
-            border-bottom: 1px solid #000;
-            padding: 2mm;
-            display: flex;
-            align-items: center;
-          }
-          .row:last-child {
-            border-bottom: none;
-          }
-          .label-text {
-            font-size: 8px;
-            font-weight: normal;
-            margin-right: 4px;
-          }
-          .value-text {
-            font-size: 10px;
-            font-weight: bold;
-          }
-          .barcode-section {
-            grid-column: 2;
-            grid-row: 1 / 3;
-            border-bottom: 1px solid #000;
-            display: flex;
-            flex-direction: column;
             align-items: center;
             justify-content: center;
-            padding: 2mm;
           }
-          .barcode {
-            font-family: 'Libre Barcode 128', cursive;
-            font-size: 40px;
-            letter-spacing: 0;
-            line-height: 1;
+          .label {
+            font-weight: bold;
+            margin-right: 2mm;
           }
-          .barcode-label {
-            font-size: 8px;
-            margin-top: 1mm;
+          .particulars-cell {
+            grid-column: 1 / -1;
           }
-          .bottom-left {
-            display: flex;
-            gap: 4mm;
+          @media print {
+            body {
+              print-color-adjust: exact;
+              -webkit-print-color-adjust: exact;
+            }
           }
         </style>
-        <link href="https://fonts.googleapis.com/css2?family=Libre+Barcode+128&display=swap" rel="stylesheet">
       </head>
       <body>
-        <div class="container">
-          <div class="left-section">
-            <div class="row">
-              <span class="label-text">Sno</span>
-              <span class="label-text">ITEM CODE</span>
-              <span class="value-text">${item.item_code}</span>
-            </div>
-            <div class="row">
-              <span class="label-text">PARTICULARS</span>
-              <span class="value-text">${item.particulars || ""}</span>
-            </div>
-            <div class="row bottom-left">
-              <div>
-                <span class="label-text">Price</span>
-                <span class="value-text">${item.price ? "₹" + item.price : ""}</span>
-              </div>
-              <div>
-                <span class="label-text">SIZE</span>
-                <span class="value-text">${item.size || ""}</span>
-              </div>
-            </div>
+        <div class="label-container">
+          <div class="cell">
+            <span class="label">Sno:</span>
+            <span>${item.item_code.slice(-3)}</span>
           </div>
-          <div class="barcode-section">
-            <div class="barcode">${item.item_code}</div>
-            <div class="barcode-label">BARCODE</div>
+          <div class="cell">
+            <span class="label">Item Code:</span>
+            <span>${item.item_code}</span>
           </div>
-          <div class="row">
-            <span class="label-text">Weight</span>
-            <span class="value-text">${item.weight || ""}</span>
+          <div class="cell">
+            <span class="label">Barcode:</span>
+            <span>${item.item_code}</span>
+          </div>
+          
+          <div class="cell particulars-cell">
+            <span class="label">Particulars:</span>
+            <span>${item.particulars || '-'}</span>
+          </div>
+          
+          <div class="cell">
+            <span class="label">Price:</span>
+            <span>${priceLabel}</span>
+          </div>
+          <div class="cell">
+            <span class="label">Size:</span>
+            <span>${item.size || '-'}</span>
+          </div>
+          <div class="cell">
+            <span class="label">Weight:</span>
+            <span>${weightLabel}</span>
           </div>
         </div>
+        <script>
+          window.onload = () => {
+            window.print();
+            setTimeout(() => window.close(), 500);
+          };
+        </script>
       </body>
       </html>
     `);
 
     printWindow.document.close();
-    setTimeout(() => {
-      printWindow.print();
-    }, 250);
   };
 
   return (

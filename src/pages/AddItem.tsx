@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { ArrowLeft, Plus } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { formatPriceLabel, formatWeightLabel } from "@/lib/utils";
 
 interface Category {
   id: string;
@@ -257,12 +258,18 @@ const AddItem = () => {
                   />
                 </div>
                 <div>
-                  <Label>Weight</Label>
+                  <Label>Weight (in grams)</Label>
                   <Input
+                    type="number"
                     value={weight}
                     onChange={(e) => setWeight(e.target.value)}
-                    placeholder="e.g., 500g"
+                    placeholder="e.g., 500"
                   />
+                  {weight && (
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Label: {formatWeightLabel(weight)}
+                    </p>
+                  )}
                 </div>
               </div>
 
@@ -284,6 +291,11 @@ const AddItem = () => {
                     onChange={(e) => setPrice(e.target.value)}
                     placeholder="0.00"
                   />
+                  {price && (
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Label: {formatPriceLabel(price)}
+                    </p>
+                  )}
                 </div>
               </div>
 
