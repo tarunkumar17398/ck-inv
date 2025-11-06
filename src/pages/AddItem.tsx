@@ -21,12 +21,11 @@ const AddItem = () => {
   const [categories, setCategories] = useState<Category[]>([]);
   const [selectedCategory, setSelectedCategory] = useState("");
   const [itemName, setItemName] = useState("");
-  const [particulars, setParticulars] = useState("");
   const [size, setSize] = useState("");
   const [weight, setWeight] = useState("");
-  const [colorCode, setColorCode] = useState("");
   const [price, setPrice] = useState("");
   const [loading, setLoading] = useState(false);
+  const [generatedItemCode, setGeneratedItemCode] = useState("");
   
   const [newCategoryName, setNewCategoryName] = useState("");
   const [newCategoryPrefix, setNewCategoryPrefix] = useState("");
@@ -124,16 +123,17 @@ const AddItem = () => {
       if (codeError) throw codeError;
 
       const itemCode = codeData;
+      setGeneratedItemCode(itemCode);
 
-      // Insert item
+      // Insert item - using item_name for both name and particulars
       const { error: insertError } = await supabase.from("items").insert({
         item_code: itemCode,
         category_id: selectedCategory,
         item_name: itemName,
-        particulars: particulars || null,
+        particulars: itemName, // Same as item name
         size: size || null,
         weight: weight || null,
-        color_code: colorCode || null,
+        color_code: null,
         price: price ? parseFloat(price) : null,
         status: "in_stock",
       });
@@ -229,6 +229,15 @@ const AddItem = () => {
                 </div>
               </div>
 
+              {generatedItemCode && (
+                <div className="bg-muted p-4 rounded-lg">
+                  <Label>Generated Item Code</Label>
+                  <p className="text-2xl font-bold font-mono text-primary mt-2">
+                    {generatedItemCode}
+                  </p>
+                </div>
+              )}
+
               <div>
                 <Label>Item Name *</Label>
                 <Input
@@ -236,15 +245,6 @@ const AddItem = () => {
                   onChange={(e) => setItemName(e.target.value)}
                   placeholder="Enter item name"
                   required
-                />
-              </div>
-
-              <div>
-                <Label>Particulars</Label>
-                <Input
-                  value={particulars}
-                  onChange={(e) => setParticulars(e.target.value)}
-                  placeholder="Additional details"
                 />
               </div>
 
@@ -273,30 +273,20 @@ const AddItem = () => {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label>Color Code</Label>
-                  <Input
-                    value={colorCode}
-                    onChange={(e) => setColorCode(e.target.value)}
-                    placeholder="Optional"
-                  />
-                </div>
-                <div>
-                  <Label>Price</Label>
-                  <Input
-                    type="number"
-                    step="0.01"
-                    value={price}
-                    onChange={(e) => setPrice(e.target.value)}
-                    placeholder="0.00"
-                  />
-                  {price && (
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Label: {formatPriceLabel(price)}
-                    </p>
-                  )}
-                </div>
+              <div>
+                <Label>Price</Label>
+                <Input
+                  type="number"
+                  step="0.01"
+                  value={price}
+                  onChange={(e) => setPrice(e.target.value)}
+                  placeholder="0.00"
+                />
+                {price && (
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Label: {formatPriceLabel(price)}
+                  </p>
+                )}
               </div>
 
               <Button type="submit" className="w-full" disabled={loading}>
