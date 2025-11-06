@@ -60,6 +60,27 @@ const AddItem = () => {
     setCategories(data || []);
   };
 
+  const handleCategoryChange = async (categoryId: string) => {
+    setSelectedCategory(categoryId);
+    
+    // Generate preview item code when category is selected
+    if (categoryId) {
+      const { data: codeData, error: codeError } = await supabase
+        .rpc("generate_next_item_code", { p_category_id: categoryId });
+
+      if (codeError) {
+        console.error("Error generating item code:", codeError);
+        setGeneratedItemCode("");
+        return;
+      }
+
+      // Show the next available code (the one that will be used)
+      setGeneratedItemCode(codeData);
+    } else {
+      setGeneratedItemCode("");
+    }
+  };
+
   const handleAddCategory = async () => {
     if (!newCategoryName || !newCategoryPrefix) {
       toast({
@@ -116,14 +137,13 @@ const AddItem = () => {
     setLoading(true);
 
     try {
-      // Generate item code
+      // Generate item code (use the one we already generated)
       const { data: codeData, error: codeError } = await supabase
         .rpc("generate_next_item_code", { p_category_id: selectedCategory });
 
       if (codeError) throw codeError;
 
       const itemCode = codeData;
-      setGeneratedItemCode(itemCode);
 
       // Insert item - using item_name for both name and particulars
       const { error: insertError } = await supabase.from("items").insert({
@@ -180,7 +200,7 @@ const AddItem = () => {
               <div>
                 <Label>Category *</Label>
                 <div className="flex gap-2">
-                  <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+                  <Select value={selectedCategory} onValueChange={handleCategoryChange}>
                     <SelectTrigger>
                       <SelectValue placeholder="Select category" />
                     </SelectTrigger>

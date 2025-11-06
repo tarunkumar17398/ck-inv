@@ -74,10 +74,10 @@ const ExportData = () => {
   };
 
   const copyTableToClipboard = () => {
-    const headers = ["ITEM CODE", "PARTICULARS", "SIZE", "Weight1", "Weight", "Sno", "Barcode", "Price", "O"];
+    const headers = ["ITEM CODE", "ITEM NAME", "SIZE", "Weight1", "Weight", "Sno", "Barcode", "Price", "O"];
     const rows = items.map(item => [
       item.item_code,
-      item.particulars || "",
+      item.item_name || "",
       item.size || "",
       item.weight || "",
       item.weight ? formatWeightLabel(item.weight) : "",
@@ -151,7 +151,7 @@ const ExportData = () => {
             <TableHeader>
               <TableRow>
                 <TableHead className="font-bold">ITEM CODE</TableHead>
-                <TableHead className="font-bold">PARTICULARS</TableHead>
+                <TableHead className="font-bold">ITEM NAME</TableHead>
                 <TableHead className="font-bold">SIZE</TableHead>
                 <TableHead className="font-bold">Weight1</TableHead>
                 <TableHead className="font-bold">Weight</TableHead>
@@ -165,7 +165,7 @@ const ExportData = () => {
               {items.map((item) => (
                 <TableRow key={item.id} className="font-mono text-sm">
                   <TableCell className="font-semibold">{item.item_code}</TableCell>
-                  <TableCell>{item.particulars || ""}</TableCell>
+                  <TableCell>{item.item_name || ""}</TableCell>
                   <TableCell>{item.size || ""}</TableCell>
                   <TableCell>{item.weight || ""}</TableCell>
                   <TableCell>{item.weight ? formatWeightLabel(item.weight) : ""}</TableCell>
