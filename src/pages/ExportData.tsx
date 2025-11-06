@@ -74,7 +74,7 @@ const ExportData = () => {
   };
 
   const copyTableToClipboard = () => {
-    const headers = ["ITEM CODE", "ITEM NAME", "SIZE", "Weight1", "Weight", "Sno", "Barcode", "Price", "O"];
+    const headers = ["ITEM CODE", "ITEM NAME", "SIZE", "Weight (g)", "Weight (CKBR)", "Sno", "Barcode", "Price", "O"];
     const rows = items.map(item => [
       item.item_code,
       item.item_name || "",
@@ -154,7 +154,7 @@ const ExportData = () => {
                 <TableHead className="font-bold">ITEM NAME</TableHead>
                 <TableHead className="font-bold">SIZE</TableHead>
                 <TableHead className="font-bold">Weight1</TableHead>
-                <TableHead className="font-bold">Weight</TableHead>
+                <TableHead className="font-bold">Weight (CKBR format)</TableHead>
                 <TableHead className="font-bold">Sno</TableHead>
                 <TableHead className="font-bold">Barcode</TableHead>
                 <TableHead className="font-bold">Price</TableHead>

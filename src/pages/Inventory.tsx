@@ -442,7 +442,7 @@ const Inventory = () => {
                 <TableHead>Category</TableHead>
                 <TableHead>Item Name</TableHead>
                 <TableHead>Size</TableHead>
-                <TableHead>Weight</TableHead>
+                <TableHead>Weight (g)</TableHead>
                 <TableHead>Price</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
@@ -535,7 +535,7 @@ const Inventory = () => {
                 </div>
 
                 <div>
-                  <Label>Weight (kg)</Label>
+                  <Label>Weight (g)</Label>
                   <Input
                     type="number"
                     step="0.01"
@@ -543,7 +543,7 @@ const Inventory = () => {
                     onChange={(e) =>
                       setEditFormData({ ...editFormData, weight: e.target.value })
                     }
-                    placeholder="Enter weight in kg"
+                    placeholder="Enter weight in grams"
                   />
                 </div>
 

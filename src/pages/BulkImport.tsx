@@ -161,16 +161,16 @@ const BulkImport = () => {
             <CardDescription>
               Copy your data from Excel and paste it below. Each row should contain:
               <br />
-              <strong>Category, Item Name, Particulars, Size, Weight, Color Code, Price</strong>
+              <strong>Category, Item Name, Particulars, Size, Weight (in grams), Color Code, Price</strong>
               <br />
               Columns can be separated by tabs or commas.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <Textarea
-              placeholder="Category	Item Name	Particulars	Size	Weight	Color Code	Price
-Brass	Bowl	Decorative	Large	500g	BR01	1200
-Iron	Lamp	Vintage	Medium	300g	IR02	800"
+              placeholder="Category	Item Name	Particulars	Size	Weight(g)	Color Code	Price
+Brass	Bowl	Decorative	Large	500	BR01	1200
+Iron	Lamp	Vintage	Medium	300	IR02	800"
               value={pastedData}
               onChange={(e) => setPastedData(e.target.value)}
               className="min-h-[300px] font-mono text-sm"
@@ -202,10 +202,10 @@ Iron	Lamp	Vintage	Medium	300g	IR02	800"
           <CardContent>
             <pre className="bg-muted p-4 rounded-lg text-sm overflow-x-auto">
               <code>
-{`Category	Item Name	Particulars	Size	Weight	Color Code	Price
-Brass	Decorative Bowl	Hand-crafted	Large	500g	BR01	1200
-Iron	Wall Lamp	Vintage Style	Medium	300g	IR02	800
-Wood	Photo Frame	Rustic	8x10	200g	WD03	450`}
+{`Category	Item Name	Particulars	Size	Weight(g)	Color Code	Price
+Brass	Decorative Bowl	Hand-crafted	Large	500	BR01	1200
+Iron	Wall Lamp	Vintage Style	Medium	300	IR02	800
+Wood	Photo Frame	Rustic	8x10	200	WD03	450`}
               </code>
             </pre>
           </CardContent>

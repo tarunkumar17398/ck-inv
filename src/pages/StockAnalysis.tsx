@@ -101,16 +101,16 @@ const StockAnalysis = () => {
   const avgWeight = weights.length ? totalWeight / weights.length : 0;
   const missingSize = filteredItems.filter(i => !i.size || !i.size.trim()).length;
 
-  // Weight distribution buckets
+  // Weight distribution buckets (in grams)
   const weightBuckets = [
-    { label: "0-1kg", min: 0, max: 1 },
-    { label: "1-2kg", min: 1, max: 2 },
-    { label: "2-5kg", min: 2, max: 5 },
-    { label: "5-10kg", min: 5, max: 10 },
-    { label: "10-20kg", min: 10, max: 20 },
-    { label: "20-30kg", min: 20, max: 30 },
-    { label: "30-40kg", min: 30, max: 40 },
-    { label: "40+kg", min: 40, max: Infinity },
+    { label: "0-1000g", min: 0, max: 1000 },
+    { label: "1000-2000g", min: 1000, max: 2000 },
+    { label: "2000-5000g", min: 2000, max: 5000 },
+    { label: "5000-10000g", min: 5000, max: 10000 },
+    { label: "10000-20000g", min: 10000, max: 20000 },
+    { label: "20000-30000g", min: 20000, max: 30000 },
+    { label: "30000-40000g", min: 30000, max: 40000 },
+    { label: "40000+g", min: 40000, max: Infinity },
   ];
 
   const weightDistribution = weightBuckets.map(bucket => ({
@@ -207,19 +207,19 @@ const StockAnalysis = () => {
   const getDrilldownWeightDistribution = () => {
     if (!drilldownData) return [];
     const buckets = [
-      { label: "0.01-1kg", min: 0.01, max: 1 },
-      { label: "1-2kg", min: 1, max: 2 },
-      { label: "2-3kg", min: 2, max: 3 },
-      { label: "3-4kg", min: 3, max: 4 },
-      { label: "4-5kg", min: 4, max: 5 },
-      { label: "5-7kg", min: 5, max: 7 },
-      { label: "7-10kg", min: 7, max: 10 },
-      { label: "10-12kg", min: 10, max: 12 },
-      { label: "12-15kg", min: 12, max: 15 },
-      { label: "15-17kg", min: 15, max: 17 },
-      { label: "17-20kg", min: 17, max: 20 },
-      { label: "20-25kg", min: 20, max: 25 },
-      { label: "25+kg", min: 25, max: Infinity },
+      { label: "10-1000g", min: 10, max: 1000 },
+      { label: "1000-2000g", min: 1000, max: 2000 },
+      { label: "2000-3000g", min: 2000, max: 3000 },
+      { label: "3000-4000g", min: 3000, max: 4000 },
+      { label: "4000-5000g", min: 4000, max: 5000 },
+      { label: "5000-7000g", min: 5000, max: 7000 },
+      { label: "7000-10000g", min: 7000, max: 10000 },
+      { label: "10000-12000g", min: 10000, max: 12000 },
+      { label: "12000-15000g", min: 12000, max: 15000 },
+      { label: "15000-17000g", min: 15000, max: 17000 },
+      { label: "17000-20000g", min: 17000, max: 20000 },
+      { label: "20000-25000g", min: 20000, max: 25000 },
+      { label: "25000+g", min: 25000, max: Infinity },
     ];
 
     const weights = drilldownData.items.map(i => parseFloat(i.weight || "0"));
@@ -327,7 +327,7 @@ const StockAnalysis = () => {
                   <CardTitle className="text-sm font-medium text-muted-foreground">Total Weight</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">{totalWeight.toFixed(2)} kg</div>
+                  <div className="text-2xl font-bold">{totalWeight.toFixed(2)} g</div>
                 </CardContent>
               </Card>
 
@@ -336,7 +336,7 @@ const StockAnalysis = () => {
                   <CardTitle className="text-sm font-medium text-muted-foreground">Avg Weight</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">{avgWeight.toFixed(2)} kg</div>
+                  <div className="text-2xl font-bold">{avgWeight.toFixed(2)} g</div>
                 </CardContent>
               </Card>
 
@@ -393,8 +393,8 @@ const StockAnalysis = () => {
                         >
                           <TableCell className="font-medium">{stat.category}</TableCell>
                           <TableCell>{stat.items}</TableCell>
-                          <TableCell>{stat.totalWeight.toFixed(2)} kg</TableCell>
-                          <TableCell>{stat.avgWeight.toFixed(2)} kg</TableCell>
+                          <TableCell>{stat.totalWeight.toFixed(2)} g</TableCell>
+                          <TableCell>{stat.avgWeight.toFixed(2)} g</TableCell>
                         </TableRow>
                       ))}
                     </TableBody>
