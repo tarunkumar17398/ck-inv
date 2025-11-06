@@ -170,7 +170,7 @@ const StockPrint = () => {
         {categoryGroups.map((group, index) => (
           <div key={group.category} className="mb-12 print:mb-6 print:page-break-after-always">
             {/* Category Name Header */}
-            <h1 className="text-xl font-bold mb-4 print:text-lg print:mb-3">{group.category}</h1>
+            <h1 className="text-xl font-bold mb-4 print:text-lg print:mb-3 text-center uppercase">{group.category}</h1>
 
             {/* Items Table with Borders */}
             <table className="w-full border-collapse border border-black">
