@@ -5,9 +5,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, Search, Printer } from "lucide-react";
+import { ArrowLeft, Search, Printer, Filter } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { formatPriceLabel, formatWeightLabel } from "@/lib/utils";
 
@@ -35,6 +35,12 @@ const Inventory = () => {
   const [categories, setCategories] = useState<Category[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("all");
+  const [advancedSearchOpen, setAdvancedSearchOpen] = useState(false);
+  const [nameSearch, setNameSearch] = useState("");
+  const [minWeight, setMinWeight] = useState("");
+  const [maxWeight, setMaxWeight] = useState("");
+  const [minSize, setMinSize] = useState("");
+  const [maxSize, setMaxSize] = useState("");
   
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -88,14 +94,34 @@ const Inventory = () => {
       item.item_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       item.categories.name.toLowerCase().includes(searchQuery.toLowerCase());
 
-    // Handle both category ID (from dashboard links) and category name (from dropdown)
+    // Handle category ID filter (from dashboard links and dropdown)
     const matchesCategory =
       categoryFilter === "all" || 
-      item.categories.name === categoryFilter ||
       item.category_id === categoryFilter;
 
-    return matchesSearch && matchesCategory;
+    // Advanced search filters
+    const matchesName = !nameSearch || 
+      item.item_name.toLowerCase().includes(nameSearch.toLowerCase());
+    
+    const itemWeight = item.weight ? parseFloat(item.weight) : 0;
+    const matchesMinWeight = !minWeight || itemWeight >= parseFloat(minWeight);
+    const matchesMaxWeight = !maxWeight || itemWeight <= parseFloat(maxWeight);
+    
+    const itemSize = item.size ? parseFloat(item.size) : 0;
+    const matchesMinSize = !minSize || itemSize >= parseFloat(minSize);
+    const matchesMaxSize = !maxSize || itemSize <= parseFloat(maxSize);
+
+    return matchesSearch && matchesCategory && matchesName && 
+           matchesMinWeight && matchesMaxWeight && matchesMinSize && matchesMaxSize;
   });
+
+  const clearAdvancedSearch = () => {
+    setNameSearch("");
+    setMinWeight("");
+    setMaxWeight("");
+    setMinSize("");
+    setMaxSize("");
+  };
 
   const handlePrintLabel = (item: Item) => {
     const printWindow = window.open("", "_blank");
@@ -209,29 +235,150 @@ const Inventory = () => {
       <main className="container mx-auto px-4 py-8">
         <h1 className="text-3xl font-bold text-foreground mb-6">Inventory - In Stock</h1>
 
-        <div className="flex flex-col sm:flex-row gap-4 mb-6">
-          <div className="flex-1 relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-            <Input
-              placeholder="Search by code, name, or category..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10"
-            />
+        <div className="flex flex-col gap-4 mb-6">
+          <div className="flex flex-col sm:flex-row gap-4">
+            <div className="flex-1 relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+              <Input
+                placeholder="Search by code, name, or category..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-10"
+              />
+            </div>
+            <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+              <SelectTrigger className="w-full sm:w-48">
+                <SelectValue placeholder="Filter by category" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Categories</SelectItem>
+                {categories.map((cat) => (
+                  <SelectItem key={cat.id} value={cat.id}>
+                    {cat.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Dialog open={advancedSearchOpen} onOpenChange={setAdvancedSearchOpen}>
+              <DialogTrigger asChild>
+                <Button variant="outline">
+                  <Filter className="w-4 h-4 mr-2" />
+                  Advanced Search
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Advanced Search Filters</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-4">
+                  <div>
+                    <Label>Item Name</Label>
+                    <Input
+                      placeholder="Search by name..."
+                      value={nameSearch}
+                      onChange={(e) => setNameSearch(e.target.value)}
+                    />
+                  </div>
+                  
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label>Min Weight (g)</Label>
+                      <Input
+                        type="number"
+                        placeholder="Min"
+                        value={minWeight}
+                        onChange={(e) => setMinWeight(e.target.value)}
+                      />
+                    </div>
+                    <div>
+                      <Label>Max Weight (g)</Label>
+                      <Input
+                        type="number"
+                        placeholder="Max"
+                        value={maxWeight}
+                        onChange={(e) => setMaxWeight(e.target.value)}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label>Min Size</Label>
+                      <Input
+                        type="number"
+                        placeholder="Min"
+                        value={minSize}
+                        onChange={(e) => setMinSize(e.target.value)}
+                      />
+                    </div>
+                    <div>
+                      <Label>Max Size</Label>
+                      <Input
+                        type="number"
+                        placeholder="Max"
+                        value={maxSize}
+                        onChange={(e) => setMaxSize(e.target.value)}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex gap-2">
+                    <Button 
+                      variant="outline" 
+                      className="flex-1"
+                      onClick={clearAdvancedSearch}
+                    >
+                      Clear Filters
+                    </Button>
+                    <Button 
+                      className="flex-1"
+                      onClick={() => setAdvancedSearchOpen(false)}
+                    >
+                      Apply Filters
+                    </Button>
+                  </div>
+                </div>
+              </DialogContent>
+            </Dialog>
           </div>
-          <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-            <SelectTrigger className="w-full sm:w-48">
-              <SelectValue placeholder="Filter by category" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Categories</SelectItem>
-              {categories.map((cat) => (
-                <SelectItem key={cat.id} value={cat.name}>
-                  {cat.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+
+          {(nameSearch || minWeight || maxWeight || minSize || maxSize) && (
+            <div className="flex flex-wrap gap-2 items-center text-sm">
+              <span className="text-muted-foreground">Active filters:</span>
+              {nameSearch && (
+                <span className="bg-primary/10 text-primary px-2 py-1 rounded">
+                  Name: {nameSearch}
+                </span>
+              )}
+              {minWeight && (
+                <span className="bg-primary/10 text-primary px-2 py-1 rounded">
+                  Min Weight: {minWeight}g
+                </span>
+              )}
+              {maxWeight && (
+                <span className="bg-primary/10 text-primary px-2 py-1 rounded">
+                  Max Weight: {maxWeight}g
+                </span>
+              )}
+              {minSize && (
+                <span className="bg-primary/10 text-primary px-2 py-1 rounded">
+                  Min Size: {minSize}
+                </span>
+              )}
+              {maxSize && (
+                <span className="bg-primary/10 text-primary px-2 py-1 rounded">
+                  Max Size: {maxSize}
+                </span>
+              )}
+              <Button 
+                variant="ghost" 
+                size="sm"
+                onClick={clearAdvancedSearch}
+              >
+                Clear all
+              </Button>
+            </div>
+          )}
         </div>
 
         <div className="bg-card rounded-lg border shadow-sm overflow-hidden">
