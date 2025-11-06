@@ -125,9 +125,9 @@ const StockPrint = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-white text-black">
       {/* Action buttons - hidden during print */}
-      <header className="border-b bg-card shadow-sm print:hidden">
+      <header className="border-b bg-white shadow-sm print:hidden">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
           <Button variant="ghost" size="sm" onClick={() => navigate("/dashboard")}>
             <ArrowLeft className="w-4 h-4 mr-2" />
@@ -166,43 +166,34 @@ const StockPrint = () => {
       </header>
 
       {/* Printable content */}
-      <main className="container mx-auto px-4 py-8 print:px-0 print:py-0">
+      <main className="container mx-auto px-6 py-8 print:px-0 print:py-4">
         {categoryGroups.map((group, index) => (
-          <div key={group.category} className="mb-12 print:mb-0 print:page-break-after-always">
-            {/* Category Header */}
-            <div className="mb-4 print:mb-2">
-              <h1 className="text-3xl font-bold print:text-2xl">{group.prefix}</h1>
-              <p className="text-sm text-muted-foreground print:text-xs">
-                {group.category} - Total Items: {group.items.length}
-              </p>
-            </div>
+          <div key={group.category} className="mb-12 print:mb-6 print:page-break-after-always">
+            {/* Category Header - Simple and Clean */}
+            <h1 className="text-xl font-bold mb-4 print:text-lg print:mb-3">Item List</h1>
 
-            {/* Items Table */}
-            <table className="w-full border-collapse text-sm print:text-xs">
+            {/* Items Table - Clean and Simple */}
+            <table className="w-full border-collapse">
               <thead>
-                <tr className="border-b-2 border-foreground">
-                  <th className="text-left py-2 px-2 font-bold">Item Code</th>
-                  <th className="text-left py-2 px-2 font-bold">Particulars</th>
-                  <th className="text-left py-2 px-2 font-bold">Size</th>
-                  <th className="text-left py-2 px-2 font-bold">Weight</th>
-                  <th className="text-center py-2 px-2 font-bold w-12">✓</th>
-                  <th className="text-left py-2 px-2 font-bold">DOS</th>
+                <tr className="border-b-2 border-black">
+                  <th className="text-left py-2 px-3 font-semibold text-sm">Item Code</th>
+                  <th className="text-left py-2 px-3 font-semibold text-sm">Particulars</th>
+                  <th className="text-left py-2 px-3 font-semibold text-sm">Size</th>
+                  <th className="text-left py-2 px-3 font-semibold text-sm">Weight</th>
+                  <th className="text-left py-2 px-3 font-semibold text-sm">DOS</th>
                 </tr>
               </thead>
               <tbody>
                 {group.items.map((item) => (
                   <tr 
                     key={item.id} 
-                    className={`border-b ${item.status === 'sold' ? 'text-muted-foreground line-through' : ''}`}
+                    className={`border-b border-gray-300 ${item.status === 'sold' ? 'text-gray-400 line-through' : ''}`}
                   >
-                    <td className="py-1.5 px-2">{item.item_code}</td>
-                    <td className="py-1.5 px-2">{item.item_name}</td>
-                    <td className="py-1.5 px-2">{item.size || ""}</td>
-                    <td className="py-1.5 px-2">{item.weight || ""}</td>
-                    <td className="py-1.5 px-2 text-center">
-                      <div className="inline-block w-4 h-4 border border-foreground"></div>
-                    </td>
-                    <td className="py-1.5 px-2">
+                    <td className="py-2 px-3 text-sm">{item.item_code}</td>
+                    <td className="py-2 px-3 text-sm">{item.item_name}</td>
+                    <td className="py-2 px-3 text-sm">{item.size || ""}</td>
+                    <td className="py-2 px-3 text-sm">{item.weight || ""}</td>
+                    <td className="py-2 px-3 text-sm">
                       {item.sold_date 
                         ? new Date(item.sold_date).toLocaleDateString('en-GB')
                         : ""}
@@ -220,7 +211,7 @@ const StockPrint = () => {
         @media print {
           @page {
             size: A4;
-            margin: 15mm;
+            margin: 15mm 10mm;
           }
           
           body {
@@ -236,12 +227,12 @@ const StockPrint = () => {
             page-break-after: always;
           }
           
-          .print\\:mb-0 {
-            margin-bottom: 0 !important;
+          .print\\:mb-3 {
+            margin-bottom: 0.75rem !important;
           }
           
-          .print\\:mb-2 {
-            margin-bottom: 0.5rem !important;
+          .print\\:mb-6 {
+            margin-bottom: 1.5rem !important;
           }
           
           .print\\:px-0 {
@@ -249,19 +240,14 @@ const StockPrint = () => {
             padding-right: 0 !important;
           }
           
-          .print\\:py-0 {
-            padding-top: 0 !important;
-            padding-bottom: 0 !important;
+          .print\\:py-4 {
+            padding-top: 1rem !important;
+            padding-bottom: 1rem !important;
           }
           
-          .print\\:text-2xl {
-            font-size: 1.5rem !important;
-            line-height: 2rem !important;
-          }
-          
-          .print\\:text-xs {
-            font-size: 0.75rem !important;
-            line-height: 1rem !important;
+          .print\\:text-lg {
+            font-size: 1.125rem !important;
+            line-height: 1.75rem !important;
           }
           
           table {
@@ -275,10 +261,6 @@ const StockPrint = () => {
           
           thead {
             display: table-header-group;
-          }
-          
-          tfoot {
-            display: table-footer-group;
           }
         }
       `}</style>
