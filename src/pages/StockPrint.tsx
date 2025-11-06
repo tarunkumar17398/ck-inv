@@ -169,31 +169,35 @@ const StockPrint = () => {
       <main className="container mx-auto px-6 py-8 print:px-0 print:py-4">
         {categoryGroups.map((group, index) => (
           <div key={group.category} className="mb-12 print:mb-6 print:page-break-after-always">
-            {/* Category Header - Simple and Clean */}
-            <h1 className="text-xl font-bold mb-4 print:text-lg print:mb-3">Item List</h1>
+            {/* Category Name Header */}
+            <h1 className="text-xl font-bold mb-4 print:text-lg print:mb-3">{group.category}</h1>
 
-            {/* Items Table - Clean and Simple */}
-            <table className="w-full border-collapse">
+            {/* Items Table with Borders */}
+            <table className="w-full border-collapse border border-black">
               <thead>
-                <tr className="border-b-2 border-black">
-                  <th className="text-left py-2 px-3 font-semibold text-sm">Item Code</th>
-                  <th className="text-left py-2 px-3 font-semibold text-sm">Particulars</th>
-                  <th className="text-left py-2 px-3 font-semibold text-sm">Size</th>
-                  <th className="text-left py-2 px-3 font-semibold text-sm">Weight</th>
-                  <th className="text-left py-2 px-3 font-semibold text-sm">DOS</th>
+                <tr className="border border-black">
+                  <th className="text-left py-2 px-3 font-semibold text-sm border border-black">Item Code</th>
+                  <th className="text-left py-2 px-3 font-semibold text-sm border border-black">Particulars</th>
+                  <th className="text-left py-2 px-3 font-semibold text-sm border border-black">Size</th>
+                  <th className="text-left py-2 px-3 font-semibold text-sm border border-black">Weight</th>
+                  <th className="text-center py-2 px-3 font-semibold text-sm border border-black w-12">✓</th>
+                  <th className="text-left py-2 px-3 font-semibold text-sm border border-black">DOS</th>
                 </tr>
               </thead>
               <tbody>
                 {group.items.map((item) => (
                   <tr 
                     key={item.id} 
-                    className={`border-b border-gray-300 ${item.status === 'sold' ? 'text-gray-400 line-through' : ''}`}
+                    className={`border border-black ${item.status === 'sold' ? 'text-gray-400 line-through' : ''}`}
                   >
-                    <td className="py-2 px-3 text-sm">{item.item_code}</td>
-                    <td className="py-2 px-3 text-sm">{item.item_name}</td>
-                    <td className="py-2 px-3 text-sm">{item.size || ""}</td>
-                    <td className="py-2 px-3 text-sm">{item.weight || ""}</td>
-                    <td className="py-2 px-3 text-sm">
+                    <td className="py-2 px-3 text-sm font-bold border border-black">{item.item_code}</td>
+                    <td className="py-2 px-3 text-sm border border-black">{item.item_name}</td>
+                    <td className="py-2 px-3 text-sm font-bold border border-black">{item.size || ""}</td>
+                    <td className="py-2 px-3 text-sm border border-black">{item.weight || ""}</td>
+                    <td className="py-2 px-3 text-center border border-black">
+                      <div className="inline-block w-4 h-4 border border-black"></div>
+                    </td>
+                    <td className="py-2 px-3 text-sm border border-black">
                       {item.sold_date 
                         ? new Date(item.sold_date).toLocaleDateString('en-GB')
                         : ""}
