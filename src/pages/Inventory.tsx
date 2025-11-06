@@ -21,6 +21,7 @@ interface Item {
   weight: string | null;
   color_code: string | null;
   price: number | null;
+  cost_price: number | null;
   category_id: string;
   categories: { name: string; prefix: string };
 }
@@ -49,6 +50,7 @@ const Inventory = () => {
     size: "",
     weight: "",
     price: "",
+    cost_price: "",
   });
   
   const navigate = useNavigate();
@@ -139,6 +141,7 @@ const Inventory = () => {
       size: item.size || "",
       weight: item.weight || "",
       price: item.price?.toString() || "",
+      cost_price: item.cost_price?.toString() || "",
     });
     setEditDialogOpen(true);
   };
@@ -154,6 +157,7 @@ const Inventory = () => {
         size: editFormData.size || null,
         weight: editFormData.weight || null,
         price: editFormData.price ? parseFloat(editFormData.price) : null,
+        cost_price: editFormData.cost_price ? parseFloat(editFormData.cost_price) : null,
       })
       .eq("id", editingItem.id);
 
@@ -443,7 +447,8 @@ const Inventory = () => {
                 <TableHead>Item Name</TableHead>
                 <TableHead>Size</TableHead>
                 <TableHead>Weight (g)</TableHead>
-                <TableHead>Price</TableHead>
+                <TableHead>Cost Price</TableHead>
+                <TableHead>Selling Price</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
@@ -455,6 +460,7 @@ const Inventory = () => {
                   <TableCell>{item.item_name}</TableCell>
                   <TableCell className="text-muted-foreground">{item.size || "-"}</TableCell>
                   <TableCell className="text-muted-foreground">{item.weight || "-"}</TableCell>
+                  <TableCell>{item.cost_price ? `₹${item.cost_price}` : "-"}</TableCell>
                   <TableCell>{item.price ? `₹${item.price}` : "-"}</TableCell>
                   <TableCell className="text-right">
                     <div className="flex gap-2 justify-end">
@@ -548,7 +554,20 @@ const Inventory = () => {
                 </div>
 
                 <div>
-                  <Label>Price (₹)</Label>
+                  <Label>Cost Price (₹)</Label>
+                  <Input
+                    type="number"
+                    step="0.01"
+                    value={editFormData.cost_price}
+                    onChange={(e) =>
+                      setEditFormData({ ...editFormData, cost_price: e.target.value })
+                    }
+                    placeholder="Enter cost price"
+                  />
+                </div>
+
+                <div>
+                  <Label>Selling Price (₹)</Label>
                   <Input
                     type="number"
                     step="0.01"
@@ -556,7 +575,7 @@ const Inventory = () => {
                     onChange={(e) =>
                       setEditFormData({ ...editFormData, price: e.target.value })
                     }
-                    placeholder="Enter price"
+                    placeholder="Enter selling price"
                   />
                 </div>
 

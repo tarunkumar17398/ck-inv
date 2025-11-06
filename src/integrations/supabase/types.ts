@@ -89,6 +89,7 @@ export type Database = {
         Row: {
           category_id: string
           color_code: string | null
+          cost_price: number | null
           created_at: string | null
           id: string
           item_code: string
@@ -104,6 +105,7 @@ export type Database = {
         Insert: {
           category_id: string
           color_code?: string | null
+          cost_price?: number | null
           created_at?: string | null
           id?: string
           item_code: string
@@ -119,6 +121,7 @@ export type Database = {
         Update: {
           category_id?: string
           color_code?: string | null
+          cost_price?: number | null
           created_at?: string | null
           id?: string
           item_code?: string

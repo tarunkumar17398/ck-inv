@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { ArrowLeft, Copy, Filter } from "lucide-react";
+import { ArrowLeft, Copy, Filter, Download, Database } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { formatPriceLabel, formatWeightLabel } from "@/lib/utils";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -106,6 +106,60 @@ const ExportData = () => {
     });
   };
 
+  const handleBackupAllData = async () => {
+    // Fetch all items (both in-stock and sold)
+    const { data: allItems, error } = await supabase
+      .from("items")
+      .select("*, categories(name, prefix)")
+      .order("created_at", { ascending: false });
+
+    if (error) {
+      toast({
+        title: "Error fetching data",
+        description: error.message,
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Create CSV content
+    const headers = ["Item Code", "Item Name", "Category", "Size", "Weight", "Cost Price", "Selling Price", "Sold Price", "Status", "Created Date", "Sold Date"];
+    const rows = allItems?.map(item => [
+      item.item_code,
+      item.item_name || "",
+      item.categories?.name || "",
+      item.size || "",
+      item.weight || "",
+      item.cost_price || "",
+      item.price || "",
+      item.sold_price || "",
+      item.status,
+      format(new Date(item.created_at), "yyyy-MM-dd"),
+      item.sold_date ? format(new Date(item.sold_date), "yyyy-MM-dd") : ""
+    ]);
+
+    const csv = [
+      headers.join(","),
+      ...rows.map(row => row.map(cell => `"${cell}"`).join(","))
+    ].join("\n");
+
+    // Create and download file
+    const blob = new Blob([csv], { type: "text/csv" });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `inventory_backup_${format(new Date(), "yyyy-MM-dd_HHmmss")}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    window.URL.revokeObjectURL(url);
+
+    toast({
+      title: "Backup created",
+      description: `Exported ${allItems?.length} items to CSV`,
+    });
+  };
+
   return (
     <div className="min-h-screen bg-background">
       <header className="border-b bg-card shadow-sm">
@@ -120,13 +174,19 @@ const ExportData = () => {
       <main className="container mx-auto px-4 py-8">
         <div className="flex items-center justify-between mb-6">
           <div>
-            <h1 className="text-3xl font-bold text-foreground mb-2">Export Data for Access</h1>
-            <p className="text-muted-foreground">Copy formatted data to paste into your Access database</p>
+            <h1 className="text-3xl font-bold text-foreground mb-2">Export & Backup Data</h1>
+            <p className="text-muted-foreground">Copy formatted data or create complete backups</p>
           </div>
-          <Button onClick={copyTableToClipboard}>
-            <Copy className="w-4 h-4 mr-2" />
-            Copy All Data
-          </Button>
+          <div className="flex gap-2">
+            <Button onClick={handleBackupAllData} variant="default">
+              <Database className="w-4 h-4 mr-2" />
+              Backup All Data
+            </Button>
+            <Button onClick={copyTableToClipboard} variant="outline">
+              <Copy className="w-4 h-4 mr-2" />
+              Copy Displayed Data
+            </Button>
+          </div>
         </div>
 
         <div className="flex items-center gap-4 mb-6">
@@ -184,10 +244,12 @@ const ExportData = () => {
           )}
         </div>
 
-        <div className="mt-4 p-4 bg-muted rounded-lg">
+        <div className="mt-4 p-4 bg-muted rounded-lg space-y-2">
           <p className="text-sm text-muted-foreground">
-            <strong>Tip:</strong> Click "Copy All Data" to copy the entire table, or select specific rows and use Ctrl+C (Cmd+C on Mac) to copy them.
-            The data is formatted with tabs and can be pasted directly into Excel or Access.
+            <strong>Copy Displayed Data:</strong> Click to copy the filtered items shown below in Excel/Access format. You can paste directly into spreadsheets.
+          </p>
+          <p className="text-sm text-muted-foreground">
+            <strong>Backup All Data:</strong> Downloads a complete CSV backup of ALL items (both in-stock and sold) with full details including cost prices and profit margins. Use this before recycling stock or for record keeping.
           </p>
         </div>
       </main>

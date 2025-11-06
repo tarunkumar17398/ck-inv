@@ -24,8 +24,10 @@ const AddItem = () => {
   const [size, setSize] = useState("");
   const [weight, setWeight] = useState("");
   const [price, setPrice] = useState("");
+  const [costPrice, setCostPrice] = useState("");
   const [loading, setLoading] = useState(false);
   const [generatedItemCode, setGeneratedItemCode] = useState("");
+  const [selectedCategoryPrefix, setSelectedCategoryPrefix] = useState("");
   
   const [newCategoryName, setNewCategoryName] = useState("");
   const [newCategoryPrefix, setNewCategoryPrefix] = useState("");
@@ -63,6 +65,10 @@ const AddItem = () => {
   const handleCategoryChange = async (categoryId: string) => {
     setSelectedCategory(categoryId);
     
+    // Find category prefix for BR auto-calculation
+    const category = categories.find(cat => cat.id === categoryId);
+    setSelectedCategoryPrefix(category?.prefix || "");
+    
     // Generate preview item code when category is selected
     if (categoryId) {
       const { data: codeData, error: codeError } = await supabase
@@ -78,6 +84,18 @@ const AddItem = () => {
       setGeneratedItemCode(codeData);
     } else {
       setGeneratedItemCode("");
+    }
+  };
+
+  const handleWeightChange = (value: string) => {
+    setWeight(value);
+    
+    // Auto-calculate cost price for BR category
+    if (selectedCategoryPrefix === "BR" && value) {
+      const weightNum = parseFloat(value);
+      if (!isNaN(weightNum)) {
+        setCostPrice((weightNum * 1000).toString());
+      }
     }
   };
 
@@ -134,6 +152,15 @@ const AddItem = () => {
       return;
     }
 
+    if (!costPrice) {
+      toast({
+        title: "Missing cost price",
+        description: "Please enter the cost price",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -155,6 +182,7 @@ const AddItem = () => {
         weight: weight || null,
         color_code: null,
         price: price ? parseFloat(price) : null,
+        cost_price: costPrice ? parseFloat(costPrice) : null,
         status: "in_stock",
       });
 
@@ -282,7 +310,7 @@ const AddItem = () => {
                   <Input
                     type="number"
                     value={weight}
-                    onChange={(e) => setWeight(e.target.value)}
+                    onChange={(e) => handleWeightChange(e.target.value)}
                     placeholder="e.g., 500"
                   />
                   {weight && (
@@ -294,7 +322,24 @@ const AddItem = () => {
               </div>
 
               <div>
-                <Label>Price</Label>
+                <Label>Cost Price *</Label>
+                <Input
+                  type="number"
+                  step="0.01"
+                  value={costPrice}
+                  onChange={(e) => setCostPrice(e.target.value)}
+                  placeholder={selectedCategoryPrefix === "BR" ? "Auto-calculated from weight" : "Enter cost price"}
+                  required
+                />
+                {selectedCategoryPrefix === "BR" && weight && (
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Auto-calculated: Weight × 1000 = ₹{costPrice} (editable)
+                  </p>
+                )}
+              </div>
+
+              <div>
+                <Label>Selling Price</Label>
                 <Input
                   type="number"
                   step="0.01"
