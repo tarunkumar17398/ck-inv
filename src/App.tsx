@@ -12,6 +12,7 @@ import Categories from "./pages/Categories";
 import BulkImport from "./pages/BulkImport";
 import Reports from "./pages/Reports";
 import ExportData from "./pages/ExportData";
+import StockAnalysis from "./pages/StockAnalysis";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -32,6 +33,7 @@ const App = () => (
         <Route path="/categories" element={<Categories />} />
         <Route path="/reports" element={<Reports />} />
           <Route path="/export-data" element={<ExportData />} />
+          <Route path="/stock-analysis" element={<StockAnalysis />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>

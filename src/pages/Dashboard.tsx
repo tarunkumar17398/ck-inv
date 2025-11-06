@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Plus, Package, LogOut, Search, Upload, BarChart3, DollarSign, Calendar as CalendarIcon, FileSpreadsheet } from "lucide-react";
+import { Plus, Package, LogOut, Search, Upload, BarChart3, DollarSign, Calendar as CalendarIcon, FileSpreadsheet, TrendingUp } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
@@ -292,6 +292,14 @@ const Dashboard = () => {
           >
             <FileSpreadsheet className="w-6 h-6 mr-2" />
             Export to Access
+          </Button>
+          <Button
+            variant="outline"
+            className="h-24 text-lg"
+            onClick={() => navigate("/stock-analysis")}
+          >
+            <TrendingUp className="w-6 h-6 mr-2" />
+            Stock Analysis
           </Button>
         </div>
       </main>
