@@ -20,6 +20,7 @@ interface Item {
   weight: string | null;
   color_code: string | null;
   price: number | null;
+  category_id: string;
   categories: { name: string; prefix: string };
 }
 
@@ -90,8 +91,11 @@ const Inventory = () => {
       item.item_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       item.categories.name.toLowerCase().includes(searchQuery.toLowerCase());
 
+    // Handle both category ID (from dashboard links) and category name (from dropdown)
     const matchesCategory =
-      categoryFilter === "all" || item.categories.name === categoryFilter;
+      categoryFilter === "all" || 
+      item.categories.name === categoryFilter ||
+      item.category_id === categoryFilter;
 
     return matchesSearch && matchesCategory;
   });
