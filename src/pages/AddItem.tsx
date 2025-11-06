@@ -94,7 +94,7 @@ const AddItem = () => {
     if (selectedCategoryPrefix === "BR" && value) {
       const weightNum = parseFloat(value);
       if (!isNaN(weightNum)) {
-        setCostPrice((weightNum * 1000).toString());
+        setCostPrice((weightNum * 1).toString());
       }
     }
   };
@@ -333,7 +333,7 @@ const AddItem = () => {
                 />
                 {selectedCategoryPrefix === "BR" && weight && (
                   <p className="text-xs text-muted-foreground mt-1">
-                    Auto-calculated: Weight × 1000 = ₹{costPrice} (editable)
+                    Auto-calculated: Weight × 1 = ₹{costPrice} (editable)
                   </p>
                 )}
               </div>

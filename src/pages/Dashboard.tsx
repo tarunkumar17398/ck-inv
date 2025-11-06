@@ -29,10 +29,6 @@ const Dashboard = () => {
   const [itemDetails, setItemDetails] = useState<any>(null);
   const [soldPrice, setSoldPrice] = useState("");
   const [loading, setLoading] = useState(false);
-  const [totalStockValue, setTotalStockValue] = useState(0);
-  const [totalItems, setTotalItems] = useState(0);
-  const [itemsSoldThisMonth, setItemsSoldThisMonth] = useState(0);
-  const [recentActivities, setRecentActivities] = useState<any[]>([]);
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -42,8 +38,6 @@ const Dashboard = () => {
       return;
     }
     loadCategories();
-    loadDashboardStats();
-    loadRecentActivities();
   }, [navigate]);
 
   const loadCategories = async () => {
@@ -77,48 +71,6 @@ const Dashboard = () => {
 
     const stats = await Promise.all(statsPromises);
     setCategories(stats);
-  };
-
-  const loadDashboardStats = async () => {
-    // Total items in stock
-    const { count: totalCount } = await supabase
-      .from("items")
-      .select("*", { count: "exact", head: true })
-      .eq("status", "in_stock");
-    setTotalItems(totalCount || 0);
-
-    // Total stock value (sum of cost prices)
-    const { data: stockData } = await supabase
-      .from("items")
-      .select("cost_price")
-      .eq("status", "in_stock");
-    
-    const stockValue = stockData?.reduce((sum, item) => sum + (item.cost_price || 0), 0) || 0;
-    setTotalStockValue(stockValue);
-
-    // Items sold this month
-    const startOfMonth = new Date();
-    startOfMonth.setDate(1);
-    startOfMonth.setHours(0, 0, 0, 0);
-
-    const { count: soldCount } = await supabase
-      .from("items")
-      .select("*", { count: "exact", head: true })
-      .eq("status", "sold")
-      .gte("sold_date", startOfMonth.toISOString());
-    setItemsSoldThisMonth(soldCount || 0);
-  };
-
-  const loadRecentActivities = async () => {
-    // Get 5 most recent sales
-    const { data } = await supabase
-      .from("items")
-      .select("item_code, item_name, sold_date, sold_price, categories(name)")
-      .eq("status", "sold")
-      .order("sold_date", { ascending: false })
-      .limit(5);
-    
-    setRecentActivities(data || []);
   };
 
   const handleLogout = () => {
@@ -222,8 +174,6 @@ const Dashboard = () => {
     setSalesDate(new Date());
     setSalesDialogOpen(false);
     loadCategories(); // Refresh stats
-    loadDashboardStats();
-    loadRecentActivities();
   };
 
   return (
@@ -281,67 +231,6 @@ const Dashboard = () => {
             Sales Entry
           </Button>
         </div>
-
-        {/* Quick Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Total Stock Value</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">₹{totalStockValue.toLocaleString()}</div>
-              <p className="text-xs text-muted-foreground mt-1">Based on cost prices</p>
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Total Items in Stock</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{totalItems}</div>
-              <p className="text-xs text-muted-foreground mt-1">Available for sale</p>
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Sold This Month</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{itemsSoldThisMonth}</div>
-              <p className="text-xs text-muted-foreground mt-1">{format(new Date(), "MMMM yyyy")}</p>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Recent Activities */}
-        {recentActivities.length > 0 && (
-          <div className="mb-8">
-            <h3 className="text-xl font-semibold mb-4 text-foreground">Recent Sales</h3>
-            <Card>
-              <CardContent className="pt-6">
-                <div className="space-y-3">
-                  {recentActivities.map((activity, idx) => (
-                    <div key={idx} className="flex items-center justify-between border-b last:border-0 pb-3 last:pb-0">
-                      <div>
-                        <p className="font-medium">{activity.item_code}</p>
-                        <p className="text-sm text-muted-foreground">{activity.item_name}</p>
-                        <p className="text-xs text-muted-foreground">{activity.categories.name}</p>
-                      </div>
-                      <div className="text-right">
-                        <p className="font-semibold">₹{activity.sold_price}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {format(new Date(activity.sold_date), "MMM dd, yyyy")}
-                        </p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        )}
 
         <div className="mb-8">
           <h3 className="text-xl font-semibold mb-4 text-foreground">Category Stock Overview</h3>

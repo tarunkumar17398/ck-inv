@@ -208,15 +208,44 @@ const Reports = () => {
       .select("*", { count: "exact", head: true })
       .eq("status", "in_stock");
     
-    // Stock value
+    // Total stock value (based on cost prices)
     const { data: stockItems } = await supabase
       .from("items")
-      .select("price")
+      .select("cost_price")
       .eq("status", "in_stock");
     
-    const stockValue = stockItems?.reduce((sum, item) => sum + (item.price || 0), 0) || 0;
+    const stockValue = stockItems?.reduce((sum, item) => sum + (item.cost_price || 0), 0) || 0;
+
+    // Items sold this month
+    const startOfThisMonth = new Date();
+    startOfThisMonth.setDate(1);
+    startOfThisMonth.setHours(0, 0, 0, 0);
+
+    const { count: soldThisMonth } = await supabase
+      .from("items")
+      .select("*", { count: "exact", head: true })
+      .eq("status", "sold")
+      .gte("sold_date", startOfThisMonth.toISOString());
     
     setMetrics([
+      {
+        title: "Total Stock Value",
+        value: `₹${stockValue.toLocaleString("en-IN")}`,
+        icon: Package,
+        description: "Based on cost prices",
+      },
+      {
+        title: "Total Items in Stock",
+        value: stockCount?.toString() || "0",
+        icon: Package,
+        description: "Available for sale",
+      },
+      {
+        title: "Sold This Month",
+        value: soldThisMonth?.toString() || "0",
+        icon: ShoppingCart,
+        description: format(new Date(), "MMMM yyyy"),
+      },
       {
         title: "Total Revenue",
         value: `₹${totalRevenue.toLocaleString("en-IN")}`,
@@ -225,23 +254,17 @@ const Reports = () => {
         description: `Last ${dateRange === "3months" ? "3" : dateRange === "6months" ? "6" : "12"} months`,
       },
       {
-        title: "Items Sold",
+        title: "Items Sold (Period)",
         value: totalItemsSold.toString(),
         change: `${itemsChange}% vs last month`,
         icon: ShoppingCart,
-        description: "Total units sold",
+        description: "Total units sold in period",
       },
       {
         title: "Average Sale Price",
         value: `₹${avgSalePrice}`,
         icon: TrendingUp,
         description: "Per item average",
-      },
-      {
-        title: "Current Stock",
-        value: stockCount?.toString() || "0",
-        icon: Package,
-        description: `Worth ₹${stockValue.toLocaleString("en-IN")}`,
       },
     ]);
   };
@@ -360,7 +383,7 @@ const Reports = () => {
         ) : (
           <>
             {/* Key Metrics */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
               {metrics.map((metric, index) => {
                 const Icon = metric.icon;
                 return (
