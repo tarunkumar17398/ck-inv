@@ -17,7 +17,7 @@ const BulkImport = () => {
     if (!pastedData.trim()) {
       toast({
         title: "No data provided",
-        description: "Please paste your Excel data",
+        description: "Please paste your data",
         variant: "destructive",
       });
       return;
@@ -36,10 +36,11 @@ const BulkImport = () => {
         
         if (cells.length < 3) continue; // Skip invalid rows
 
-        // Expected format: Category, Item Name, Particulars, Size, Weight, Color Code, Price
-        const [category, itemName, particulars, size, weight, colorCode, price] = cells.map(c => c.trim());
+        // Parse CSV format: Category, PARTICULARS, SIZE, Weight
+        // Expected format: Category, PARTICULARS, SIZE, Weight (in grams)
+        const [category, particulars, size, weight] = cells.map(c => c.trim());
 
-        if (!category || !itemName) continue;
+        if (!category || !particulars) continue;
 
         // Find category
         const { data: categories } = await supabase
@@ -60,46 +61,25 @@ const BulkImport = () => {
         const categoryData = categories[0];
 
         // Generate item code
-        const { data: counter } = await supabase
-          .from("item_code_counters")
-          .select("*")
-          .eq("category_id", categoryData.id)
-          .single();
+        const { data: codeData, error: codeError } = await supabase
+          .rpc("generate_next_item_code", { p_category_id: categoryData.id });
 
-        if (!counter) continue;
-
-        const itemCode = `${categoryData.prefix}${counter.current_letter || ""}${counter.current_number}`;
-
-        // Update counter
-        let newNumber = counter.current_number + 1;
-        let newLetter = counter.current_letter;
-
-        if (newNumber > 999) {
-          newNumber = 1;
-          if (!newLetter) {
-            newLetter = "A";
-          } else {
-            newLetter = String.fromCharCode(newLetter.charCodeAt(0) + 1);
-          }
+        if (codeError) {
+          console.error("Error generating item code:", codeError);
+          continue;
         }
 
-        await supabase
-          .from("item_code_counters")
-          .update({
-            current_number: newNumber,
-            current_letter: newLetter,
-          })
-          .eq("id", counter.id);
+        const itemCode = codeData;
 
         items.push({
           item_code: itemCode,
           category_id: categoryData.id,
-          item_name: itemName,
-          particulars: particulars || null,
+          item_name: particulars,
+          particulars: particulars, // Store same value in both fields
           size: size || null,
-          weight: weight || null,
-          color_code: colorCode || null,
-          price: price ? parseFloat(price) : null,
+          weight: weight && weight.toLowerCase() !== 'na' ? weight : null,
+          color_code: null,
+          price: null,
           status: "in_stock",
         });
       }
@@ -157,20 +137,21 @@ const BulkImport = () => {
 
         <Card>
           <CardHeader>
-            <CardTitle>Paste Excel Data</CardTitle>
+            <CardTitle>Paste Your Inventory Data</CardTitle>
             <CardDescription>
-              Copy your data from Excel and paste it below. Each row should contain:
+              Copy your data from Excel/CSV and paste it below. Each row should contain:
               <br />
-              <strong>Category, Item Name, Particulars, Size, Weight (in grams), Color Code, Price</strong>
+              <strong>Category, PARTICULARS, SIZE, Weight (in grams)</strong>
               <br />
-              Columns can be separated by tabs or commas.
+              Note: Weight can be "NA" if not applicable. Columns can be separated by tabs or commas.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <Textarea
-              placeholder="Category	Item Name	Particulars	Size	Weight(g)	Color Code	Price
-Brass	Bowl	Decorative	Large	500	BR01	1200
-Iron	Lamp	Vintage	Medium	300	IR02	800"
+              placeholder="Category	PARTICULARS	SIZE	Weight
+Brass	GANESH STANDING (S.W)	6&quot;	1700
+Wood	BUDDHA SITTING	8&quot;	850
+Iron	PEACOCK CLOCK	15&quot;	NA"
               value={pastedData}
               onChange={(e) => setPastedData(e.target.value)}
               className="min-h-[300px] font-mono text-sm"
@@ -197,17 +178,24 @@ Iron	Lamp	Vintage	Medium	300	IR02	800"
 
         <Card className="mt-6">
           <CardHeader>
-            <CardTitle>Example Format</CardTitle>
+            <CardTitle>Example Format (From Your Data)</CardTitle>
           </CardHeader>
           <CardContent>
             <pre className="bg-muted p-4 rounded-lg text-sm overflow-x-auto">
               <code>
-{`Category	Item Name	Particulars	Size	Weight(g)	Color Code	Price
-Brass	Decorative Bowl	Hand-crafted	Large	500	BR01	1200
-Iron	Wall Lamp	Vintage Style	Medium	300	IR02	800
-Wood	Photo Frame	Rustic	8x10	200	WD03	450`}
+{`Category	PARTICULARS	SIZE	Weight
+Brass	FISH CHOWKI (GREEN)	6"	6100
+Brass	LAKSHMI SITTING	8.5"	2600
+Iron	MUSICIAN CLOCK PEN STAND	15"	NA
+Wood	GANESHA WITH ARCH	17.5"	3000
+Terracotta	GAJA LAKSHMI	15"x12"	NA`}
               </code>
             </pre>
+            <p className="text-xs text-muted-foreground mt-3">
+              💡 Tip: Copy directly from your existing CSV files (BR_Data.csv, IR_Data.csv, etc.)
+              <br />
+              Make sure Category names match exactly: Brass, Iron, Wood, Terracotta, or Gift Items
+            </p>
           </CardContent>
         </Card>
       </main>
