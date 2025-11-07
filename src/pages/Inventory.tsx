@@ -5,9 +5,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, Search, Printer, Filter, Pencil } from "lucide-react";
+import { ArrowLeft, Search, Filter, Pencil, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Label } from "@/components/ui/label";
 import { formatPriceLabel, formatWeightLabel } from "@/lib/utils";
 import { Textarea } from "@/components/ui/textarea";
@@ -180,102 +181,27 @@ const Inventory = () => {
     loadItems(); // Refresh the list
   };
 
-  const handlePrintLabel = (item: Item) => {
-    const printWindow = window.open("", "_blank");
-    if (!printWindow) return;
+  const handleDeleteItem = async (itemId: string, itemCode: string) => {
+    const { error } = await supabase
+      .from("items")
+      .delete()
+      .eq("id", itemId);
 
-    const priceLabel = item.price ? formatPriceLabel(item.price) : '-';
-    const weightLabel = item.weight ? formatWeightLabel(item.weight) : '-';
-    
-    printWindow.document.write(`
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <title>Label - ${item.item_code}</title>
-        <style>
-          @page { size: 110mm 28mm; margin: 0; }
-          body {
-            margin: 0;
-            padding: 2mm;
-            font-family: Arial, sans-serif;
-            width: 110mm;
-            height: 28mm;
-            box-sizing: border-box;
-          }
-          .label-container {
-            display: grid;
-            grid-template-columns: 1fr 1fr 1fr;
-            grid-template-rows: repeat(3, 1fr);
-            gap: 1mm;
-            height: 100%;
-            font-size: 9pt;
-          }
-          .cell {
-            border: 1px solid #000;
-            padding: 1.5mm;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-          }
-          .label {
-            font-weight: bold;
-            margin-right: 2mm;
-          }
-          .particulars-cell {
-            grid-column: 1 / -1;
-          }
-          @media print {
-            body {
-              print-color-adjust: exact;
-              -webkit-print-color-adjust: exact;
-            }
-          }
-        </style>
-      </head>
-      <body>
-        <div class="label-container">
-          <div class="cell">
-            <span class="label">Sno:</span>
-            <span>${item.item_code.slice(-3)}</span>
-          </div>
-          <div class="cell">
-            <span class="label">Item Code:</span>
-            <span>${item.item_code}</span>
-          </div>
-          <div class="cell">
-            <span class="label">Barcode:</span>
-            <span>${item.item_code}</span>
-          </div>
-          
-          <div class="cell particulars-cell">
-            <span class="label">Particulars:</span>
-            <span>${item.particulars || '-'}</span>
-          </div>
-          
-          <div class="cell">
-            <span class="label">Price:</span>
-            <span>${priceLabel}</span>
-          </div>
-          <div class="cell">
-            <span class="label">Size:</span>
-            <span>${item.size || '-'}</span>
-          </div>
-          <div class="cell">
-            <span class="label">Weight:</span>
-            <span>${weightLabel}</span>
-          </div>
-        </div>
-        <script>
-          window.onload = () => {
-            window.print();
-            setTimeout(() => window.close(), 500);
-          };
-        </script>
-      </body>
-      </html>
-    `);
+    if (error) {
+      toast({
+        title: "Error deleting item",
+        description: error.message,
+        variant: "destructive",
+      });
+      return;
+    }
 
-    printWindow.document.close();
+    toast({
+      title: "Item deleted",
+      description: `${itemCode} has been deleted successfully`,
+    });
+
+    loadItems(); // Refresh the list
   };
 
   return (
@@ -471,13 +397,35 @@ const Inventory = () => {
                       >
                         <Pencil className="w-4 h-4" />
                       </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => handlePrintLabel(item)}
-                      >
-                        <Printer className="w-4 h-4" />
-                      </Button>
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Delete Item</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              Are you sure you want to delete <strong>{item.item_code}</strong> - {item.item_name}?
+                              <br />
+                              This action cannot be undone.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                            <AlertDialogAction
+                              onClick={() => handleDeleteItem(item.id, item.item_code)}
+                              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                            >
+                              Delete
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
                     </div>
                   </TableCell>
                 </TableRow>
