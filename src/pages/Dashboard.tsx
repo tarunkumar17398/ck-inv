@@ -4,7 +4,19 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Plus, Package, LogOut, Search, Upload, BarChart3, DollarSign, Calendar as CalendarIcon, FileSpreadsheet, TrendingUp, FileCheck } from "lucide-react";
+import {
+  Plus,
+  Package,
+  LogOut,
+  Search,
+  Upload,
+  BarChart3,
+  DollarSign,
+  Calendar as CalendarIcon,
+  FileSpreadsheet,
+  TrendingUp,
+  FileCheck,
+} from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
@@ -41,10 +53,7 @@ const Dashboard = () => {
   }, [navigate]);
 
   const loadCategories = async () => {
-    const { data: categoriesData, error: catError } = await supabase
-      .from("categories")
-      .select("*")
-      .order("name");
+    const { data: categoriesData, error: catError } = await supabase.from("categories").select("*").order("name");
 
     if (catError) {
       toast({
@@ -199,7 +208,6 @@ const Dashboard = () => {
       <main className="container mx-auto px-4 py-8">
         <div className="mb-8">
           <h2 className="text-3xl font-bold text-foreground mb-2">Dashboard</h2>
-          <p className="text-muted-foreground">Manage your art & handicraft inventory</p>
         </div>
 
         <div className="flex flex-col sm:flex-row gap-4 mb-8">
@@ -255,57 +263,29 @@ const Dashboard = () => {
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <Button
-            variant="outline"
-            className="h-24 text-lg"
-            onClick={() => navigate("/inventory")}
-          >
+          <Button variant="outline" className="h-24 text-lg" onClick={() => navigate("/inventory")}>
             <Package className="w-6 h-6 mr-2" />
             View All Inventory
           </Button>
-          <Button
-            variant="outline"
-            className="h-24 text-lg"
-            onClick={() => navigate("/sold-items")}
-          >
+          <Button variant="outline" className="h-24 text-lg" onClick={() => navigate("/sold-items")}>
             Sold Items History
           </Button>
-          <Button
-            variant="outline"
-            className="h-24 text-lg"
-            onClick={() => navigate("/categories")}
-          >
+          <Button variant="outline" className="h-24 text-lg" onClick={() => navigate("/categories")}>
             Manage Categories
           </Button>
-          <Button
-            variant="outline"
-            className="h-24 text-lg"
-            onClick={() => navigate("/reports")}
-          >
+          <Button variant="outline" className="h-24 text-lg" onClick={() => navigate("/reports")}>
             <BarChart3 className="w-6 h-6 mr-2" />
             Business Reports
           </Button>
-          <Button
-            variant="outline"
-            className="h-24 text-lg"
-            onClick={() => navigate("/export-data")}
-          >
+          <Button variant="outline" className="h-24 text-lg" onClick={() => navigate("/export-data")}>
             <FileSpreadsheet className="w-6 h-6 mr-2" />
             Export to Access
           </Button>
-          <Button
-            variant="outline"
-            className="h-24 text-lg"
-            onClick={() => navigate("/stock-analysis")}
-          >
+          <Button variant="outline" className="h-24 text-lg" onClick={() => navigate("/stock-analysis")}>
             <TrendingUp className="w-6 h-6 mr-2" />
             Stock Analysis
           </Button>
-          <Button
-            variant="outline"
-            className="h-24 text-lg"
-            onClick={() => navigate("/stock-print")}
-          >
+          <Button variant="outline" className="h-24 text-lg" onClick={() => navigate("/stock-print")}>
             <FileCheck className="w-6 h-6 mr-2" />
             Stock Print
           </Button>
@@ -324,10 +304,7 @@ const Dashboard = () => {
                 <PopoverTrigger asChild>
                   <Button
                     variant="outline"
-                    className={cn(
-                      "w-full justify-start text-left font-normal",
-                      !salesDate && "text-muted-foreground"
-                    )}
+                    className={cn("w-full justify-start text-left font-normal", !salesDate && "text-muted-foreground")}
                   >
                     <CalendarIcon className="mr-2 h-4 w-4" />
                     {salesDate ? format(salesDate, "PPP") : <span>Pick a date</span>}
@@ -357,11 +334,7 @@ const Dashboard = () => {
                   placeholder="Enter item code"
                   onKeyDown={(e) => e.key === "Enter" && handleFetchItemDetails()}
                 />
-                <Button 
-                  onClick={handleFetchItemDetails} 
-                  disabled={loading || !itemCode.trim()}
-                  variant="secondary"
-                >
+                <Button onClick={handleFetchItemDetails} disabled={loading || !itemCode.trim()} variant="secondary">
                   Fetch
                 </Button>
               </div>
@@ -395,11 +368,7 @@ const Dashboard = () => {
                   />
                 </div>
 
-                <Button 
-                  onClick={handleSalesEntry} 
-                  className="w-full"
-                  disabled={loading || !soldPrice}
-                >
+                <Button onClick={handleSalesEntry} className="w-full" disabled={loading || !soldPrice}>
                   {loading ? "Recording..." : "Record Sale"}
                 </Button>
               </>
