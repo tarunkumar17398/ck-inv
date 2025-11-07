@@ -96,6 +96,7 @@ export type Database = {
           item_name: string
           particulars: string | null
           price: number | null
+          rfid_epc: string | null
           size: string | null
           sold_date: string | null
           sold_price: number | null
@@ -112,6 +113,7 @@ export type Database = {
           item_name: string
           particulars?: string | null
           price?: number | null
+          rfid_epc?: string | null
           size?: string | null
           sold_date?: string | null
           sold_price?: number | null
@@ -128,6 +130,7 @@ export type Database = {
           item_name?: string
           particulars?: string | null
           price?: number | null
+          rfid_epc?: string | null
           size?: string | null
           sold_date?: string | null
           sold_price?: number | null

@@ -25,6 +25,7 @@ const AddItem = () => {
   const [weight, setWeight] = useState("");
   const [price, setPrice] = useState("");
   const [costPrice, setCostPrice] = useState("");
+  const [rfidEpc, setRfidEpc] = useState("");
   const [loading, setLoading] = useState(false);
   const [generatedItemCode, setGeneratedItemCode] = useState("");
   const [selectedCategoryPrefix, setSelectedCategoryPrefix] = useState("");
@@ -183,6 +184,7 @@ const AddItem = () => {
         color_code: null,
         price: price ? parseFloat(price) : null,
         cost_price: costPrice ? parseFloat(costPrice) : null,
+        rfid_epc: rfidEpc || null,
         status: "in_stock",
       });
 
@@ -293,6 +295,15 @@ const AddItem = () => {
                   onChange={(e) => setItemName(e.target.value)}
                   placeholder="Enter item name"
                   required
+                />
+              </div>
+
+              <div>
+                <Label>RFID EPC</Label>
+                <Input
+                  value={rfidEpc}
+                  onChange={(e) => setRfidEpc(e.target.value)}
+                  placeholder="e.g., A7B700000000000000023303"
                 />
               </div>
 
