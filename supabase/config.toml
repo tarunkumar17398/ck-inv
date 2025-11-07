@@ -1,1 +1,4 @@
 project_id = "eucxuuepfsrbgktlqyqx"
+
+[functions.rfid-export]
+verify_jwt = false
