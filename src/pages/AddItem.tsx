@@ -17,9 +17,15 @@ interface Category {
   prefix: string;
 }
 
+interface Subcategory {
+  id: string;
+  subcategory_name: string;
+}
+
 const AddItem = () => {
   const [categories, setCategories] = useState<Category[]>([]);
   const [selectedCategory, setSelectedCategory] = useState("");
+  const [selectedCategoryName, setSelectedCategoryName] = useState("");
   const [itemName, setItemName] = useState("");
   const [size, setSize] = useState("");
   const [weight, setWeight] = useState("");
@@ -29,6 +35,11 @@ const AddItem = () => {
   const [loading, setLoading] = useState(false);
   const [generatedItemCode, setGeneratedItemCode] = useState("");
   const [selectedCategoryPrefix, setSelectedCategoryPrefix] = useState("");
+  
+  const [subcategories, setSubcategories] = useState<Subcategory[]>([]);
+  const [selectedSubcategory, setSelectedSubcategory] = useState("");
+  const [newSubcategoryName, setNewSubcategoryName] = useState("");
+  const [showAddSubcategory, setShowAddSubcategory] = useState(false);
   
   const [newCategoryName, setNewCategoryName] = useState("");
   const [newCategoryPrefix, setNewCategoryPrefix] = useState("");
@@ -66,20 +77,19 @@ const AddItem = () => {
   const handleCategoryChange = async (categoryId: string) => {
     setSelectedCategory(categoryId);
     
-    // Find category to check if it's Panchaloha Idols
+    // Find category
     const category = categories.find(cat => cat.id === categoryId);
-    
-    // Redirect to Panchaloha management if Panchaloha Idols is selected
-    if (category?.name === "Panchaloha Idols") {
-      toast({
-        title: "Panchaloha Idols Category",
-        description: "Please use the Panchaloha management page to add subcategories and pieces",
-      });
-      navigate("/panchaloha-subcategories");
-      return;
-    }
-    
+    setSelectedCategoryName(category?.name || "");
     setSelectedCategoryPrefix(category?.prefix || "");
+    
+    // If Panchaloha Idols, load subcategories
+    if (category?.name === "Panchaloha Idols") {
+      loadSubcategories(categoryId);
+      setSelectedSubcategory("");
+    } else {
+      setSubcategories([]);
+      setSelectedSubcategory("");
+    }
     
     // Generate preview item code when category is selected
     if (categoryId) {
@@ -97,6 +107,64 @@ const AddItem = () => {
     } else {
       setGeneratedItemCode("");
     }
+  };
+
+  const loadSubcategories = async (categoryId: string) => {
+    const { data, error } = await supabase
+      .from("subcategories")
+      .select("*")
+      .eq("category_id", categoryId)
+      .order("subcategory_name");
+
+    if (error) {
+      toast({
+        title: "Error loading subcategories",
+        description: error.message,
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setSubcategories(data || []);
+  };
+
+  const handleAddSubcategory = async () => {
+    if (!newSubcategoryName.trim()) {
+      toast({
+        title: "Missing field",
+        description: "Please enter a subcategory name",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const { data, error } = await supabase
+      .from("subcategories")
+      .insert({
+        category_id: selectedCategory,
+        subcategory_name: newSubcategoryName.trim(),
+      })
+      .select()
+      .single();
+
+    if (error) {
+      toast({
+        title: "Error adding subcategory",
+        description: error.message,
+        variant: "destructive",
+      });
+      return;
+    }
+
+    toast({
+      title: "Subcategory added",
+      description: `${newSubcategoryName} added successfully`,
+    });
+
+    setNewSubcategoryName("");
+    setShowAddSubcategory(false);
+    loadSubcategories(selectedCategory);
+    setSelectedSubcategory(data.id);
   };
 
   const handleWeightChange = (value: string) => {
@@ -164,6 +232,57 @@ const AddItem = () => {
       return;
     }
 
+    // Check if Panchaloha Idols - require subcategory
+    if (selectedCategoryName === "Panchaloha Idols") {
+      if (!selectedSubcategory) {
+        toast({
+          title: "Missing subcategory",
+          description: "Please select a subcategory for Panchaloha Idols",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // For Panchaloha Idols, create piece
+      setLoading(true);
+      try {
+        // Generate piece code
+        const { data: codeData, error: codeError } = await supabase
+          .rpc("generate_next_item_code", { p_category_id: selectedCategory });
+
+        if (codeError) throw codeError;
+
+        const pieceCode = codeData;
+
+        // Insert piece
+        const { error: insertError } = await supabase.from("item_pieces").insert({
+          subcategory_id: selectedSubcategory,
+          piece_code: pieceCode,
+          status: "available",
+          notes: `${itemName}${size ? ` - Size: ${size}` : ""}${weight ? ` - Weight: ${weight}g` : ""}`,
+        });
+
+        if (insertError) throw insertError;
+
+        toast({
+          title: "Piece added successfully",
+          description: `Piece code: ${pieceCode}`,
+        });
+
+        navigate("/panchaloha-subcategories");
+      } catch (error: any) {
+        toast({
+          title: "Error adding piece",
+          description: error.message,
+          variant: "destructive",
+        });
+      } finally {
+        setLoading(false);
+      }
+      return;
+    }
+
+    // For regular items
     if (!costPrice) {
       toast({
         title: "Missing cost price",
@@ -290,6 +409,54 @@ const AddItem = () => {
                 </div>
               </div>
 
+              {selectedCategoryName === "Panchaloha Idols" && (
+                <div>
+                  <Label>Subcategory *</Label>
+                  <div className="flex gap-2">
+                    <Select value={selectedSubcategory} onValueChange={setSelectedSubcategory}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select subcategory" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {subcategories.map((subcat) => (
+                          <SelectItem key={subcat.id} value={subcat.id}>
+                            {subcat.subcategory_name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <Dialog open={showAddSubcategory} onOpenChange={setShowAddSubcategory}>
+                      <DialogTrigger asChild>
+                        <Button type="button" variant="outline" size="icon">
+                          <Plus className="w-4 h-4" />
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent>
+                        <DialogHeader>
+                          <DialogTitle>Add New Subcategory</DialogTitle>
+                        </DialogHeader>
+                        <div className="space-y-4">
+                          <div>
+                            <Label>Subcategory Name</Label>
+                            <Input
+                              value={newSubcategoryName}
+                              onChange={(e) => setNewSubcategoryName(e.target.value)}
+                              placeholder="e.g., Nataraja, Lakshmi"
+                            />
+                          </div>
+                          <Button onClick={handleAddSubcategory} className="w-full">
+                            Add Subcategory
+                          </Button>
+                        </div>
+                      </DialogContent>
+                    </Dialog>
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Select the design/model type for this piece
+                  </p>
+                </div>
+              )}
+
               {generatedItemCode && (
                 <div className="bg-muted p-4 rounded-lg">
                   <Label>Generated Item Code</Label>
@@ -304,19 +471,26 @@ const AddItem = () => {
                 <Input
                   value={itemName}
                   onChange={(e) => setItemName(e.target.value)}
-                  placeholder="Enter item name"
+                  placeholder={selectedCategoryName === "Panchaloha Idols" ? "Enter design details" : "Enter item name"}
                   required
                 />
+                {selectedCategoryName === "Panchaloha Idols" && (
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Enter details like color, special features, etc.
+                  </p>
+                )}
               </div>
 
-              <div>
-                <Label>RFID EPC</Label>
-                <Input
-                  value={rfidEpc}
-                  onChange={(e) => setRfidEpc(e.target.value)}
-                  placeholder="e.g., A7B700000000000000023303"
-                />
-              </div>
+              {selectedCategoryName !== "Panchaloha Idols" && (
+                <div>
+                  <Label>RFID EPC</Label>
+                  <Input
+                    value={rfidEpc}
+                    onChange={(e) => setRfidEpc(e.target.value)}
+                    placeholder="e.g., A7B700000000000000023303"
+                  />
+                </div>
+              )}
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
@@ -343,41 +517,45 @@ const AddItem = () => {
                 </div>
               </div>
 
-              <div>
-                <Label>Cost Price *</Label>
-                <Input
-                  type="number"
-                  step="0.01"
-                  value={costPrice}
-                  onChange={(e) => setCostPrice(e.target.value)}
-                  placeholder={selectedCategoryPrefix === "BR" ? "Auto-calculated from weight" : "Enter cost price"}
-                  required
-                />
-                {selectedCategoryPrefix === "BR" && weight && (
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Auto-calculated: Weight × 1 = ₹{costPrice} (editable)
-                  </p>
-                )}
-              </div>
+              {selectedCategoryName !== "Panchaloha Idols" && (
+                <>
+                  <div>
+                    <Label>Cost Price *</Label>
+                    <Input
+                      type="number"
+                      step="0.01"
+                      value={costPrice}
+                      onChange={(e) => setCostPrice(e.target.value)}
+                      placeholder={selectedCategoryPrefix === "BR" ? "Auto-calculated from weight" : "Enter cost price"}
+                      required
+                    />
+                    {selectedCategoryPrefix === "BR" && weight && (
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Auto-calculated: Weight × 1 = ₹{costPrice} (editable)
+                      </p>
+                    )}
+                  </div>
 
-              <div>
-                <Label>Selling Price</Label>
-                <Input
-                  type="number"
-                  step="0.01"
-                  value={price}
-                  onChange={(e) => setPrice(e.target.value)}
-                  placeholder="0.00"
-                />
-                {price && (
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Label: {formatPriceLabel(price)}
-                  </p>
-                )}
-              </div>
+                  <div>
+                    <Label>Selling Price</Label>
+                    <Input
+                      type="number"
+                      step="0.01"
+                      value={price}
+                      onChange={(e) => setPrice(e.target.value)}
+                      placeholder="0.00"
+                    />
+                    {price && (
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Label: {formatPriceLabel(price)}
+                      </p>
+                    )}
+                  </div>
+                </>
+              )}
 
               <Button type="submit" className="w-full" disabled={loading}>
-                {loading ? "Adding..." : "Add Item"}
+                {loading ? "Adding..." : selectedCategoryName === "Panchaloha Idols" ? "Add Piece" : "Add Item"}
               </Button>
             </form>
           </CardContent>
