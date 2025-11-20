@@ -20,6 +20,7 @@ const BulkImport = () => {
   const [file, setFile] = useState<File | null>(null);
   const [salesFile, setSalesFile] = useState<File | null>(null);
   const [isSalesProcessing, setIsSalesProcessing] = useState(false);
+  const [replaceMode, setReplaceMode] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -69,12 +70,7 @@ const BulkImport = () => {
     setIsProcessing(true);
 
     try {
-      const rows = csvText.trim().split("\n");
-      // Skip header row
-      const dataRows = rows.slice(1);
-      const items = [];
-
-      // Find category
+      // Find category first
       const { data: categoryData } = await supabase
         .from("categories")
         .select("*")
@@ -90,6 +86,33 @@ const BulkImport = () => {
         setIsProcessing(false);
         return;
       }
+
+      // If replace mode is enabled, delete all existing items from this category
+      if (replaceMode) {
+        const { error: deleteError } = await supabase
+          .from("items")
+          .delete()
+          .eq("category_id", selectedCategory);
+
+        if (deleteError) {
+          toast({
+            title: "Delete failed",
+            description: deleteError.message,
+            variant: "destructive",
+          });
+          setIsProcessing(false);
+          return;
+        }
+
+        toast({
+          title: "Existing items cleared",
+          description: `All items from ${categoryData.name} category have been removed`,
+        });
+      }
+
+      const rows = csvText.trim().split("\n");
+      const dataRows = rows.slice(1);
+      const items = [];
 
       for (const row of dataRows) {
         if (!row.trim()) continue;
@@ -444,6 +467,19 @@ const BulkImport = () => {
                       ))}
                     </SelectContent>
                   </Select>
+                </div>
+
+                <div className="flex items-center space-x-2">
+                  <input
+                    type="checkbox"
+                    id="replaceMode"
+                    checked={replaceMode}
+                    onChange={(e) => setReplaceMode(e.target.checked)}
+                    className="h-4 w-4 rounded border-border"
+                  />
+                  <Label htmlFor="replaceMode" className="text-sm cursor-pointer">
+                    Replace existing items (delete all items from selected category before importing)
+                  </Label>
                 </div>
 
                 <div>
