@@ -16,6 +16,8 @@ import ExportData from "./pages/ExportData";
 import StockAnalysis from "./pages/StockAnalysis";
 import StockPrint from "./pages/StockPrint";
 import BackupRestore from "./pages/BackupRestore";
+import SubcategoryManagement from "./pages/SubcategoryManagement";
+import PiecesManagement from "./pages/PiecesManagement";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -40,6 +42,8 @@ const App = () => (
           <Route path="/stock-analysis" element={<StockAnalysis />} />
           <Route path="/stock-print" element={<StockPrint />} />
           <Route path="/backup-restore" element={<BackupRestore />} />
+          <Route path="/panchaloha-subcategories" element={<SubcategoryManagement />} />
+          <Route path="/panchaloha-pieces" element={<PiecesManagement />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>

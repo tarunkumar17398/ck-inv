@@ -66,8 +66,19 @@ const AddItem = () => {
   const handleCategoryChange = async (categoryId: string) => {
     setSelectedCategory(categoryId);
     
-    // Find category prefix for BR auto-calculation
+    // Find category to check if it's Panchaloha Idols
     const category = categories.find(cat => cat.id === categoryId);
+    
+    // Redirect to Panchaloha management if Panchaloha Idols is selected
+    if (category?.name === "Panchaloha Idols") {
+      toast({
+        title: "Panchaloha Idols Category",
+        description: "Please use the Panchaloha management page to add subcategories and pieces",
+      });
+      navigate("/panchaloha-subcategories");
+      return;
+    }
+    
     setSelectedCategoryPrefix(category?.prefix || "");
     
     // Generate preview item code when category is selected

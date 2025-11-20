@@ -294,6 +294,10 @@ const Dashboard = () => {
             <Database className="w-6 h-6 mr-2" />
             Backup & Restore
           </Button>
+          <Button variant="outline" className="h-24 text-lg bg-gradient-to-r from-amber-500/10 to-yellow-500/10 border-amber-500/30" onClick={() => navigate("/panchaloha-subcategories")}>
+            <Package className="w-6 h-6 mr-2" />
+            Panchaloha Idols
+          </Button>
         </div>
       </main>
 
