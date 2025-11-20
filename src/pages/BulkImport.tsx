@@ -350,31 +350,31 @@ const BulkImport = () => {
 
         if (!categoryData) continue;
 
-        // Parse date - handle multiple formats
+        // Parse date - expecting DD-MM-YYYY format (e.g., 17-11-2025)
         let soldDate = new Date();
         if (dateStr && dateStr.trim()) {
-          // Try parsing as-is first
-          let parsedDate = new Date(dateStr);
+          // Split by common delimiters
+          const parts = dateStr.trim().split(/[\/\-\.]/);
           
-          // If that fails, try common formats: DD/MM/YYYY, DD-MM-YYYY, etc.
-          if (isNaN(parsedDate.getTime())) {
-            // Try DD/MM/YYYY or DD-MM-YYYY format
-            const parts = dateStr.split(/[\/\-\.]/);
-            if (parts.length === 3) {
-              // Assume DD/MM/YYYY format (common in many regions)
-              const day = parseInt(parts[0]);
-              const month = parseInt(parts[1]) - 1; // JS months are 0-indexed
-              const year = parseInt(parts[2]);
-              parsedDate = new Date(year, month, day);
+          if (parts.length === 3) {
+            const day = parseInt(parts[0], 10);
+            const month = parseInt(parts[1], 10) - 1; // JS months are 0-indexed (0-11)
+            const year = parseInt(parts[2], 10);
+            
+            // Create date at noon to avoid timezone issues
+            const parsedDate = new Date(year, month, day, 12, 0, 0);
+            
+            if (!isNaN(parsedDate.getTime())) {
+              soldDate = parsedDate;
+              console.log(`✓ Parsed date: "${dateStr}" → ${soldDate.toLocaleDateString()}`);
+            } else {
+              console.warn(`✗ Invalid date values: day=${day}, month=${month}, year=${year}`);
             }
-          }
-          
-          if (!isNaN(parsedDate.getTime())) {
-            soldDate = parsedDate;
-            console.log(`Parsed date for ${itemCode}: ${dateStr} -> ${soldDate.toISOString()}`);
           } else {
-            console.warn(`Could not parse date: ${dateStr} for item ${itemCode}, using current date`);
+            console.warn(`✗ Could not split date "${dateStr}" into 3 parts, got ${parts.length} parts`);
           }
+        } else {
+          console.warn(`✗ No date provided for item ${itemCode}`);
         }
 
         // Check if item already exists
