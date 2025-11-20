@@ -3,11 +3,14 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { ArrowLeft, Calendar as CalendarIcon } from "lucide-react";
+import { ArrowLeft, Calendar as CalendarIcon, Pencil } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 
 interface SoldItem {
@@ -25,6 +28,13 @@ interface SoldItem {
 const SoldItems = () => {
   const [items, setItems] = useState<SoldItem[]>([]);
   const [editingDateId, setEditingDateId] = useState<string | null>(null);
+  const [editingItem, setEditingItem] = useState<SoldItem | null>(null);
+  const [editForm, setEditForm] = useState({
+    particulars: "",
+    size: "",
+    weight: "",
+    sold_price: "",
+  });
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -79,6 +89,79 @@ const SoldItems = () => {
     loadSoldItems();
   };
 
+  const openEditDialog = (item: SoldItem) => {
+    setEditingItem(item);
+    setEditForm({
+      particulars: item.particulars || "",
+      size: item.size || "",
+      weight: item.weight || "",
+      sold_price: item.sold_price?.toString() || "",
+    });
+  };
+
+  const closeEditDialog = () => {
+    setEditingItem(null);
+    setEditForm({
+      particulars: "",
+      size: "",
+      weight: "",
+      sold_price: "",
+    });
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editingItem) return;
+
+    // Validate sold price
+    const soldPrice = parseFloat(editForm.sold_price);
+    if (editForm.sold_price && (isNaN(soldPrice) || soldPrice < 0)) {
+      toast({
+        title: "Invalid Price",
+        description: "Please enter a valid positive number for sold price",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Validate weight
+    const weight = editForm.weight.trim();
+    if (weight && isNaN(parseFloat(weight))) {
+      toast({
+        title: "Invalid Weight",
+        description: "Please enter a valid number for weight",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const { error } = await supabase
+      .from("items")
+      .update({
+        particulars: editForm.particulars.trim() || null,
+        size: editForm.size.trim() || null,
+        weight: weight || null,
+        sold_price: editForm.sold_price ? soldPrice : null,
+      })
+      .eq("id", editingItem.id);
+
+    if (error) {
+      toast({
+        title: "Error updating item",
+        description: error.message,
+        variant: "destructive",
+      });
+      return;
+    }
+
+    toast({
+      title: "Item updated",
+      description: "Item details have been updated successfully",
+    });
+
+    closeEditDialog();
+    loadSoldItems();
+  };
+
   return (
     <div className="min-h-screen bg-background">
       <header className="border-b bg-card shadow-sm">
@@ -104,6 +187,7 @@ const SoldItems = () => {
                 <TableHead>Weight</TableHead>
                 <TableHead>Sold Price</TableHead>
                 <TableHead>Sold Date</TableHead>
+                <TableHead>Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -144,6 +228,15 @@ const SoldItems = () => {
                       </PopoverContent>
                     </Popover>
                   </TableCell>
+                  <TableCell>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => openEditDialog(item)}
+                    >
+                      <Pencil className="w-4 h-4" />
+                    </Button>
+                  </TableCell>
                 </TableRow>
               ))}
             </TableBody>
@@ -154,6 +247,66 @@ const SoldItems = () => {
             </div>
           )}
         </div>
+
+        {/* Edit Dialog */}
+        <Dialog open={!!editingItem} onOpenChange={closeEditDialog}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Edit Sold Item</DialogTitle>
+            </DialogHeader>
+            <div className="grid gap-4 py-4">
+              <div className="grid gap-2">
+                <Label htmlFor="edit-particulars">Particulars</Label>
+                <Input
+                  id="edit-particulars"
+                  value={editForm.particulars}
+                  onChange={(e) => setEditForm({ ...editForm, particulars: e.target.value })}
+                  maxLength={200}
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="edit-size">Size</Label>
+                <Input
+                  id="edit-size"
+                  value={editForm.size}
+                  onChange={(e) => setEditForm({ ...editForm, size: e.target.value })}
+                  maxLength={50}
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="edit-weight">Weight (g)</Label>
+                <Input
+                  id="edit-weight"
+                  type="text"
+                  value={editForm.weight}
+                  onChange={(e) => setEditForm({ ...editForm, weight: e.target.value })}
+                  placeholder="e.g., 100"
+                  maxLength={20}
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="edit-sold-price">Sold Price (₹)</Label>
+                <Input
+                  id="edit-sold-price"
+                  type="number"
+                  value={editForm.sold_price}
+                  onChange={(e) => setEditForm({ ...editForm, sold_price: e.target.value })}
+                  placeholder="e.g., 5000"
+                  min="0"
+                  step="0.01"
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={closeEditDialog}>
+                Cancel
+              </Button>
+              <Button onClick={handleSaveEdit}>
+                Save Changes
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </main>
     </div>
   );
