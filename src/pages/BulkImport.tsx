@@ -367,18 +367,16 @@ const BulkImport = () => {
           .maybeSingle();
 
         if (existingItem) {
-          // Update existing item if it's in stock
-          if (existingItem.status === "in_stock") {
-            await supabase
-              .from("items")
-              .update({
-                status: "sold",
-                sold_price: parseFloat(sellingPrice),
-                sold_date: soldDate.toISOString()
-              })
-              .eq("id", existingItem.id);
-            successCount++;
-          }
+          // Update existing item with sold date and price
+          await supabase
+            .from("items")
+            .update({
+              status: "sold",
+              sold_price: parseFloat(sellingPrice),
+              sold_date: soldDate.toISOString()
+            })
+            .eq("id", existingItem.id);
+          successCount++;
         } else {
           // Create new sold item
           const { error: insertError } = await supabase
