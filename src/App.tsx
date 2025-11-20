@@ -3,6 +3,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { OfflineIndicator } from "@/components/OfflineIndicator";
 import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
 import AddItem from "./pages/AddItem";
@@ -14,6 +15,7 @@ import Reports from "./pages/Reports";
 import ExportData from "./pages/ExportData";
 import StockAnalysis from "./pages/StockAnalysis";
 import StockPrint from "./pages/StockPrint";
+import BackupRestore from "./pages/BackupRestore";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -23,6 +25,7 @@ const App = () => (
     <TooltipProvider>
       <Toaster />
       <Sonner />
+      <OfflineIndicator />
       <BrowserRouter>
         <Routes>
           <Route path="/" element={<Login />} />
@@ -36,6 +39,7 @@ const App = () => (
           <Route path="/export-data" element={<ExportData />} />
           <Route path="/stock-analysis" element={<StockAnalysis />} />
           <Route path="/stock-print" element={<StockPrint />} />
+          <Route path="/backup-restore" element={<BackupRestore />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
