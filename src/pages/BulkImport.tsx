@@ -317,14 +317,26 @@ const BulkImport = () => {
     setIsSalesProcessing(true);
 
     try {
+      // Step 1: Delete all old sold items
+      console.log("Deleting all old sold items...");
+      const { error: deleteError } = await supabase
+        .from("items")
+        .delete()
+        .eq("status", "sold");
+
+      if (deleteError) {
+        console.error("Error deleting old sold items:", deleteError);
+        throw deleteError;
+      }
+
       const rows = csvText.trim().split("\n");
       const dataRows = rows.slice(1); // Skip header
       
-      let successCount = 0;
-      let createdCount = 0;
       let skippedCount = 0;
       const skipReasons: string[] = [];
+      const itemsToInsert: any[] = [];
 
+      // Step 2: Parse CSV and prepare items for bulk insert
       for (const row of dataRows) {
         if (!row.trim()) {
           skippedCount++;
@@ -361,7 +373,7 @@ const BulkImport = () => {
         // Find category by prefix
         const { data: categoryData } = await supabase
           .from("categories")
-          .select("*")
+          .select("id")
           .eq("prefix", categoryPrefix)
           .maybeSingle();
 
@@ -374,72 +386,52 @@ const BulkImport = () => {
         // Parse date - expecting DD-MM-YYYY format (e.g., 17-11-2025)
         let soldDate = new Date();
         if (dateStr && dateStr.trim()) {
-          // Split by common delimiters
           const parts = dateStr.trim().split(/[\/\-\.]/);
           
           if (parts.length === 3) {
             const day = parseInt(parts[0], 10);
-            const month = parseInt(parts[1], 10) - 1; // JS months are 0-indexed (0-11)
+            const month = parseInt(parts[1], 10) - 1;
             const year = parseInt(parts[2], 10);
-            
-            // Create date at noon to avoid timezone issues
             const parsedDate = new Date(year, month, day, 12, 0, 0);
             
             if (!isNaN(parsedDate.getTime())) {
               soldDate = parsedDate;
-              console.log(`✓ Parsed date: "${dateStr}" → ${soldDate.toLocaleDateString()}`);
-            } else {
-              console.warn(`✗ Invalid date values: day=${day}, month=${month}, year=${year}`);
             }
-          } else {
-            console.warn(`✗ Could not split date "${dateStr}" into 3 parts, got ${parts.length} parts`);
-          }
-        } else {
-          console.warn(`✗ No date provided for item ${itemCode}`);
-        }
-
-        // Check if item already exists
-        const { data: existingItem } = await supabase
-          .from("items")
-          .select("*")
-          .eq("item_code", itemCode.toUpperCase())
-          .maybeSingle();
-
-        if (existingItem) {
-          // Update existing item with sold date and price
-          await supabase
-            .from("items")
-            .update({
-              status: "sold",
-              sold_price: parseFloat(sellingPrice),
-              sold_date: soldDate.toISOString()
-            })
-            .eq("id", existingItem.id);
-          successCount++;
-        } else {
-          // Create new sold item
-          const { error: insertError } = await supabase
-            .from("items")
-            .insert({
-              item_code: itemCode.toUpperCase(),
-              category_id: categoryData.id,
-              item_name: particulars,
-              particulars: particulars,
-              size: size || null,
-              weight: weight && weight.toLowerCase() !== 'na' ? weight : null,
-              cost_price: costPrice && costPrice.toLowerCase() !== 'na' ? parseFloat(costPrice) : null,
-              status: "sold",
-              sold_price: parseFloat(sellingPrice),
-              sold_date: soldDate.toISOString()
-            });
-
-          if (!insertError) {
-            createdCount++;
           }
         }
+
+        // Prepare item for bulk insert
+        itemsToInsert.push({
+          item_code: itemCode.toUpperCase(),
+          category_id: categoryData.id,
+          item_name: particulars,
+          particulars: particulars,
+          size: size || null,
+          weight: weight && weight.toLowerCase() !== 'na' ? weight : null,
+          cost_price: costPrice && costPrice.toLowerCase() !== 'na' ? parseFloat(costPrice) : null,
+          status: "sold",
+          sold_price: parseFloat(sellingPrice),
+          sold_date: soldDate.toISOString()
+        });
       }
 
-      const message = `✅ ${successCount + createdCount} items processed (${successCount} updated, ${createdCount} created). ${skippedCount > 0 ? `⚠️ ${skippedCount} skipped.` : ''}`;
+      // Step 3: Bulk insert all items
+      let successCount = 0;
+      if (itemsToInsert.length > 0) {
+        console.log(`Inserting ${itemsToInsert.length} sold items...`);
+        const { error: insertError } = await supabase
+          .from("items")
+          .insert(itemsToInsert);
+
+        if (insertError) {
+          console.error("Error inserting items:", insertError);
+          throw insertError;
+        }
+        
+        successCount = itemsToInsert.length;
+      }
+
+      const message = `✅ ${successCount} sold items imported. ${skippedCount > 0 ? `⚠️ ${skippedCount} skipped.` : ''}`;
       
       console.log('=== SALES IMPORT SUMMARY ===');
       console.log(message);
