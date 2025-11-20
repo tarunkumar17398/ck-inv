@@ -286,7 +286,7 @@ const Reports = () => {
             <h1 className="text-3xl font-bold text-foreground mb-2">Business Reports</h1>
             <p className="text-muted-foreground">Sales analytics and performance metrics</p>
           </div>
-          <Calendar className="w-8 h-8 text-muted-foreground" />
+          <CalendarIcon className="w-8 h-8 text-muted-foreground" />
         </div>
 
         {/* Filters */}
@@ -342,7 +342,7 @@ const Reports = () => {
                       selected={customStartDate}
                       onSelect={setCustomStartDate}
                       initialFocus
-                      className="pointer-events-auto"
+                      className={cn("p-3 pointer-events-auto")}
                     />
                   </PopoverContent>
                 </Popover>
@@ -369,7 +369,7 @@ const Reports = () => {
                       selected={customEndDate}
                       onSelect={setCustomEndDate}
                       initialFocus
-                      className="pointer-events-auto"
+                      className={cn("p-3 pointer-events-auto")}
                     />
                   </PopoverContent>
                 </Popover>
