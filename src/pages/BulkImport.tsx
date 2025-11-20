@@ -322,22 +322,39 @@ const BulkImport = () => {
       
       let successCount = 0;
       let createdCount = 0;
+      let skippedCount = 0;
+      const skipReasons: string[] = [];
 
       for (const row of dataRows) {
-        if (!row.trim()) continue;
+        if (!row.trim()) {
+          skippedCount++;
+          continue;
+        }
 
         // Parse CSV: ITEM CODE, PARTICULARS, SIZE, Weight, Cost Price, Selling Price, Date
         const cells = row.split(",").map(c => c.trim().replace(/^"|"$/g, ''));
         
-        if (cells.length < 7) continue;
+        if (cells.length < 7) {
+          skippedCount++;
+          skipReasons.push(`Row with ${cells.length} columns (need 7): ${row.substring(0, 50)}...`);
+          continue;
+        }
 
         const [itemCode, particulars, size, weight, costPrice, sellingPrice, dateStr] = cells;
         
-        if (!itemCode || !particulars || !sellingPrice) continue;
+        if (!itemCode || !particulars || !sellingPrice) {
+          skippedCount++;
+          skipReasons.push(`Missing data - Code: ${itemCode}, Particulars: ${particulars}, Price: ${sellingPrice}`);
+          continue;
+        }
 
         // Extract category prefix from item code (e.g., CKBR0001 -> BR)
         const prefixMatch = itemCode.match(/^CK([A-Z]+)/i);
-        if (!prefixMatch) continue;
+        if (!prefixMatch) {
+          skippedCount++;
+          skipReasons.push(`Invalid item code format: ${itemCode}`);
+          continue;
+        }
         
         const categoryPrefix = prefixMatch[1].toUpperCase();
 
@@ -348,7 +365,11 @@ const BulkImport = () => {
           .eq("prefix", categoryPrefix)
           .maybeSingle();
 
-        if (!categoryData) continue;
+        if (!categoryData) {
+          skippedCount++;
+          skipReasons.push(`Category not found for prefix: ${categoryPrefix} (item: ${itemCode})`);
+          continue;
+        }
 
         // Parse date - expecting DD-MM-YYYY format (e.g., 17-11-2025)
         let soldDate = new Date();
@@ -418,9 +439,18 @@ const BulkImport = () => {
         }
       }
 
+      const message = `✅ ${successCount + createdCount} items processed (${successCount} updated, ${createdCount} created). ${skippedCount > 0 ? `⚠️ ${skippedCount} skipped.` : ''}`;
+      
+      console.log('=== SALES IMPORT SUMMARY ===');
+      console.log(message);
+      if (skipReasons.length > 0) {
+        console.log('\n=== SKIP REASONS ===');
+        skipReasons.forEach((reason, i) => console.log(`${i + 1}. ${reason}`));
+      }
+
       toast({
         title: "Sales Import Complete",
-        description: `Successfully processed ${successCount + createdCount} items (${successCount} updated, ${createdCount} created as sold).`,
+        description: message,
       });
 
     } catch (error: any) {
