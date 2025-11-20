@@ -87,6 +87,7 @@ export type Database = {
       }
       item_pieces: {
         Row: {
+          cost_price: number | null
           created_at: string
           date_added: string
           date_sold: string | null
@@ -97,6 +98,7 @@ export type Database = {
           subcategory_id: string
         }
         Insert: {
+          cost_price?: number | null
           created_at?: string
           date_added?: string
           date_sold?: string | null
@@ -107,6 +109,7 @@ export type Database = {
           subcategory_id: string
         }
         Update: {
+          cost_price?: number | null
           created_at?: string
           date_added?: string
           date_sold?: string | null

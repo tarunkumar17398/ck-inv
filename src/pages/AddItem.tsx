@@ -254,11 +254,12 @@ const AddItem = () => {
 
         const pieceCode = codeData;
 
-        // Insert piece
+        // Insert piece with cost_price
         const { error: insertError } = await supabase.from("item_pieces").insert({
           subcategory_id: selectedSubcategory,
           piece_code: pieceCode,
           status: "available",
+          cost_price: costPrice ? parseFloat(costPrice) : null,
           notes: `${itemName}${size ? ` - Size: ${size}` : ""}${weight ? ` - Weight: ${weight}g` : ""}`,
         });
 
@@ -517,41 +518,39 @@ const AddItem = () => {
                 </div>
               </div>
 
-              {selectedCategoryName !== "Panchaloha Idols" && (
-                <>
-                  <div>
-                    <Label>Cost Price *</Label>
-                    <Input
-                      type="number"
-                      step="0.01"
-                      value={costPrice}
-                      onChange={(e) => setCostPrice(e.target.value)}
-                      placeholder={selectedCategoryPrefix === "BR" ? "Auto-calculated from weight" : "Enter cost price"}
-                      required
-                    />
-                    {selectedCategoryPrefix === "BR" && weight && (
-                      <p className="text-xs text-muted-foreground mt-1">
-                        Auto-calculated: Weight × 1 = ₹{costPrice} (editable)
-                      </p>
-                    )}
-                  </div>
+              <div>
+                <Label>Cost Price {selectedCategoryName !== "Panchaloha Idols" && "*"}</Label>
+                <Input
+                  type="number"
+                  step="0.01"
+                  value={costPrice}
+                  onChange={(e) => setCostPrice(e.target.value)}
+                  placeholder={selectedCategoryPrefix === "BR" ? "Auto-calculated from weight" : "Enter cost price"}
+                  required={selectedCategoryName !== "Panchaloha Idols" && selectedCategoryPrefix !== "BR"}
+                />
+                {selectedCategoryPrefix === "BR" && weight && (
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Auto-calculated: Weight × 1 = ₹{costPrice} (editable)
+                  </p>
+                )}
+              </div>
 
-                  <div>
-                    <Label>Selling Price</Label>
-                    <Input
-                      type="number"
-                      step="0.01"
-                      value={price}
-                      onChange={(e) => setPrice(e.target.value)}
-                      placeholder="0.00"
-                    />
-                    {price && (
-                      <p className="text-xs text-muted-foreground mt-1">
-                        Label: {formatPriceLabel(price)}
-                      </p>
-                    )}
-                  </div>
-                </>
+              {selectedCategoryName !== "Panchaloha Idols" && (
+                <div>
+                  <Label>Selling Price</Label>
+                  <Input
+                    type="number"
+                    step="0.01"
+                    value={price}
+                    onChange={(e) => setPrice(e.target.value)}
+                    placeholder="0.00"
+                  />
+                  {price && (
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Label: {formatPriceLabel(price)}
+                    </p>
+                  )}
+                </div>
               )}
 
               <Button type="submit" className="w-full" disabled={loading}>
