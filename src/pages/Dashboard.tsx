@@ -16,6 +16,7 @@ import {
   FileSpreadsheet,
   TrendingUp,
   FileCheck,
+  Database,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -288,6 +289,10 @@ const Dashboard = () => {
           <Button variant="outline" className="h-24 text-lg" onClick={() => navigate("/stock-print")}>
             <FileCheck className="w-6 h-6 mr-2" />
             Stock Print
+          </Button>
+          <Button variant="outline" className="h-24 text-lg" onClick={() => navigate("/backup-restore")}>
+            <Database className="w-6 h-6 mr-2" />
+            Backup & Restore
           </Button>
         </div>
       </main>
