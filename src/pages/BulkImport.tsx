@@ -298,8 +298,7 @@ const BulkImport = () => {
       const dataRows = rows.slice(1); // Skip header
       
       let successCount = 0;
-      let notFoundCount = 0;
-      const notFoundItems: string[] = [];
+      let createdCount = 0;
 
       for (const row of dataRows) {
         if (!row.trim()) continue;
@@ -309,61 +308,81 @@ const BulkImport = () => {
         
         if (cells.length < 7) continue;
 
-        const [itemCode, , , , , sellingPrice, dateStr] = cells;
+        const [itemCode, particulars, size, weight, costPrice, sellingPrice, dateStr] = cells;
         
-        if (!itemCode || !sellingPrice) continue;
+        if (!itemCode || !particulars || !sellingPrice) continue;
 
-        // Find item by item code
-        const { data: item, error: findError } = await supabase
-          .from("items")
+        // Extract category prefix from item code (e.g., CKBR0001 -> BR)
+        const prefixMatch = itemCode.match(/^CK([A-Z]+)/i);
+        if (!prefixMatch) continue;
+        
+        const categoryPrefix = prefixMatch[1].toUpperCase();
+
+        // Find category by prefix
+        const { data: categoryData } = await supabase
+          .from("categories")
           .select("*")
-          .eq("item_code", itemCode.toUpperCase())
-          .eq("status", "in_stock")
+          .eq("prefix", categoryPrefix)
           .maybeSingle();
 
-        if (findError || !item) {
-          notFoundCount++;
-          notFoundItems.push(itemCode);
-          continue;
-        }
+        if (!categoryData) continue;
 
-        // Parse date (assuming format like DD/MM/YYYY or YYYY-MM-DD)
+        // Parse date
         let soldDate = new Date();
         if (dateStr) {
-          // Try parsing the date
           const parsedDate = new Date(dateStr);
           if (!isNaN(parsedDate.getTime())) {
             soldDate = parsedDate;
           }
         }
 
-        // Update item as sold
-        const { error: updateError } = await supabase
+        // Check if item already exists
+        const { data: existingItem } = await supabase
           .from("items")
-          .update({
-            status: "sold",
-            sold_price: parseFloat(sellingPrice),
-            sold_date: soldDate.toISOString()
-          })
-          .eq("id", item.id);
+          .select("*")
+          .eq("item_code", itemCode.toUpperCase())
+          .maybeSingle();
 
-        if (!updateError) {
-          successCount++;
+        if (existingItem) {
+          // Update existing item if it's in stock
+          if (existingItem.status === "in_stock") {
+            await supabase
+              .from("items")
+              .update({
+                status: "sold",
+                sold_price: parseFloat(sellingPrice),
+                sold_date: soldDate.toISOString()
+              })
+              .eq("id", existingItem.id);
+            successCount++;
+          }
+        } else {
+          // Create new sold item
+          const { error: insertError } = await supabase
+            .from("items")
+            .insert({
+              item_code: itemCode.toUpperCase(),
+              category_id: categoryData.id,
+              item_name: particulars,
+              particulars: particulars,
+              size: size || null,
+              weight: weight && weight.toLowerCase() !== 'na' ? weight : null,
+              cost_price: costPrice && costPrice.toLowerCase() !== 'na' ? parseFloat(costPrice) : null,
+              status: "sold",
+              sold_price: parseFloat(sellingPrice),
+              sold_date: soldDate.toISOString()
+            });
+
+          if (!insertError) {
+            createdCount++;
+          }
         }
       }
 
       toast({
         title: "Sales Import Complete",
-        description: `Successfully marked ${successCount} items as sold. ${notFoundCount} items not found or already sold.`,
+        description: `Successfully processed ${successCount + createdCount} items (${successCount} updated, ${createdCount} created as sold).`,
       });
-
-      if (notFoundItems.length > 0 && notFoundItems.length <= 10) {
-        toast({
-          title: "Items Not Found",
-          description: `The following items were not found: ${notFoundItems.join(", ")}`,
-          variant: "destructive",
-        });
-      }
 
     } catch (error: any) {
       toast({
@@ -549,11 +568,11 @@ Terracotta	GAJA LAKSHMI	15"x12"	NA`}
               <CardHeader>
                 <CardTitle>Import Sales Data</CardTitle>
                 <CardDescription>
-                  Upload a CSV file with sales data to mark items as sold.
+                  Upload a CSV file with historical sales data. Items will be created as sold records for analysis.
                   <br />
                   <strong>Required format:</strong> ITEM CODE, PARTICULARS, SIZE, Weight, Cost Price, Selling Price, Date
                   <br />
-                  Items will be matched by ITEM CODE and marked as sold with the selling price and date.
+                  If an item code already exists in inventory, it will be updated. Otherwise, a new sold record will be created.
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
@@ -587,10 +606,10 @@ Terracotta	GAJA LAKSHMI	15"x12"	NA`}
                 <div className="bg-muted p-4 rounded-lg space-y-2">
                   <h4 className="font-semibold text-sm">How it works:</h4>
                   <ul className="text-xs text-muted-foreground space-y-1 list-disc list-inside">
-                    <li>Each row must have the item code that exists in your inventory</li>
-                    <li>Only items with status "in_stock" will be updated</li>
-                    <li>Items will be marked as "sold" with the selling price and date</li>
-                    <li>Items not found or already sold will be skipped</li>
+                    <li>Category is automatically detected from item code prefix (BR, IR, TP, WD)</li>
+                    <li>If item code exists in inventory and is "in_stock", it will be marked as sold</li>
+                    <li>If item code doesn't exist, a new sold record will be created for historical data</li>
+                    <li>Perfect for importing historical sales when migrating from Excel</li>
                   </ul>
                 </div>
               </CardContent>
