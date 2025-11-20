@@ -350,12 +350,30 @@ const BulkImport = () => {
 
         if (!categoryData) continue;
 
-        // Parse date
+        // Parse date - handle multiple formats
         let soldDate = new Date();
-        if (dateStr) {
-          const parsedDate = new Date(dateStr);
+        if (dateStr && dateStr.trim()) {
+          // Try parsing as-is first
+          let parsedDate = new Date(dateStr);
+          
+          // If that fails, try common formats: DD/MM/YYYY, DD-MM-YYYY, etc.
+          if (isNaN(parsedDate.getTime())) {
+            // Try DD/MM/YYYY or DD-MM-YYYY format
+            const parts = dateStr.split(/[\/\-\.]/);
+            if (parts.length === 3) {
+              // Assume DD/MM/YYYY format (common in many regions)
+              const day = parseInt(parts[0]);
+              const month = parseInt(parts[1]) - 1; // JS months are 0-indexed
+              const year = parseInt(parts[2]);
+              parsedDate = new Date(year, month, day);
+            }
+          }
+          
           if (!isNaN(parsedDate.getTime())) {
             soldDate = parsedDate;
+            console.log(`Parsed date for ${itemCode}: ${dateStr} -> ${soldDate.toISOString()}`);
+          } else {
+            console.warn(`Could not parse date: ${dateStr} for item ${itemCode}, using current date`);
           }
         }
 
