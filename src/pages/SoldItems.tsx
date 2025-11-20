@@ -16,6 +16,7 @@ interface SoldItem {
   item_name: string;
   particulars: string | null;
   size: string | null;
+  weight: string | null;
   sold_price: number | null;
   sold_date: string | null;
   categories: { name: string; prefix: string };
@@ -98,8 +99,9 @@ const SoldItems = () => {
               <TableRow>
                 <TableHead>Item Code</TableHead>
                 <TableHead>Category</TableHead>
-                <TableHead>Name</TableHead>
                 <TableHead>Particulars</TableHead>
+                <TableHead>Size</TableHead>
+                <TableHead>Weight</TableHead>
                 <TableHead>Sold Price</TableHead>
                 <TableHead>Sold Date</TableHead>
               </TableRow>
@@ -109,8 +111,9 @@ const SoldItems = () => {
                 <TableRow key={item.id}>
                   <TableCell className="font-mono font-semibold">{item.item_code}</TableCell>
                   <TableCell>{item.categories.name}</TableCell>
-                  <TableCell>{item.item_name}</TableCell>
-                  <TableCell className="text-muted-foreground">{item.particulars || "-"}</TableCell>
+                  <TableCell>{item.particulars || "-"}</TableCell>
+                  <TableCell>{item.size || "-"}</TableCell>
+                  <TableCell>{item.weight ? `${item.weight}g` : "-"}</TableCell>
                   <TableCell className="font-semibold">
                     {item.sold_price ? `₹${item.sold_price}` : "-"}
                   </TableCell>
