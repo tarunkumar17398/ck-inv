@@ -18,6 +18,8 @@ const BulkImport = () => {
   const [selectedCategory, setSelectedCategory] = useState("");
   const [categories, setCategories] = useState<any[]>([]);
   const [file, setFile] = useState<File | null>(null);
+  const [salesFile, setSalesFile] = useState<File | null>(null);
+  const [isSalesProcessing, setIsSalesProcessing] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -273,6 +275,107 @@ const BulkImport = () => {
     setIsProcessing(false);
   };
 
+  const handleSalesFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const uploadedFile = event.target.files?.[0];
+    if (!uploadedFile) return;
+
+    setSalesFile(uploadedFile);
+    const reader = new FileReader();
+    
+    reader.onload = async (e) => {
+      const text = e.target?.result as string;
+      await processSalesData(text);
+    };
+    
+    reader.readAsText(uploadedFile);
+  };
+
+  const processSalesData = async (csvText: string) => {
+    setIsSalesProcessing(true);
+
+    try {
+      const rows = csvText.trim().split("\n");
+      const dataRows = rows.slice(1); // Skip header
+      
+      let successCount = 0;
+      let notFoundCount = 0;
+      const notFoundItems: string[] = [];
+
+      for (const row of dataRows) {
+        if (!row.trim()) continue;
+
+        // Parse CSV: ITEM CODE, PARTICULARS, SIZE, Weight, Cost Price, Selling Price, Date
+        const cells = row.split(",").map(c => c.trim().replace(/^"|"$/g, ''));
+        
+        if (cells.length < 7) continue;
+
+        const [itemCode, , , , , sellingPrice, dateStr] = cells;
+        
+        if (!itemCode || !sellingPrice) continue;
+
+        // Find item by item code
+        const { data: item, error: findError } = await supabase
+          .from("items")
+          .select("*")
+          .eq("item_code", itemCode.toUpperCase())
+          .eq("status", "in_stock")
+          .maybeSingle();
+
+        if (findError || !item) {
+          notFoundCount++;
+          notFoundItems.push(itemCode);
+          continue;
+        }
+
+        // Parse date (assuming format like DD/MM/YYYY or YYYY-MM-DD)
+        let soldDate = new Date();
+        if (dateStr) {
+          // Try parsing the date
+          const parsedDate = new Date(dateStr);
+          if (!isNaN(parsedDate.getTime())) {
+            soldDate = parsedDate;
+          }
+        }
+
+        // Update item as sold
+        const { error: updateError } = await supabase
+          .from("items")
+          .update({
+            status: "sold",
+            sold_price: parseFloat(sellingPrice),
+            sold_date: soldDate.toISOString()
+          })
+          .eq("id", item.id);
+
+        if (!updateError) {
+          successCount++;
+        }
+      }
+
+      toast({
+        title: "Sales Import Complete",
+        description: `Successfully marked ${successCount} items as sold. ${notFoundCount} items not found or already sold.`,
+      });
+
+      if (notFoundItems.length > 0 && notFoundItems.length <= 10) {
+        toast({
+          title: "Items Not Found",
+          description: `The following items were not found: ${notFoundItems.join(", ")}`,
+          variant: "destructive",
+        });
+      }
+
+    } catch (error: any) {
+      toast({
+        title: "Error processing sales data",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+
+    setIsSalesProcessing(false);
+  };
+
   return (
     <div className="min-h-screen bg-background">
       <header className="border-b bg-card shadow-sm">
@@ -288,9 +391,10 @@ const BulkImport = () => {
         <h1 className="text-3xl font-bold text-foreground mb-6">Bulk Import Items</h1>
 
         <Tabs defaultValue="file" className="w-full">
-          <TabsList className="grid w-full grid-cols-2">
+          <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="file">Upload CSV File</TabsTrigger>
             <TabsTrigger value="paste">Paste Data</TabsTrigger>
+            <TabsTrigger value="sales">Import Sales</TabsTrigger>
           </TabsList>
 
           {/* CSV File Upload Tab */}
@@ -435,6 +539,60 @@ Terracotta	GAJA LAKSHMI	15"x12"	NA`}
                   <br />
                   Make sure Category names match exactly: Brass, Iron, Wood, Terracotta, or Gift Items
                 </p>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Sales Import Tab */}
+          <TabsContent value="sales">
+            <Card>
+              <CardHeader>
+                <CardTitle>Import Sales Data</CardTitle>
+                <CardDescription>
+                  Upload a CSV file with sales data to mark items as sold.
+                  <br />
+                  <strong>Required format:</strong> ITEM CODE, PARTICULARS, SIZE, Weight, Cost Price, Selling Price, Date
+                  <br />
+                  Items will be matched by ITEM CODE and marked as sold with the selling price and date.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div>
+                  <Label>Upload Sales CSV File</Label>
+                  <div className="flex gap-2 items-center">
+                    <Input
+                      type="file"
+                      accept=".csv"
+                      onChange={handleSalesFileUpload}
+                      disabled={isSalesProcessing}
+                      className="flex-1"
+                    />
+                    {salesFile && (
+                      <span className="text-sm text-muted-foreground">
+                        {salesFile.name}
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-2">
+                    CSV must include: ITEM CODE, PARTICULARS, SIZE, Weight, Cost Price, Selling Price, Date
+                  </p>
+                </div>
+
+                {isSalesProcessing && (
+                  <div className="text-center py-4">
+                    <p className="text-sm text-muted-foreground">Processing sales data...</p>
+                  </div>
+                )}
+
+                <div className="bg-muted p-4 rounded-lg space-y-2">
+                  <h4 className="font-semibold text-sm">How it works:</h4>
+                  <ul className="text-xs text-muted-foreground space-y-1 list-disc list-inside">
+                    <li>Each row must have the item code that exists in your inventory</li>
+                    <li>Only items with status "in_stock" will be updated</li>
+                    <li>Items will be marked as "sold" with the selling price and date</li>
+                    <li>Items not found or already sold will be skipped</li>
+                  </ul>
+                </div>
               </CardContent>
             </Card>
           </TabsContent>
