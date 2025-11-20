@@ -330,6 +330,14 @@ const BulkImport = () => {
       }
       console.log("✓ Old sold items deleted");
 
+      // Pre-load all categories for faster lookup
+      const { data: allCategories } = await supabase
+        .from("categories")
+        .select("id, prefix");
+      
+      const categoryMap = new Map(allCategories?.map(c => [c.prefix, c.id]) || []);
+      console.log(`Loaded ${categoryMap.size} categories`);
+
       const rows = csvText.trim().split("\n");
       const dataRows = rows.slice(1); // Skip header
       
@@ -364,8 +372,9 @@ const BulkImport = () => {
           continue;
         }
 
-        // Extract category prefix from item code (e.g., CKBR0001 -> BR)
-        const prefixMatch = itemCode.match(/^CK([A-Z]+)/i);
+        // Extract category prefix - take first 2 letters after CK
+        // This handles CKBR, CKBRA, CKBRB, CKBRC all as BR
+        const prefixMatch = itemCode.match(/^CK([A-Z]{2})/i);
         if (!prefixMatch) {
           skippedCount++;
           skipReasons.push(`Row ${i + 1}: Invalid item code format: ${itemCode}`);
@@ -374,14 +383,9 @@ const BulkImport = () => {
         
         const categoryPrefix = prefixMatch[1].toUpperCase();
 
-        // Find category by prefix
-        const { data: categoryData } = await supabase
-          .from("categories")
-          .select("id")
-          .eq("prefix", categoryPrefix)
-          .maybeSingle();
-
-        if (!categoryData) {
+        // Fast category lookup from pre-loaded map
+        const categoryId = categoryMap.get(categoryPrefix);
+        if (!categoryId) {
           skippedCount++;
           skipReasons.push(`Row ${i + 1}: Category not found for prefix: ${categoryPrefix}`);
           continue;
@@ -407,7 +411,7 @@ const BulkImport = () => {
         // Prepare item for bulk insert
         itemsToInsert.push({
           item_code: itemCode.toUpperCase(),
-          category_id: categoryData.id,
+          category_id: categoryId,
           item_name: particulars,
           particulars: particulars,
           size: size || null,
