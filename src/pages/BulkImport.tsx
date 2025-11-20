@@ -328,16 +328,20 @@ const BulkImport = () => {
         console.error("Error deleting old sold items:", deleteError);
         throw deleteError;
       }
+      console.log("✓ Old sold items deleted");
 
       const rows = csvText.trim().split("\n");
       const dataRows = rows.slice(1); // Skip header
+      
+      console.log(`Processing ${dataRows.length} rows...`);
       
       let skippedCount = 0;
       const skipReasons: string[] = [];
       const itemsToInsert: any[] = [];
 
       // Step 2: Parse CSV and prepare items for bulk insert
-      for (const row of dataRows) {
+      for (let i = 0; i < dataRows.length; i++) {
+        const row = dataRows[i];
         if (!row.trim()) {
           skippedCount++;
           continue;
@@ -348,7 +352,7 @@ const BulkImport = () => {
         
         if (cells.length < 7) {
           skippedCount++;
-          skipReasons.push(`Row with ${cells.length} columns (need 7): ${row.substring(0, 50)}...`);
+          skipReasons.push(`Row ${i + 1}: ${cells.length} columns (need 7)`);
           continue;
         }
 
@@ -356,7 +360,7 @@ const BulkImport = () => {
         
         if (!itemCode || !particulars || !sellingPrice) {
           skippedCount++;
-          skipReasons.push(`Missing data - Code: ${itemCode}, Particulars: ${particulars}, Price: ${sellingPrice}`);
+          skipReasons.push(`Row ${i + 1}: Missing required data`);
           continue;
         }
 
@@ -364,7 +368,7 @@ const BulkImport = () => {
         const prefixMatch = itemCode.match(/^CK([A-Z]+)/i);
         if (!prefixMatch) {
           skippedCount++;
-          skipReasons.push(`Invalid item code format: ${itemCode}`);
+          skipReasons.push(`Row ${i + 1}: Invalid item code format: ${itemCode}`);
           continue;
         }
         
@@ -379,7 +383,7 @@ const BulkImport = () => {
 
         if (!categoryData) {
           skippedCount++;
-          skipReasons.push(`Category not found for prefix: ${categoryPrefix} (item: ${itemCode})`);
+          skipReasons.push(`Row ${i + 1}: Category not found for prefix: ${categoryPrefix}`);
           continue;
         }
 
@@ -413,22 +417,36 @@ const BulkImport = () => {
           sold_price: parseFloat(sellingPrice),
           sold_date: soldDate.toISOString()
         });
+
+        // Log progress every 50 items
+        if ((i + 1) % 50 === 0) {
+          console.log(`Processed ${i + 1}/${dataRows.length} rows...`);
+        }
       }
+
+      console.log(`Parsed ${itemsToInsert.length} items for insertion`);
 
       // Step 3: Bulk insert all items
       let successCount = 0;
       if (itemsToInsert.length > 0) {
         console.log(`Inserting ${itemsToInsert.length} sold items...`);
-        const { error: insertError } = await supabase
+        const { data, error: insertError } = await supabase
           .from("items")
-          .insert(itemsToInsert);
+          .insert(itemsToInsert)
+          .select();
 
         if (insertError) {
           console.error("Error inserting items:", insertError);
+          toast({
+            title: "Insert Error",
+            description: insertError.message,
+            variant: "destructive",
+          });
           throw insertError;
         }
         
-        successCount = itemsToInsert.length;
+        successCount = data?.length || itemsToInsert.length;
+        console.log(`✓ Successfully inserted ${successCount} items`);
       }
 
       const message = `✅ ${successCount} sold items imported. ${skippedCount > 0 ? `⚠️ ${skippedCount} skipped.` : ''}`;
@@ -436,8 +454,11 @@ const BulkImport = () => {
       console.log('=== SALES IMPORT SUMMARY ===');
       console.log(message);
       if (skipReasons.length > 0) {
-        console.log('\n=== SKIP REASONS ===');
-        skipReasons.forEach((reason, i) => console.log(`${i + 1}. ${reason}`));
+        console.log('\n=== SKIP REASONS (First 20) ===');
+        skipReasons.slice(0, 20).forEach((reason, i) => console.log(`${i + 1}. ${reason}`));
+        if (skipReasons.length > 20) {
+          console.log(`... and ${skipReasons.length - 20} more`);
+        }
       }
 
       toast({
@@ -446,6 +467,7 @@ const BulkImport = () => {
       });
 
     } catch (error: any) {
+      console.error("Sales import error:", error);
       toast({
         title: "Error processing sales data",
         description: error.message,
