@@ -54,23 +54,57 @@ const ExportData = () => {
         startDate = new Date(now.setHours(0, 0, 0, 0));
     }
 
-    const { data, error } = await supabase
+    // Fetch regular items
+    const { data: regularItems, error: itemsError } = await supabase
       .from("items")
       .select("*, categories(name, prefix)")
       .eq("status", "in_stock")
-      .gte("created_at", startDate.toISOString())
-      .order("created_at", { ascending: false });
+      .gte("created_at", startDate.toISOString());
 
-    if (error) {
+    if (itemsError) {
       toast({
         title: "Error loading items",
-        description: error.message,
+        description: itemsError.message,
         variant: "destructive",
       });
       return;
     }
 
-    setItems(data || []);
+    // Fetch Panchaloha pieces
+    const { data: pieces, error: piecesError } = await supabase
+      .from("item_pieces")
+      .select("*, subcategories(subcategory_name, categories(name, prefix))")
+      .gte("date_added", startDate.toISOString());
+
+    if (piecesError) {
+      toast({
+        title: "Error loading pieces",
+        description: piecesError.message,
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Transform pieces to match Item interface
+    const transformedPieces = pieces?.map((piece: any) => ({
+      id: piece.id,
+      item_code: piece.piece_code,
+      item_name: piece.subcategories?.subcategory_name || "",
+      particulars: piece.notes,
+      size: null,
+      weight: null,
+      color_code: null,
+      price: piece.cost_price,
+      created_at: piece.date_added,
+      categories: piece.subcategories?.categories || { name: "Panchaloha Idols", prefix: "PI" }
+    })) || [];
+
+    // Combine and sort by created_at (latest first)
+    const combined = [...(regularItems || []), ...transformedPieces].sort((a, b) => 
+      new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+    );
+
+    setItems(combined);
   };
 
   const copyTableToClipboard = () => {
@@ -108,31 +142,79 @@ const ExportData = () => {
 
   const handleBackupAllData = async () => {
     // Fetch all items (both in-stock and sold)
-    const { data: allItems, error } = await supabase
+    const { data: allItems, error: itemsError } = await supabase
       .from("items")
-      .select("*, categories(name, prefix)")
-      .order("created_at", { ascending: false });
+      .select("*, categories(name, prefix)");
 
-    if (error) {
+    if (itemsError) {
       toast({
-        title: "Error fetching data",
-        description: error.message,
+        title: "Error fetching items",
+        description: itemsError.message,
         variant: "destructive",
       });
       return;
     }
 
+    // Fetch all Panchaloha pieces
+    const { data: allPieces, error: piecesError } = await supabase
+      .from("item_pieces")
+      .select("*, subcategories(subcategory_name, categories(name, prefix))");
+
+    if (piecesError) {
+      toast({
+        title: "Error fetching pieces",
+        description: piecesError.message,
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Transform pieces to match export format
+    const transformedPieces = allPieces?.map((piece: any) => ({
+      item_code: piece.piece_code,
+      item_name: piece.subcategories?.subcategory_name || "",
+      category: piece.subcategories?.categories?.name || "Panchaloha Idols",
+      size: "",
+      weight: "",
+      cost_price: piece.cost_price || "",
+      selling_price: "",
+      sold_price: "",
+      status: piece.status,
+      created_at: piece.date_added,
+      sold_date: piece.date_sold || ""
+    })) || [];
+
+    // Transform regular items
+    const transformedItems = allItems?.map(item => ({
+      item_code: item.item_code,
+      item_name: item.item_name,
+      category: item.categories?.name || "",
+      size: item.size || "",
+      weight: item.weight || "",
+      cost_price: item.cost_price || "",
+      selling_price: item.price || "",
+      sold_price: item.sold_price || "",
+      status: item.status,
+      created_at: item.created_at,
+      sold_date: item.sold_date || ""
+    })) || [];
+
+    // Combine and sort by created_at (latest first)
+    const combined = [...transformedItems, ...transformedPieces].sort((a, b) => 
+      new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+    );
+
     // Create CSV content
     const headers = ["Item Code", "Item Name", "Category", "Size", "Weight", "Cost Price", "Selling Price", "Sold Price", "Status", "Created Date", "Sold Date"];
-    const rows = allItems?.map(item => [
+    const rows = combined.map(item => [
       item.item_code,
-      item.item_name || "",
-      item.categories?.name || "",
-      item.size || "",
-      item.weight || "",
-      item.cost_price || "",
-      item.price || "",
-      item.sold_price || "",
+      item.item_name,
+      item.category,
+      item.size,
+      item.weight,
+      item.cost_price,
+      item.selling_price,
+      item.sold_price,
       item.status,
       format(new Date(item.created_at), "yyyy-MM-dd"),
       item.sold_date ? format(new Date(item.sold_date), "yyyy-MM-dd") : ""
