@@ -13,19 +13,26 @@ const Login = () => {
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (pin.length !== 6) {
+    if (pin.length !== 4) {
       toast({
         title: "Invalid PIN",
-        description: "Please enter a 6-digit PIN",
+        description: "Please enter a 4-digit PIN",
         variant: "destructive",
       });
       return;
     }
 
-    // For demo, accept any 6-digit PIN
-    // In production, verify against hashed PIN in database
-    sessionStorage.setItem("admin_logged_in", "true");
-    navigate("/dashboard");
+    // Check against correct PIN
+    if (pin === "1718") {
+      sessionStorage.setItem("admin_logged_in", "true");
+      navigate("/dashboard");
+    } else {
+      toast({
+        title: "Incorrect PIN",
+        description: "Please enter the correct PIN",
+        variant: "destructive",
+      });
+    }
   };
 
   return (
@@ -50,10 +57,10 @@ const Login = () => {
               <Input
                 type="password"
                 inputMode="numeric"
-                maxLength={6}
+                maxLength={4}
                 value={pin}
                 onChange={(e) => setPin(e.target.value.replace(/\D/g, ""))}
-                placeholder="Enter 6-digit PIN"
+                placeholder="Enter 4-digit PIN"
                 className="text-center text-2xl tracking-widest"
               />
             </div>
