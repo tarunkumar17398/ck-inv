@@ -3,9 +3,12 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Calendar as CalendarIcon } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { cn } from "@/lib/utils";
 
 interface SoldItem {
   id: string;
@@ -20,6 +23,7 @@ interface SoldItem {
 
 const SoldItems = () => {
   const [items, setItems] = useState<SoldItem[]>([]);
+  const [editingDateId, setEditingDateId] = useState<string | null>(null);
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -48,6 +52,30 @@ const SoldItems = () => {
     }
 
     setItems(data || []);
+  };
+
+  const updateSoldDate = async (itemId: string, newDate: Date) => {
+    const { error } = await supabase
+      .from("items")
+      .update({ sold_date: newDate.toISOString() })
+      .eq("id", itemId);
+
+    if (error) {
+      toast({
+        title: "Error updating date",
+        description: error.message,
+        variant: "destructive",
+      });
+      return;
+    }
+
+    toast({
+      title: "Date updated",
+      description: "Sold date has been updated successfully",
+    });
+
+    setEditingDateId(null);
+    loadSoldItems();
   };
 
   return (
@@ -86,10 +114,32 @@ const SoldItems = () => {
                   <TableCell className="font-semibold">
                     {item.sold_price ? `₹${item.sold_price}` : "-"}
                   </TableCell>
-                  <TableCell className="text-muted-foreground">
-                    {item.sold_date
-                      ? format(new Date(item.sold_date), "MMM dd, yyyy HH:mm")
-                      : "-"}
+                  <TableCell>
+                    <Popover open={editingDateId === item.id} onOpenChange={(open) => setEditingDateId(open ? item.id : null)}>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          className={cn(
+                            "justify-start text-left font-normal p-2 h-auto",
+                            !item.sold_date && "text-muted-foreground"
+                          )}
+                        >
+                          <CalendarIcon className="mr-2 h-4 w-4" />
+                          {item.sold_date
+                            ? format(new Date(item.sold_date), "MMM dd, yyyy")
+                            : "Set date"}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <Calendar
+                          mode="single"
+                          selected={item.sold_date ? new Date(item.sold_date) : undefined}
+                          onSelect={(date) => date && updateSoldDate(item.id, date)}
+                          initialFocus
+                          className={cn("p-3 pointer-events-auto")}
+                        />
+                      </PopoverContent>
+                    </Popover>
                   </TableCell>
                 </TableRow>
               ))}
