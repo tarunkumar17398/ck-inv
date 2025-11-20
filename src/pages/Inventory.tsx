@@ -23,6 +23,7 @@ interface Item {
   color_code: string | null;
   price: number | null;
   cost_price: number | null;
+  rfid_epc: string | null;
   category_id: string;
   categories: { name: string; prefix: string };
 }
@@ -52,6 +53,7 @@ const Inventory = () => {
     weight: "",
     price: "",
     cost_price: "",
+    rfid_epc: "",
   });
   
   const navigate = useNavigate();
@@ -143,6 +145,7 @@ const Inventory = () => {
       weight: item.weight || "",
       price: item.price?.toString() || "",
       cost_price: item.cost_price?.toString() || "",
+      rfid_epc: item.rfid_epc || "",
     });
     setEditDialogOpen(true);
   };
@@ -159,6 +162,7 @@ const Inventory = () => {
         weight: editFormData.weight || null,
         price: editFormData.price ? parseFloat(editFormData.price) : null,
         cost_price: editFormData.cost_price ? parseFloat(editFormData.cost_price) : null,
+        rfid_epc: editFormData.rfid_epc || null,
       })
       .eq("id", editingItem.id);
 
@@ -524,6 +528,17 @@ const Inventory = () => {
                       setEditFormData({ ...editFormData, price: e.target.value })
                     }
                     placeholder="Enter selling price"
+                  />
+                </div>
+
+                <div>
+                  <Label>RFID EPC</Label>
+                  <Input
+                    value={editFormData.rfid_epc}
+                    onChange={(e) =>
+                      setEditFormData({ ...editFormData, rfid_epc: e.target.value })
+                    }
+                    placeholder="e.g., A7B700000000000000023303"
                   />
                 </div>
 
