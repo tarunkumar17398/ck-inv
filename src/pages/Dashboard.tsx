@@ -256,9 +256,9 @@ const Dashboard = () => {
             <Plus className="w-4 h-4 mr-2" />
             Add Item
           </Button>
-          <Button onClick={() => navigate("/bulk-import")} variant="outline">
-            <Upload className="w-4 h-4 mr-2" />
-            Bulk Import
+          <Button onClick={() => navigate("/data-importer")} variant="secondary">
+            <Database className="w-4 h-4 mr-2" />
+            Import CSV Data
           </Button>
           <Button onClick={() => setSalesDialogOpen(true)} variant="default">
             <DollarSign className="w-4 h-4 mr-2" />
