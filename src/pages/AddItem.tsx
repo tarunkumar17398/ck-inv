@@ -7,9 +7,12 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { ArrowLeft, Plus } from "lucide-react";
+import { ArrowLeft, Plus, Check, ChevronsUpDown } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { formatPriceLabel, formatWeightLabel } from "@/lib/utils";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { cn } from "@/lib/utils";
 
 interface Category {
   id: string;
@@ -41,6 +44,7 @@ const AddItem = () => {
   const [selectedSubcategory, setSelectedSubcategory] = useState("");
   const [newSubcategoryName, setNewSubcategoryName] = useState("");
   const [showAddSubcategory, setShowAddSubcategory] = useState(false);
+  const [subcategoryOpen, setSubcategoryOpen] = useState(false);
   
   const [newCategoryName, setNewCategoryName] = useState("");
   const [newCategoryPrefix, setNewCategoryPrefix] = useState("");
@@ -92,19 +96,69 @@ const AddItem = () => {
       setSelectedSubcategory("");
     }
     
-    // Generate preview item code when category is selected
-    if (categoryId) {
-      const { data: codeData, error: codeError } = await supabase
-        .rpc("generate_next_item_code", { p_category_id: categoryId });
+    // Generate preview item code by checking last item (including sold)
+    if (categoryId && category) {
+      try {
+        // Fetch the last item code from items table (including sold items)
+        const { data: lastItem, error: fetchError } = await supabase
+          .from('items')
+          .select('item_code')
+          .eq('category_id', categoryId)
+          .order('item_code', { ascending: false })
+          .limit(1)
+          .maybeSingle();
 
-      if (codeError) {
-        console.error("Error generating item code:", codeError);
+        if (fetchError) throw fetchError;
+
+        let nextCode = "";
+        const prefix = category.prefix;
+
+        if (lastItem && lastItem.item_code) {
+          // Parse the last item code to get the next number
+          const codePattern = /^CK([A-Z]+)([A-Z]?)(\d+)$/;
+          const match = lastItem.item_code.match(codePattern);
+          
+          if (match) {
+            const [, , letter, number] = match;
+            let nextNumber = parseInt(number) + 1;
+            let nextLetter = letter;
+
+            if (letter) {
+              // Has letter series (e.g., CKBRA001)
+              if (nextNumber > 999) {
+                nextLetter = String.fromCharCode(letter.charCodeAt(0) + 1);
+                nextNumber = 1;
+              }
+              nextCode = `CK${prefix}${nextLetter}${String(nextNumber).padStart(3, '0')}`;
+            } else {
+              // No letter series (e.g., CKBR0001)
+              if (nextNumber > 9999) {
+                nextLetter = 'A';
+                nextNumber = 1;
+                nextCode = `CK${prefix}${nextLetter}${String(nextNumber).padStart(3, '0')}`;
+              } else {
+                nextCode = `CK${prefix}${String(nextNumber).padStart(4, '0')}`;
+              }
+            }
+          } else {
+            // Fallback to starting code
+            nextCode = `CK${prefix}0001`;
+          }
+        } else {
+          // No items exist, start with 0001
+          nextCode = `CK${prefix}0001`;
+        }
+
+        setGeneratedItemCode(nextCode);
+      } catch (error) {
+        console.error('Error generating item code:', error);
+        toast({
+          title: "Error",
+          description: "Failed to generate item code",
+          variant: "destructive",
+        });
         setGeneratedItemCode("");
-        return;
       }
-
-      // Show the next available code (the one that will be used)
-      setGeneratedItemCode(codeData);
     } else {
       setGeneratedItemCode("");
     }
@@ -415,28 +469,53 @@ const AddItem = () => {
                 <div>
                   <Label>Subcategory *</Label>
                   <div className="flex gap-2">
-                    <Select 
-                      value={selectedSubcategory} 
-                      onValueChange={(value) => {
-                        setSelectedSubcategory(value);
-                        // Auto-fill cost price from subcategory default_price
-                        const subcat = subcategories.find(s => s.id === value);
-                        if (subcat?.default_price) {
-                          setCostPrice(subcat.default_price.toString());
-                        }
-                      }}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select subcategory" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {subcategories.map((subcat) => (
-                          <SelectItem key={subcat.id} value={subcat.id}>
-                            {subcat.subcategory_name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <Popover open={subcategoryOpen} onOpenChange={setSubcategoryOpen}>
+                      <PopoverTrigger asChild>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          role="combobox"
+                          aria-expanded={subcategoryOpen}
+                          className="flex-1 justify-between"
+                        >
+                          {selectedSubcategory
+                            ? subcategories.find((s) => s.id === selectedSubcategory)?.subcategory_name
+                            : "Search subcategory..."}
+                          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-[400px] p-0" align="start">
+                        <Command>
+                          <CommandInput placeholder="Search subcategory..." />
+                          <CommandList>
+                            <CommandEmpty>No subcategory found.</CommandEmpty>
+                            <CommandGroup>
+                              {subcategories.map((subcategory) => (
+                                <CommandItem
+                                  key={subcategory.id}
+                                  value={subcategory.subcategory_name}
+                                  onSelect={() => {
+                                    setSelectedSubcategory(subcategory.id);
+                                    if (subcategory.default_price) {
+                                      setCostPrice(subcategory.default_price.toString());
+                                    }
+                                    setSubcategoryOpen(false);
+                                  }}
+                                >
+                                  <Check
+                                    className={cn(
+                                      "mr-2 h-4 w-4",
+                                      selectedSubcategory === subcategory.id ? "opacity-100" : "opacity-0"
+                                    )}
+                                  />
+                                  {subcategory.subcategory_name}
+                                </CommandItem>
+                              ))}
+                            </CommandGroup>
+                          </CommandList>
+                        </Command>
+                      </PopoverContent>
+                    </Popover>
                     <Dialog open={showAddSubcategory} onOpenChange={setShowAddSubcategory}>
                       <DialogTrigger asChild>
                         <Button type="button" variant="outline" size="icon">
