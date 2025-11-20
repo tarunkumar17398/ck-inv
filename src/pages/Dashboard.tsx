@@ -67,15 +67,40 @@ const Dashboard = () => {
 
     // Get stock count for each category
     const statsPromises = categoriesData.map(async (cat) => {
-      const { count } = await supabase
-        .from("items")
-        .select("*", { count: "exact", head: true })
-        .eq("category_id", cat.id)
-        .eq("status", "in_stock");
+      let count = 0;
+      
+      // Special handling for Panchaloha Idols - count pieces
+      if (cat.name === "Panchaloha Idols") {
+        // Get all subcategories for this category
+        const { data: subcats } = await supabase
+          .from("subcategories")
+          .select("id")
+          .eq("category_id", cat.id);
+
+        if (subcats && subcats.length > 0) {
+          const subcatIds = subcats.map(s => s.id);
+          const { count: pieceCount } = await supabase
+            .from("item_pieces")
+            .select("*", { count: "exact", head: true })
+            .in("subcategory_id", subcatIds)
+            .eq("status", "available");
+          
+          count = pieceCount || 0;
+        }
+      } else {
+        // Regular items count
+        const { count: itemCount } = await supabase
+          .from("items")
+          .select("*", { count: "exact", head: true })
+          .eq("category_id", cat.id)
+          .eq("status", "in_stock");
+        
+        count = itemCount || 0;
+      }
 
       return {
         ...cat,
-        stock_count: count || 0,
+        stock_count: count,
       };
     });
 
@@ -248,7 +273,14 @@ const Dashboard = () => {
               <Card
                 key={cat.id}
                 className="cursor-pointer hover:shadow-lg transition-shadow"
-                onClick={() => navigate(`/inventory?category=${cat.id}`)}
+                onClick={() => {
+                  // Special handling for Panchaloha Idols
+                  if (cat.name === "Panchaloha Idols") {
+                    navigate("/panchaloha-subcategories");
+                  } else {
+                    navigate(`/inventory?category=${cat.id}`);
+                  }
+                }}
               >
                 <CardHeader className="pb-3">
                   <CardTitle className="text-lg">{cat.name}</CardTitle>
@@ -293,10 +325,6 @@ const Dashboard = () => {
           <Button variant="outline" className="h-24 text-lg" onClick={() => navigate("/backup-restore")}>
             <Database className="w-6 h-6 mr-2" />
             Backup & Restore
-          </Button>
-          <Button variant="outline" className="h-24 text-lg bg-gradient-to-r from-amber-500/10 to-yellow-500/10 border-amber-500/30" onClick={() => navigate("/panchaloha-subcategories")}>
-            <Package className="w-6 h-6 mr-2" />
-            Panchaloha Idols
           </Button>
         </div>
       </main>
