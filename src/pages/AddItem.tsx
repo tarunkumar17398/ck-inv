@@ -114,31 +114,38 @@ const AddItem = () => {
         const prefix = category.prefix;
 
         if (lastItem && lastItem.item_code) {
-          // Parse the last item code to get the next number
-          const codePattern = /^CK([A-Z]+)([A-Z]?)(\d+)$/;
-          const match = lastItem.item_code.match(codePattern);
+          // Parse the last item code using the known prefix
+          // Pattern: CK + PREFIX + optional LETTER + NUMBER
+          const afterPrefix = lastItem.item_code.substring(2 + prefix.length); // Remove "CK" and prefix
           
-          if (match) {
-            const [, , letter, number] = match;
+          // Check if there's a letter series
+          const letterSeriesPattern = /^([A-Z])(\d+)$/;
+          const noLetterPattern = /^(\d+)$/;
+          
+          const letterMatch = afterPrefix.match(letterSeriesPattern);
+          const noLetterMatch = afterPrefix.match(noLetterPattern);
+          
+          if (letterMatch) {
+            // Has letter series (e.g., CKBRA001)
+            const [, letter, number] = letterMatch;
             let nextNumber = parseInt(number) + 1;
             let nextLetter = letter;
 
-            if (letter) {
-              // Has letter series (e.g., CKBRA001)
-              if (nextNumber > 999) {
-                nextLetter = String.fromCharCode(letter.charCodeAt(0) + 1);
-                nextNumber = 1;
-              }
-              nextCode = `CK${prefix}${nextLetter}${String(nextNumber).padStart(3, '0')}`;
+            if (nextNumber > 999) {
+              nextLetter = String.fromCharCode(letter.charCodeAt(0) + 1);
+              nextNumber = 1;
+            }
+            nextCode = `CK${prefix}${nextLetter}${String(nextNumber).padStart(3, '0')}`;
+          } else if (noLetterMatch) {
+            // No letter series (e.g., CKBR0001)
+            const [, number] = noLetterMatch;
+            let nextNumber = parseInt(number) + 1;
+            
+            if (nextNumber > 9999) {
+              // Start letter series
+              nextCode = `CK${prefix}A${String(1).padStart(3, '0')}`;
             } else {
-              // No letter series (e.g., CKBR0001)
-              if (nextNumber > 9999) {
-                nextLetter = 'A';
-                nextNumber = 1;
-                nextCode = `CK${prefix}${nextLetter}${String(nextNumber).padStart(3, '0')}`;
-              } else {
-                nextCode = `CK${prefix}${String(nextNumber).padStart(4, '0')}`;
-              }
+              nextCode = `CK${prefix}${String(nextNumber).padStart(4, '0')}`;
             }
           } else {
             // Fallback to starting code
