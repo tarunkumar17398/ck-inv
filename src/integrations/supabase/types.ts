@@ -195,18 +195,21 @@ export type Database = {
         Row: {
           category_id: string
           created_at: string
+          default_price: number | null
           id: string
           subcategory_name: string
         }
         Insert: {
           category_id: string
           created_at?: string
+          default_price?: number | null
           id?: string
           subcategory_name: string
         }
         Update: {
           category_id?: string
           created_at?: string
+          default_price?: number | null
           id?: string
           subcategory_name?: string
         }

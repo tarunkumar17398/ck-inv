@@ -20,6 +20,7 @@ interface Category {
 interface Subcategory {
   id: string;
   subcategory_name: string;
+  default_price: number | null;
 }
 
 const AddItem = () => {
@@ -414,7 +415,17 @@ const AddItem = () => {
                 <div>
                   <Label>Subcategory *</Label>
                   <div className="flex gap-2">
-                    <Select value={selectedSubcategory} onValueChange={setSelectedSubcategory}>
+                    <Select 
+                      value={selectedSubcategory} 
+                      onValueChange={(value) => {
+                        setSelectedSubcategory(value);
+                        // Auto-fill cost price from subcategory default_price
+                        const subcat = subcategories.find(s => s.id === value);
+                        if (subcat?.default_price) {
+                          setCostPrice(subcat.default_price.toString());
+                        }
+                      }}
+                    >
                       <SelectTrigger>
                         <SelectValue placeholder="Select subcategory" />
                       </SelectTrigger>
