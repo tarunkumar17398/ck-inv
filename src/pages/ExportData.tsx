@@ -24,6 +24,7 @@ interface Item {
 
 const ExportData = () => {
   const [items, setItems] = useState<Item[]>([]);
+  const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
   const [filter, setFilter] = useState("today");
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -107,6 +108,24 @@ const ExportData = () => {
     setItems(combined);
   };
 
+  const toggleItemSelection = (itemId: string) => {
+    const newSelected = new Set(selectedItems);
+    if (newSelected.has(itemId)) {
+      newSelected.delete(itemId);
+    } else {
+      newSelected.add(itemId);
+    }
+    setSelectedItems(newSelected);
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedItems.size === items.length) {
+      setSelectedItems(new Set());
+    } else {
+      setSelectedItems(new Set(items.map(item => item.id)));
+    }
+  };
+
   const copyTableToClipboard = () => {
     const headers = ["ITEM CODE", "ITEM NAME", "SIZE", "Weight (g)", "Weight (CKBR)", "Sno", "Barcode", "Price", "O"];
     const rows = items.map(item => [
@@ -130,6 +149,49 @@ const ExportData = () => {
       toast({
         title: "Copied to clipboard",
         description: "Data copied in Excel/Access format",
+      });
+    }).catch(() => {
+      toast({
+        title: "Copy failed",
+        description: "Please try selecting and copying manually",
+        variant: "destructive",
+      });
+    });
+  };
+
+  const copySelectedToClipboard = () => {
+    if (selectedItems.size === 0) {
+      toast({
+        title: "No items selected",
+        description: "Please select items to copy",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const selectedItemsData = items.filter(item => selectedItems.has(item.id));
+    const headers = ["ITEM CODE", "ITEM NAME", "SIZE", "Weight (g)", "Weight (CKBR)", "Sno", "Barcode", "Price", "O"];
+    const rows = selectedItemsData.map(item => [
+      item.item_code,
+      item.item_name || "",
+      item.size || "",
+      item.weight || "",
+      item.weight ? formatWeightLabel(item.weight) : "",
+      `S.No:`,
+      item.item_code,
+      item.price ? formatPriceLabel(item.price) : "",
+      "O"
+    ]);
+
+    const tsv = [
+      headers.join("\t"),
+      ...rows.map(row => row.join("\t"))
+    ].join("\n");
+
+    navigator.clipboard.writeText(tsv).then(() => {
+      toast({
+        title: "Copied to clipboard",
+        description: `${selectedItems.size} items copied in Excel/Access format`,
       });
     }).catch(() => {
       toast({
@@ -259,14 +321,18 @@ const ExportData = () => {
             <h1 className="text-3xl font-bold text-foreground mb-2">Export & Backup Data</h1>
             <p className="text-muted-foreground">Copy formatted data or create complete backups</p>
           </div>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             <Button onClick={handleBackupAllData} variant="default">
               <Database className="w-4 h-4 mr-2" />
               Backup All Data
             </Button>
             <Button onClick={copyTableToClipboard} variant="outline">
               <Copy className="w-4 h-4 mr-2" />
-              Copy Displayed Data
+              Copy All Displayed
+            </Button>
+            <Button onClick={copySelectedToClipboard} variant="secondary" disabled={selectedItems.size === 0}>
+              <Copy className="w-4 h-4 mr-2" />
+              Copy Selected ({selectedItems.size})
             </Button>
           </div>
         </div>
@@ -292,6 +358,14 @@ const ExportData = () => {
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead className="w-12">
+                  <input
+                    type="checkbox"
+                    checked={selectedItems.size === items.length && items.length > 0}
+                    onChange={toggleSelectAll}
+                    className="cursor-pointer w-4 h-4"
+                  />
+                </TableHead>
                 <TableHead className="font-bold">ITEM CODE</TableHead>
                 <TableHead className="font-bold">ITEM NAME</TableHead>
                 <TableHead className="font-bold">SIZE</TableHead>
@@ -306,6 +380,14 @@ const ExportData = () => {
             <TableBody>
               {items.map((item) => (
                 <TableRow key={item.id} className="font-mono text-sm">
+                  <TableCell>
+                    <input
+                      type="checkbox"
+                      checked={selectedItems.has(item.id)}
+                      onChange={() => toggleItemSelection(item.id)}
+                      className="cursor-pointer w-4 h-4"
+                    />
+                  </TableCell>
                   <TableCell className="font-semibold">{item.item_code}</TableCell>
                   <TableCell>{item.item_name || ""}</TableCell>
                   <TableCell>{item.size || ""}</TableCell>
