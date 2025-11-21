@@ -18,26 +18,65 @@ const RfidApiTest = () => {
     setData(null);
 
     try {
-      console.log("Fetching from API...");
+      console.log("=== STEP 1: Starting API Fetch ===");
+      console.log("URL:", 'https://eucxuuepfsrbgktlqyqx.supabase.co/functions/v1/rfid-export');
+      
       const response = await fetch('https://eucxuuepfsrbgktlqyqx.supabase.co/functions/v1/rfid-export');
       
-      console.log("Response status:", response.status);
-      console.log("Response headers:", Object.fromEntries(response.headers.entries()));
+      console.log("=== STEP 2: Response Received ===");
+      console.log("Status:", response.status);
+      console.log("Status Text:", response.statusText);
+      console.log("OK:", response.ok);
+      console.log("Headers:", Object.fromEntries(response.headers.entries()));
       
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
       
+      console.log("=== STEP 3: Parsing JSON ===");
       const result = await response.json();
-      console.log("API Response:", result);
-      console.log("Item count from API:", result.count);
-      console.log("Data array length:", result.data?.length);
       
-      setData(result);
+      console.log("=== STEP 4: Analyzing Response Structure ===");
+      console.log("Full Response Object:", result);
+      console.log("typeof result:", typeof result);
+      console.log("result.success:", result.success);
+      console.log("result.count:", result.count);
+      console.log("result.data:", result.data ? "EXISTS" : "MISSING");
+      console.log("typeof result.data:", typeof result.data);
+      console.log("Array.isArray(result.data):", Array.isArray(result.data));
+      console.log("result.data.length:", result.data?.length);
+      
+      console.log("=== STEP 5: Checking Data Array ===");
+      if (result.data && result.data.length > 0) {
+        console.log("First item:", result.data[0]);
+        console.log("First item keys:", Object.keys(result.data[0]));
+      }
+      
+      console.log("=== STEP 6: What RFID Scanner Should Do ===");
+      console.log("const items = result.data;  // This gives you the array");
+      console.log("items.length:", result.data?.length);
+      console.log("If items.length is 0, check if you're looking for 'success' field!");
+      
+      setData({
+        ...result,
+        debug: {
+          responseType: typeof result,
+          hasSuccess: 'success' in result,
+          hasCount: 'count' in result,
+          hasData: 'data' in result,
+          dataIsArray: Array.isArray(result.data),
+          dataLength: result.data?.length,
+          firstItem: result.data?.[0],
+          rawJSON: JSON.stringify(result, null, 2)
+        }
+      });
+      
       toast.success(`Successfully loaded ${result.count} items from API`);
       
     } catch (err: any) {
-      console.error("Error fetching from API:", err);
+      console.error("=== ERROR ===");
+      console.error("Error message:", err.message);
+      console.error("Error stack:", err.stack);
       setError(err.message || "Failed to fetch data");
       toast.error("Failed to fetch data from API");
     } finally {
@@ -117,6 +156,66 @@ const RfidApiTest = () => {
                   <span className="font-semibold">Data Array Length:</span>
                   <span className="text-2xl font-bold">{data.data?.length || 0}</span>
                 </div>
+              </CardContent>
+            </Card>
+
+            <Card className="mb-6">
+              <CardHeader>
+                <CardTitle>🔍 Debug Information</CardTitle>
+                <CardDescription>Use this to fix your RFID Scanner App</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="bg-muted p-4 rounded space-y-2">
+                  <p className="font-semibold text-lg">Response Structure:</p>
+                  <div className="grid grid-cols-2 gap-2 text-sm">
+                    <div>Has 'success' field:</div>
+                    <div className="font-mono">{data.debug?.hasSuccess ? "✓ YES" : "✗ NO"}</div>
+                    
+                    <div>Has 'count' field:</div>
+                    <div className="font-mono">{data.debug?.hasCount ? "✓ YES" : "✗ NO"}</div>
+                    
+                    <div>Has 'data' field:</div>
+                    <div className="font-mono">{data.debug?.hasData ? "✓ YES" : "✗ NO"}</div>
+                    
+                    <div>Data is Array:</div>
+                    <div className="font-mono">{data.debug?.dataIsArray ? "✓ YES" : "✗ NO"}</div>
+                    
+                    <div>Data Length:</div>
+                    <div className="font-mono font-bold text-lg">{data.debug?.dataLength}</div>
+                  </div>
+                </div>
+
+                <div className="bg-yellow-50 dark:bg-yellow-950 p-4 rounded border border-yellow-200 dark:border-yellow-800">
+                  <p className="font-semibold text-lg mb-2">⚠️ Fix for RFID Scanner App:</p>
+                  <pre className="text-xs bg-background p-3 rounded overflow-x-auto">
+{`// WRONG - Checking for 'success' field
+if (result.success) {
+  const items = result.data; // This won't work!
+}
+
+// CORRECT - Use data directly
+const response = await fetch(apiUrl);
+const result = await response.json();
+const items = result.data || [];  // Always use result.data
+
+console.log("Items loaded:", items.length);
+// Should show: Items loaded: ${data.count}`}
+                  </pre>
+                </div>
+
+                <div className="bg-muted p-4 rounded">
+                  <p className="font-semibold mb-2">First Item Structure:</p>
+                  <pre className="text-xs bg-background p-3 rounded overflow-x-auto">
+                    {JSON.stringify(data.debug?.firstItem, null, 2)}
+                  </pre>
+                </div>
+
+                <details className="bg-muted p-4 rounded">
+                  <summary className="font-semibold cursor-pointer">View Full Raw JSON Response</summary>
+                  <pre className="text-xs bg-background p-3 rounded overflow-x-auto mt-2 max-h-96">
+                    {data.debug?.rawJSON}
+                  </pre>
+                </details>
               </CardContent>
             </Card>
 
