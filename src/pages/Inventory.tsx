@@ -108,10 +108,11 @@ const Inventory = () => {
       query = query.eq("category_id", categoryFilter);
     }
     
-    // Apply search filter (searches across all items in DB)
-    if (searchQuery.trim()) {
+    // Apply search filter ONLY if searchQuery is not empty
+    if (searchQuery && searchQuery.trim()) {
+      // Search in item_code, item_name only (not in joined table)
       query = query.or(
-        `item_code.ilike.%${searchQuery}%,item_name.ilike.%${searchQuery}%,categories.name.ilike.%${searchQuery}%`
+        `item_code.ilike.%${searchQuery.trim()}%,item_name.ilike.%${searchQuery.trim()}%`
       );
     }
     
@@ -119,6 +120,7 @@ const Inventory = () => {
     const { data, error, count } = await query.range(from, to);
 
     if (error) {
+      console.error("Load items error:", error);
       toast({
         title: "Error loading items",
         description: error.message,
@@ -140,7 +142,7 @@ const Inventory = () => {
     // Check if there are more items to load
     setHasMore((from + newItems.length) < (count || 0));
     
-    console.log(`Loaded ${newItems.length} items. Total: ${isInitialLoad ? newItems.length : items.length + newItems.length} of ${count || 0}`);
+    console.log(`Loaded ${newItems.length} items. Total loaded: ${isInitialLoad ? newItems.length : items.length + newItems.length} of ${count || 0}`);
     loadingState(false);
   };
 
