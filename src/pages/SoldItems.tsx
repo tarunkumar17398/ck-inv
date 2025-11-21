@@ -266,7 +266,7 @@ const SoldItems = () => {
                   <TableCell>{item.categories.name}</TableCell>
                   <TableCell>{item.particulars || "-"}</TableCell>
                   <TableCell>{cleanSizeDisplay(item.size)}</TableCell>
-                  <TableCell>{item.weight ? `${parseFloat(item.weight).toLocaleString()}g` : "-"}</TableCell>
+                  <TableCell>{item.weight ? `${(parseFloat(item.weight) * 1000).toLocaleString()}g` : "-"}</TableCell>
                   <TableCell className="font-semibold">
                     {item.sold_price ? `₹${item.sold_price}` : "-"}
                   </TableCell>
