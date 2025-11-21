@@ -45,6 +45,7 @@ const AddItem = () => {
   const [newSubcategoryName, setNewSubcategoryName] = useState("");
   const [showAddSubcategory, setShowAddSubcategory] = useState(false);
   const [subcategoryOpen, setSubcategoryOpen] = useState(false);
+  const [quantity, setQuantity] = useState(1);
   
   const [newCategoryName, setNewCategoryName] = useState("");
   const [newCategoryPrefix, setNewCategoryPrefix] = useState("");
@@ -278,31 +279,39 @@ const AddItem = () => {
         return;
       }
 
-      // For Panchaloha Idols, create piece
+      // For Panchaloha Idols, create pieces (supports bulk quantity)
       setLoading(true);
       try {
-        // Generate piece code
-        const { data: codeData, error: codeError } = await supabase
-          .rpc("generate_next_item_code", { p_category_id: selectedCategory });
+        const pieceCodes: string[] = [];
 
-        if (codeError) throw codeError;
+        // Loop through quantity and create each piece
+        for (let i = 0; i < quantity; i++) {
+          // Generate unique piece code for each piece
+          const { data: codeData, error: codeError } = await supabase
+            .rpc("generate_next_item_code", { p_category_id: selectedCategory });
 
-        const pieceCode = codeData;
+          if (codeError) throw codeError;
 
-        // Insert piece with cost_price
-        const { error: insertError } = await supabase.from("item_pieces").insert({
-          subcategory_id: selectedSubcategory,
-          piece_code: pieceCode,
-          status: "available",
-          cost_price: costPrice ? parseFloat(costPrice) : null,
-          notes: `${itemName}${size ? ` - Size: ${size}` : ""}${weight ? ` - Weight: ${weight}g` : ""}`,
-        });
+          const pieceCode = codeData;
 
-        if (insertError) throw insertError;
+          // Insert piece with cost_price
+          const { error: insertError } = await supabase.from("item_pieces").insert({
+            subcategory_id: selectedSubcategory,
+            piece_code: pieceCode,
+            status: "available",
+            cost_price: costPrice ? parseFloat(costPrice) : null,
+            notes: `${itemName}${size ? ` - Size: ${size}` : ""}${weight ? ` - Weight: ${weight}g` : ""}`,
+          });
+
+          if (insertError) throw insertError;
+          pieceCodes.push(pieceCode);
+        }
 
         toast({
-          title: "Piece added successfully",
-          description: `Piece code: ${pieceCode}`,
+          title: "Success",
+          description: quantity === 1 
+            ? `Piece code: ${pieceCodes[0]}`
+            : `${quantity} pieces added: ${pieceCodes[0]} to ${pieceCodes[pieceCodes.length - 1]}`,
         });
 
         // Clear form and stay on page for adding next item
@@ -311,6 +320,7 @@ const AddItem = () => {
         setWeight("");
         setCostPrice("");
         setSelectedSubcategory("");
+        setQuantity(1);
         
         // Reload the category to update the item code preview
         handleCategoryChange(selectedCategory);
@@ -613,6 +623,23 @@ const AddItem = () => {
                   </p>
                 )}
               </div>
+
+              {selectedCategoryName === "Panchaloha Idols" && (
+                <div>
+                  <Label>Quantity</Label>
+                  <Input
+                    type="number"
+                    min="1"
+                    max="100"
+                    value={quantity}
+                    onChange={(e) => setQuantity(parseInt(e.target.value) || 1)}
+                    placeholder="Enter quantity"
+                  />
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Number of identical pieces to create with sequential item codes
+                  </p>
+                </div>
+              )}
 
               {selectedCategoryName !== "Panchaloha Idols" && (
                 <div>
