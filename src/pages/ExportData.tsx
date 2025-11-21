@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ArrowLeft, Copy, Filter, Download, Database } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { formatPriceLabel, formatWeightLabel } from "@/lib/utils";
+import { formatPriceLabel, formatWeightLabel, formatSizeWithInches } from "@/lib/utils";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { format } from "date-fns";
 
@@ -92,7 +92,7 @@ const ExportData = () => {
       const sizeMatch = notes.match(/Size:\s*([^-,]+)/i);
       const weightMatch = notes.match(/Weight:\s*(\d+(?:\.\d+)?)\s*g/i);
       return {
-        size: sizeMatch ? sizeMatch[1].trim() : null,
+        size: sizeMatch ? formatSizeWithInches(sizeMatch[1].trim()) : null,
         weight: weightMatch ? weightMatch[1].trim() : null
       };
     };
@@ -251,7 +251,7 @@ const ExportData = () => {
       const sizeMatch = notes.match(/Size:\s*([^-,]+)/i);
       const weightMatch = notes.match(/Weight:\s*(\d+(?:\.\d+)?)\s*g/i);
       return {
-        size: sizeMatch ? sizeMatch[1].trim() : "",
+        size: sizeMatch ? formatSizeWithInches(sizeMatch[1].trim()) || "" : "",
         weight: weightMatch ? weightMatch[1].trim() : ""
       };
     };
