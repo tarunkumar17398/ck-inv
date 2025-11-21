@@ -23,7 +23,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Label } from "@/components/ui/label";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { cn } from "@/lib/utils";
+import { cn, formatSizeWithInches } from "@/lib/utils";
 import { format } from "date-fns";
 
 interface CategoryStats {
@@ -386,9 +386,16 @@ const Dashboard = () => {
                   <p className="text-sm">
                     <span className="font-semibold">Category:</span> {itemDetails.categories.name}
                   </p>
-                  <p className="text-sm">
-                    <span className="font-semibold">Particulars:</span> {itemDetails.particulars || "-"}
-                  </p>
+                  {itemDetails.size && (
+                    <p className="text-sm">
+                      <span className="font-semibold">Size:</span> {formatSizeWithInches(itemDetails.size) || "-"}
+                    </p>
+                  )}
+                  {itemDetails.weight && (
+                    <p className="text-sm">
+                      <span className="font-semibold">Weight:</span> {itemDetails.weight}g
+                    </p>
+                  )}
                   <p className="text-sm">
                     <span className="font-semibold">Original Price:</span> ₹{itemDetails.price || "-"}
                   </p>
