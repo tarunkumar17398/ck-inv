@@ -36,10 +36,10 @@ serve(async (req) => {
 
     const categoryIds = categories.map(cat => cat.id);
 
-    // Fetch all items from these categories in batches
+    // Fetch all items from these categories in batches (supports up to 5000+ items)
     let allItems: any[] = [];
     let from = 0;
-    const batchSize = 1000;
+    const batchSize = 5000; // Increased to handle larger inventory efficiently
     
     while (true) {
       const { data: items, error } = await supabaseClient
