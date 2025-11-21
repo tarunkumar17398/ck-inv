@@ -99,63 +99,33 @@ const AddItem = () => {
       setSelectedSubcategory("");
     }
     
-    // Generate preview item code by checking last item (including sold)
+    // Generate preview item code using the counter
     if (categoryId && category) {
       try {
-        // Fetch the last item code from items table (including sold items)
-        const { data: lastItem, error: fetchError } = await supabase
-          .from('items')
-          .select('item_code')
+        // Fetch the current counter value
+        const { data: counter, error: fetchError } = await supabase
+          .from('item_code_counters')
+          .select('current_number, current_letter')
           .eq('category_id', categoryId)
-          .order('item_code', { ascending: false })
-          .limit(1)
           .maybeSingle();
 
         if (fetchError) throw fetchError;
 
-        let nextCode = "";
         const prefix = category.prefix;
+        let nextCode = "";
 
-        if (lastItem && lastItem.item_code) {
-          // Parse the last item code using the known prefix
-          // Pattern: CK + PREFIX + optional LETTER + NUMBER
-          const afterPrefix = lastItem.item_code.substring(2 + prefix.length); // Remove "CK" and prefix
+        if (counter) {
+          const { current_number, current_letter } = counter;
           
-          // Check if there's a letter series
-          const letterSeriesPattern = /^([A-Z])(\d+)$/;
-          const noLetterPattern = /^(\d+)$/;
-          
-          const letterMatch = afterPrefix.match(letterSeriesPattern);
-          const noLetterMatch = afterPrefix.match(noLetterPattern);
-          
-          if (letterMatch) {
+          if (current_letter) {
             // Has letter series (e.g., CKBRA001)
-            const [, letter, number] = letterMatch;
-            let nextNumber = parseInt(number) + 1;
-            let nextLetter = letter;
-
-            if (nextNumber > 999) {
-              nextLetter = String.fromCharCode(letter.charCodeAt(0) + 1);
-              nextNumber = 1;
-            }
-            nextCode = `CK${prefix}${nextLetter}${String(nextNumber).padStart(3, '0')}`;
-          } else if (noLetterMatch) {
-            // No letter series (e.g., CKBR0001)
-            const [, number] = noLetterMatch;
-            let nextNumber = parseInt(number) + 1;
-            
-            if (nextNumber > 9999) {
-              // Start letter series
-              nextCode = `CK${prefix}A${String(1).padStart(3, '0')}`;
-            } else {
-              nextCode = `CK${prefix}${String(nextNumber).padStart(4, '0')}`;
-            }
+            nextCode = `CK${prefix}${current_letter}${String(current_number).padStart(3, '0')}`;
           } else {
-            // Fallback to starting code
-            nextCode = `CK${prefix}0001`;
+            // No letter series (e.g., CKBR0001)
+            nextCode = `CK${prefix}${String(current_number).padStart(4, '0')}`;
           }
         } else {
-          // No items exist, start with 0001
+          // No counter found, start with 0001
           nextCode = `CK${prefix}0001`;
         }
 
