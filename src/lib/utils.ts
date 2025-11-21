@@ -43,10 +43,34 @@ export function parsePriceLabel(priceLabel: string): number {
   return thousands + hundreds + tens;
 }
 
-// Format size by adding inch symbol (") after all numbers that don't already have it
+// Clean and format size by adding inch symbol (") after all numbers
 export function formatSizeWithInches(size: string | null | undefined): string | null {
   if (!size || !size.trim()) return null;
-  // Add inch symbol (") after all numbers that don't already have it
-  // Pattern matches: numbers (including decimals) NOT followed by "
-  return size.replace(/([0-9.]+)(?!")/g, '$1"');
+  
+  // First, clean up any existing malformed formatting like 2."5"" or 3.""5""
+  let cleaned = size
+    .replace(/\."+/g, '.') // Remove quote marks after periods
+    .replace(/"+/g, '"')   // Normalize multiple quotes to single
+    .replace(/(\d)\."+(\d)/g, '$1.$2') // Fix patterns like 2."5 to 2.5
+    .trim();
+  
+  // Remove all existing inch symbols first
+  cleaned = cleaned.replace(/"/g, '');
+  
+  // Now add inch symbol after each number or decimal number
+  return cleaned.replace(/(\d+\.?\d*)/g, '$1"');
+}
+
+// Display size - clean up formatting issues for display
+export function cleanSizeDisplay(size: string | null | undefined): string {
+  if (!size || !size.trim()) return "-";
+  
+  // Clean up malformed patterns
+  let cleaned = size
+    .replace(/\."+/g, '.') // Remove quote marks after periods  
+    .replace(/"+/g, '"')   // Normalize multiple quotes to single
+    .replace(/(\d)\."+(\d)/g, '$1.$2"') // Fix patterns like 2."5 to 2.5"
+    .trim();
+  
+  return cleaned;
 }
