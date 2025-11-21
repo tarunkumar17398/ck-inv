@@ -1,9 +1,9 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { ArrowLeft, Calendar as CalendarIcon, Pencil } from "lucide-react";
+import { ArrowLeft, Calendar as CalendarIcon, Pencil, Search, Filter } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { Calendar } from "@/components/ui/calendar";
@@ -11,6 +11,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { cn, formatSizeWithInches } from "@/lib/utils";
 
 interface SoldItem {
@@ -22,11 +23,14 @@ interface SoldItem {
   weight: string | null;
   sold_price: number | null;
   sold_date: string | null;
-  categories: { name: string; prefix: string };
+  categories: { name: string; prefix: string; id: string };
 }
 
 const SoldItems = () => {
   const [items, setItems] = useState<SoldItem[]>([]);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState<string>("all");
+  const [categories, setCategories] = useState<Array<{ id: string; name: string }>>([]);
   const [editingDateId, setEditingDateId] = useState<string | null>(null);
   const [editingItem, setEditingItem] = useState<SoldItem | null>(null);
   const [editForm, setEditForm] = useState({
@@ -44,12 +48,27 @@ const SoldItems = () => {
       return;
     }
     loadSoldItems();
+    loadCategories();
   }, [navigate]);
+
+  const loadCategories = async () => {
+    const { data, error } = await supabase
+      .from("categories")
+      .select("id, name")
+      .order("name");
+
+    if (error) {
+      console.error("Error loading categories:", error);
+      return;
+    }
+
+    setCategories(data || []);
+  };
 
   const loadSoldItems = async () => {
     const { data, error } = await supabase
       .from("items")
-      .select("*, categories(name, prefix)")
+      .select("*, categories(id, name, prefix)")
       .eq("status", "sold")
       .order("sold_date", { ascending: false });
 
@@ -64,6 +83,22 @@ const SoldItems = () => {
 
     setItems(data || []);
   };
+
+  const filteredItems = useMemo(() => {
+    return items.filter(item => {
+      const matchesSearch = 
+        searchQuery === "" ||
+        item.item_code.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        item.particulars?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        item.item_name.toLowerCase().includes(searchQuery.toLowerCase());
+
+      const matchesCategory = 
+        selectedCategory === "all" || 
+        item.categories.id === selectedCategory;
+
+      return matchesSearch && matchesCategory;
+    });
+  }, [items, searchQuery, selectedCategory]);
 
   const updateSoldDate = async (itemId: string, newDate: Date) => {
     const { error } = await supabase
@@ -176,6 +211,40 @@ const SoldItems = () => {
       <main className="container mx-auto px-4 py-8">
         <h1 className="text-3xl font-bold text-foreground mb-6">Sold Items History</h1>
 
+        {/* Search and Filter Section */}
+        <div className="bg-card rounded-lg border shadow-sm p-4 mb-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search by item code or particulars..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-10"
+              />
+            </div>
+            <div className="flex items-center gap-2">
+              <Filter className="h-4 w-4 text-muted-foreground" />
+              <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Filter by category" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Categories</SelectItem>
+                  {categories.map((category) => (
+                    <SelectItem key={category.id} value={category.id}>
+                      {category.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <div className="mt-2 text-sm text-muted-foreground">
+            Showing {filteredItems.length} of {items.length} sold items
+          </div>
+        </div>
+
         <div className="bg-card rounded-lg border shadow-sm overflow-hidden">
           <Table>
             <TableHeader>
@@ -191,7 +260,7 @@ const SoldItems = () => {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {items.map((item) => (
+              {filteredItems.map((item) => (
                 <TableRow key={item.id}>
                   <TableCell className="font-mono font-semibold">{item.item_code}</TableCell>
                   <TableCell>{item.categories.name}</TableCell>
@@ -244,6 +313,11 @@ const SoldItems = () => {
           {items.length === 0 && (
             <div className="text-center py-12 text-muted-foreground">
               No sold items yet
+            </div>
+          )}
+          {items.length > 0 && filteredItems.length === 0 && (
+            <div className="text-center py-12 text-muted-foreground">
+              No items match your search criteria
             </div>
           )}
         </div>
