@@ -41,6 +41,7 @@ const Inventory = () => {
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [sortOrder, setSortOrder] = useState<"newest" | "oldest">("newest");
   const [advancedSearchOpen, setAdvancedSearchOpen] = useState(false);
+  const [isInitialized, setIsInitialized] = useState(false);
   const [nameSearch, setNameSearch] = useState("");
   const [minWeight, setMinWeight] = useState("");
   const [maxWeight, setMaxWeight] = useState("");
@@ -78,12 +79,15 @@ const Inventory = () => {
     if (initialCategory) setCategoryFilter(initialCategory);
 
     loadCategories();
+    setIsInitialized(true);
   }, [navigate, searchParams]);
 
-  // Reload items when category filter, search, or sort order changes
+  // Reload items when category filter, search, or sort order changes (but only after initialization)
   useEffect(() => {
-    loadItems(true);
-  }, [categoryFilter, searchQuery, sortOrder]);
+    if (isInitialized) {
+      loadItems(true);
+    }
+  }, [categoryFilter, searchQuery, sortOrder, isInitialized]);
 
   const loadCategories = async () => {
     const { data } = await supabase.from("categories").select("*").order("name");
