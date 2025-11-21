@@ -86,19 +86,33 @@ const ExportData = () => {
       return;
     }
 
+    // Helper to parse size and weight from notes
+    const parseNotes = (notes: string | null) => {
+      if (!notes) return { size: null, weight: null };
+      const sizeMatch = notes.match(/Size:\s*([^-,]+)/i);
+      const weightMatch = notes.match(/Weight:\s*(\d+(?:\.\d+)?)\s*g/i);
+      return {
+        size: sizeMatch ? sizeMatch[1].trim() : null,
+        weight: weightMatch ? weightMatch[1].trim() : null
+      };
+    };
+
     // Transform pieces to match Item interface
-    const transformedPieces = pieces?.map((piece: any) => ({
-      id: piece.id,
-      item_code: piece.piece_code,
-      item_name: piece.subcategories?.subcategory_name || "",
-      particulars: piece.notes,
-      size: null,
-      weight: null,
-      color_code: null,
-      price: piece.cost_price,
-      created_at: piece.date_added,
-      categories: piece.subcategories?.categories || { name: "Panchaloha Idols", prefix: "PI" }
-    })) || [];
+    const transformedPieces = pieces?.map((piece: any) => {
+      const { size, weight } = parseNotes(piece.notes);
+      return {
+        id: piece.id,
+        item_code: piece.piece_code,
+        item_name: piece.subcategories?.subcategory_name || "",
+        particulars: piece.notes,
+        size,
+        weight,
+        color_code: null,
+        price: piece.cost_price,
+        created_at: piece.date_added,
+        categories: piece.subcategories?.categories || { name: "Panchaloha Idols", prefix: "PI" }
+      };
+    }) || [];
 
     // Combine and sort by created_at (latest first)
     const combined = [...(regularItems || []), ...transformedPieces].sort((a, b) => 
@@ -231,20 +245,34 @@ const ExportData = () => {
       return;
     }
 
+    // Helper to parse size and weight from notes
+    const parseNotesForBackup = (notes: string | null) => {
+      if (!notes) return { size: "", weight: "" };
+      const sizeMatch = notes.match(/Size:\s*([^-,]+)/i);
+      const weightMatch = notes.match(/Weight:\s*(\d+(?:\.\d+)?)\s*g/i);
+      return {
+        size: sizeMatch ? sizeMatch[1].trim() : "",
+        weight: weightMatch ? weightMatch[1].trim() : ""
+      };
+    };
+
     // Transform pieces to match export format
-    const transformedPieces = allPieces?.map((piece: any) => ({
-      item_code: piece.piece_code,
-      item_name: piece.subcategories?.subcategory_name || "",
-      category: piece.subcategories?.categories?.name || "Panchaloha Idols",
-      size: "",
-      weight: "",
-      cost_price: piece.cost_price || "",
-      selling_price: "",
-      sold_price: "",
-      status: piece.status,
-      created_at: piece.date_added,
-      sold_date: piece.date_sold || ""
-    })) || [];
+    const transformedPieces = allPieces?.map((piece: any) => {
+      const { size, weight } = parseNotesForBackup(piece.notes);
+      return {
+        item_code: piece.piece_code,
+        item_name: piece.subcategories?.subcategory_name || "",
+        category: piece.subcategories?.categories?.name || "Panchaloha Idols",
+        size,
+        weight,
+        cost_price: piece.cost_price || "",
+        selling_price: "",
+        sold_price: "",
+        status: piece.status,
+        created_at: piece.date_added,
+        sold_date: piece.date_sold || ""
+      };
+    }) || [];
 
     // Transform regular items
     const transformedItems = allItems?.map(item => ({
