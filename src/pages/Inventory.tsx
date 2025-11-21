@@ -78,8 +78,12 @@ const Inventory = () => {
     if (initialCategory) setCategoryFilter(initialCategory);
 
     loadCategories();
-    loadItems(true); // true = initial load
   }, [navigate, searchParams]);
+
+  // Reload items when category filter or search changes
+  useEffect(() => {
+    loadItems(true);
+  }, [categoryFilter, searchQuery]);
 
   const loadCategories = async () => {
     const { data } = await supabase.from("categories").select("*").order("name");
@@ -93,12 +97,26 @@ const Inventory = () => {
     const from = isInitialLoad ? 0 : items.length;
     const to = from + 999; // Load 1000 items at a time
     
-    // Fetch items with count
-    const { data, error, count } = await supabase
+    // Build query with filters
+    let query = supabase
       .from("items")
       .select("*, categories(name, prefix)", { count: 'exact' })
-      .eq("status", "in_stock")
-      .range(from, to);
+      .eq("status", "in_stock");
+    
+    // Apply category filter
+    if (categoryFilter !== "all") {
+      query = query.eq("category_id", categoryFilter);
+    }
+    
+    // Apply search filter (searches across all items in DB)
+    if (searchQuery.trim()) {
+      query = query.or(
+        `item_code.ilike.%${searchQuery}%,item_name.ilike.%${searchQuery}%,categories.name.ilike.%${searchQuery}%`
+      );
+    }
+    
+    // Apply pagination
+    const { data, error, count } = await query.range(from, to);
 
     if (error) {
       toast({
@@ -128,17 +146,7 @@ const Inventory = () => {
 
   const filteredItems = items
     .filter((item) => {
-      const matchesSearch =
-        item.item_code.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        item.item_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        item.categories.name.toLowerCase().includes(searchQuery.toLowerCase());
-
-      // Handle category ID filter (from dashboard links and dropdown)
-      const matchesCategory =
-        categoryFilter === "all" || 
-        item.category_id === categoryFilter;
-
-      // Advanced search filters
+      // Advanced search filters (client-side only, after DB results)
       const matchesName = !nameSearch || 
         item.item_name.toLowerCase().includes(nameSearch.toLowerCase());
       
@@ -150,8 +158,7 @@ const Inventory = () => {
       const matchesMinSize = !minSize || itemSize >= parseFloat(minSize);
       const matchesMaxSize = !maxSize || itemSize <= parseFloat(maxSize);
 
-      return matchesSearch && matchesCategory && matchesName && 
-             matchesMinWeight && matchesMaxWeight && matchesMinSize && matchesMaxSize;
+      return matchesName && matchesMinWeight && matchesMaxWeight && matchesMinSize && matchesMaxSize;
     })
     .sort((a, b) => {
       // Sort by item code
@@ -255,9 +262,12 @@ const Inventory = () => {
       <main className="container mx-auto px-4 py-8">
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-3xl font-bold text-foreground">Inventory - In Stock</h1>
-          {!loading && (
+          {!loading && totalCount > 0 && (
             <div className="text-sm text-muted-foreground">
-              Showing {filteredItems.length} of {totalCount} items
+              Showing {items.length} of {totalCount} items
+              {categoryFilter !== "all" && categories.find(c => c.id === categoryFilter) && 
+                ` (${categories.find(c => c.id === categoryFilter)?.name})`
+              }
             </div>
           )}
         </div>
