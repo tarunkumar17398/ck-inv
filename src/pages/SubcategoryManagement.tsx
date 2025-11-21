@@ -6,8 +6,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { ArrowLeft, Plus, Edit, Trash2 } from "lucide-react";
+import { ArrowLeft, Plus, Edit, Trash2, AlertTriangle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { Badge } from "@/components/ui/badge";
 
 interface Subcategory {
   id: string;
@@ -80,27 +81,46 @@ const SubcategoryManagement = () => {
       return;
     }
 
-    // Get piece counts for each subcategory
-    const subcatsWithCounts = await Promise.all(
-      (subcats || []).map(async (subcat) => {
-        const { count: totalCount } = await supabase
-          .from("item_pieces")
-          .select("*", { count: "exact", head: true })
-          .eq("subcategory_id", subcat.id);
+    if (!subcats || subcats.length === 0) {
+      setSubcategories([]);
+      return;
+    }
 
-        const { count: availableCount } = await supabase
-          .from("item_pieces")
-          .select("*", { count: "exact", head: true })
-          .eq("subcategory_id", subcat.id)
-          .eq("status", "available");
+    // Fetch all pieces for all subcategories in a single query
+    const subcategoryIds = subcats.map(s => s.id);
+    const { data: allPieces, error: piecesError } = await supabase
+      .from("item_pieces")
+      .select("subcategory_id, status")
+      .in("subcategory_id", subcategoryIds);
 
-        return {
-          ...subcat,
-          piece_count: totalCount || 0,
-          available_count: availableCount || 0,
-        };
-      })
-    );
+    if (piecesError) {
+      toast({
+        title: "Error loading piece counts",
+        description: piecesError.message,
+        variant: "destructive",
+      });
+      setSubcategories(subcats.map(s => ({ ...s, piece_count: 0, available_count: 0 })));
+      return;
+    }
+
+    // Count pieces in memory
+    const pieceCounts = (allPieces || []).reduce((acc, piece) => {
+      if (!acc[piece.subcategory_id]) {
+        acc[piece.subcategory_id] = { total: 0, available: 0 };
+      }
+      acc[piece.subcategory_id].total++;
+      if (piece.status === "available") {
+        acc[piece.subcategory_id].available++;
+      }
+      return acc;
+    }, {} as Record<string, { total: number; available: number }>);
+
+    // Attach counts to subcategories
+    const subcatsWithCounts = subcats.map(subcat => ({
+      ...subcat,
+      piece_count: pieceCounts[subcat.id]?.total || 0,
+      available_count: pieceCounts[subcat.id]?.available || 0,
+    }));
 
     setSubcategories(subcatsWithCounts);
   };
@@ -227,8 +247,16 @@ const SubcategoryManagement = () => {
           {subcategories.map((subcat) => (
             <Card key={subcat.id} className="hover:shadow-lg transition-shadow">
               <CardHeader>
-                <CardTitle className="flex justify-between items-start">
-                  <span>{subcat.subcategory_name}</span>
+                <CardTitle className="flex justify-between items-start gap-2">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span>{subcat.subcategory_name}</span>
+                    {(subcat.piece_count || 0) < 5 && (
+                      <Badge variant="destructive" className="text-xs flex items-center gap-1">
+                        <AlertTriangle className="w-3 h-3" />
+                        Low Stock
+                      </Badge>
+                    )}
+                  </div>
                   <Button
                     variant="ghost"
                     size="sm"
