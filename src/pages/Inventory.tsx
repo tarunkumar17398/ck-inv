@@ -83,12 +83,12 @@ const Inventory = () => {
   };
 
   const loadItems = async () => {
-    // Fetch all items without pagination limit
-    const { data, error } = await supabase
+    // Fetch ALL items without pagination limits
+    const { data, error, count } = await supabase
       .from("items")
-      .select("*, categories(name, prefix)")
+      .select("*, categories(name, prefix)", { count: 'exact' })
       .eq("status", "in_stock")
-      .range(0, 9999); // Fetch up to 10,000 items
+      .range(0, 4999); // Increase to 5000 items
 
     if (error) {
       toast({
@@ -99,6 +99,7 @@ const Inventory = () => {
       return;
     }
 
+    console.log(`Loaded ${data?.length || 0} items out of ${count || 0} total`);
     setItems(data || []);
   };
 
