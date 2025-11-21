@@ -30,7 +30,8 @@ serve(async (req) => {
       `)
       .in('categories.prefix', ['BR', 'IR', 'TP', 'WD'])
       .eq('status', 'in_stock')
-      .order('created_at', { ascending: false });
+      .order('created_at', { ascending: false })
+      .limit(10000);
 
     if (error) {
       console.error('Database error:', error);
