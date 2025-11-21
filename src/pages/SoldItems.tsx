@@ -12,7 +12,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { cn, formatSizeWithInches } from "@/lib/utils";
+import { cn, formatSizeWithInches, cleanSizeDisplay } from "@/lib/utils";
 
 interface SoldItem {
   id: string;
@@ -265,8 +265,8 @@ const SoldItems = () => {
                   <TableCell className="font-mono font-semibold">{item.item_code}</TableCell>
                   <TableCell>{item.categories.name}</TableCell>
                   <TableCell>{item.particulars || "-"}</TableCell>
-                  <TableCell>{item.size || "-"}</TableCell>
-                  <TableCell>{item.weight ? `${item.weight}g` : "-"}</TableCell>
+                  <TableCell>{cleanSizeDisplay(item.size)}</TableCell>
+                  <TableCell>{item.weight ? `${parseFloat(item.weight).toLocaleString()}g` : "-"}</TableCell>
                   <TableCell className="font-semibold">
                     {item.sold_price ? `₹${item.sold_price}` : "-"}
                   </TableCell>
