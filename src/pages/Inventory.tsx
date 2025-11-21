@@ -10,7 +10,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Label } from "@/components/ui/label";
-import { formatPriceLabel, formatWeightLabel } from "@/lib/utils";
+import { formatPriceLabel, formatWeightLabel, formatSizeWithInches } from "@/lib/utils";
 import { Textarea } from "@/components/ui/textarea";
 
 interface Item {
@@ -158,7 +158,7 @@ const Inventory = () => {
       .update({
         item_name: editFormData.item_name,
         particulars: editFormData.item_name, // Keep particulars in sync with item_name
-        size: editFormData.size || null,
+        size: formatSizeWithInches(editFormData.size),
         weight: editFormData.weight || null,
         price: editFormData.price ? parseFloat(editFormData.price) : null,
         cost_price: editFormData.cost_price ? parseFloat(editFormData.cost_price) : null,

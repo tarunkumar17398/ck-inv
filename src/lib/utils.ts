@@ -28,3 +28,11 @@ export function formatWeightLabel(weight: number | string): string {
   
   return `CKBR${paddedGrams}`;
 }
+
+// Format size by adding inch symbol (") after all numbers that don't already have it
+export function formatSizeWithInches(size: string | null | undefined): string | null {
+  if (!size || !size.trim()) return null;
+  // Add inch symbol (") after all numbers that don't already have it
+  // Pattern matches: numbers (including decimals) NOT followed by "
+  return size.replace(/([0-9.]+)(?!")/g, '$1"');
+}

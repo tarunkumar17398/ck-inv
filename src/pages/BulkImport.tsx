@@ -11,6 +11,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useEffect } from "react";
+import { formatSizeWithInches } from "@/lib/utils";
 
 const BulkImport = () => {
   const [pastedData, setPastedData] = useState("");
@@ -143,7 +144,7 @@ const BulkImport = () => {
           category_id: categoryData.id,
           item_name: particulars,
           particulars: particulars,
-          size: size || null,
+          size: formatSizeWithInches(size),
           weight: weight && weight.toLowerCase() !== 'na' ? weight : null,
           color_code: null,
           price: null,
@@ -253,7 +254,7 @@ const BulkImport = () => {
           category_id: categoryData.id,
           item_name: particulars,
           particulars: particulars, // Store same value in both fields
-          size: size || null,
+          size: formatSizeWithInches(size),
           weight: weight && weight.toLowerCase() !== 'na' ? weight : null,
           color_code: null,
           price: null,
@@ -414,7 +415,7 @@ const BulkImport = () => {
           category_id: categoryId,
           item_name: particulars,
           particulars: particulars,
-          size: size || null,
+          size: formatSizeWithInches(size),
           weight: weight && weight.toLowerCase() !== 'na' ? weight : null,
           cost_price: costPrice && costPrice.toLowerCase() !== 'na' ? parseFloat(costPrice) : null,
           status: "sold",

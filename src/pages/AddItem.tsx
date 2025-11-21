@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { ArrowLeft, Plus, Check, ChevronsUpDown } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { formatPriceLabel, formatWeightLabel } from "@/lib/utils";
+import { formatPriceLabel, formatWeightLabel, formatSizeWithInches } from "@/lib/utils";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
@@ -372,7 +372,7 @@ const AddItem = () => {
         category_id: selectedCategory,
         item_name: itemName,
         particulars: itemName, // Same as item name
-        size: size || null,
+        size: formatSizeWithInches(size),
         weight: weight || null,
         color_code: null,
         price: price ? parseFloat(price) : null,

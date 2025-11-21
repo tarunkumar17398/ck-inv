@@ -11,7 +11,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { cn } from "@/lib/utils";
+import { cn, formatSizeWithInches } from "@/lib/utils";
 
 interface SoldItem {
   id: string;
@@ -138,7 +138,7 @@ const SoldItems = () => {
       .from("items")
       .update({
         particulars: editForm.particulars.trim() || null,
-        size: editForm.size.trim() || null,
+        size: formatSizeWithInches(editForm.size),
         weight: weight || null,
         sold_price: editForm.sold_price ? soldPrice : null,
       })
