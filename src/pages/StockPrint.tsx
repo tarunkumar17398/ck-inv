@@ -176,12 +176,12 @@ const StockPrint = () => {
             <table className="w-full border-collapse border border-black">
               <thead>
                 <tr className="border border-black">
-                  <th className="text-center py-2 px-3 font-semibold text-sm border border-black w-[15%]">Item Code</th>
-                  <th className="text-left py-2 px-3 font-semibold text-sm border border-black w-[35%]">Particulars</th>
-                  <th className="text-center py-2 px-3 font-semibold text-sm border border-black w-[12%]">Size</th>
-                  <th className="text-center py-2 px-3 font-semibold text-sm border border-black w-[12%]">Weight</th>
-                  <th className="text-center py-2 px-3 font-semibold text-sm border border-black w-[8%]">✓</th>
-                  <th className="text-center py-2 px-3 font-semibold text-sm border border-black w-[13%]">DOS</th>
+                  <th className="text-center py-2 px-3 font-bold text-sm border border-black w-[15%]">Item Code</th>
+                  <th className="text-center py-2 px-3 font-bold text-sm border border-black w-[35%]">Particulars</th>
+                  <th className="text-center py-2 px-3 font-bold text-sm border border-black w-[12%]">Size</th>
+                  <th className="text-center py-2 px-3 font-bold text-sm border border-black w-[12%]">Weight</th>
+                  <th className="text-center py-2 px-3 font-bold text-sm border border-black w-[8%]">✓</th>
+                  <th className="text-center py-2 px-3 font-bold text-sm border border-black w-[13%]">DOS</th>
                 </tr>
               </thead>
               <tbody>
