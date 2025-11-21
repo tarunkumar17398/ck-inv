@@ -305,7 +305,15 @@ const AddItem = () => {
           description: `Piece code: ${pieceCode}`,
         });
 
-        navigate("/panchaloha-subcategories");
+        // Clear form and stay on page for adding next item
+        setItemName("");
+        setSize("");
+        setWeight("");
+        setCostPrice("");
+        setSelectedSubcategory("");
+        
+        // Reload the category to update the item code preview
+        handleCategoryChange(selectedCategory);
       } catch (error: any) {
         toast({
           title: "Error adding piece",
