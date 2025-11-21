@@ -39,7 +39,7 @@ serve(async (req) => {
     // Fetch all items from these categories in batches (supports up to 5000+ items)
     let allItems: any[] = [];
     let from = 0;
-    const batchSize = 5000; // Increased to handle larger inventory efficiently
+    const batchSize = 1000; // Supabase's max per query, but we'll fetch multiple batches
     
     while (true) {
       const { data: items, error } = await supabaseClient
@@ -48,7 +48,6 @@ serve(async (req) => {
         .in('category_id', categoryIds)
         .eq('status', 'in_stock')
         .order('created_at', { ascending: false })
-        .limit(5000)
         .range(from, from + batchSize - 1);
 
       if (error) {
