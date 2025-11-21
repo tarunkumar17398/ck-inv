@@ -17,26 +17,16 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    // Fetch items with category prefixes BR, IR, TP, WD
-    const { data: items, error } = await supabaseClient
-      .from('items')
-      .select(`
-        item_code,
-        particulars,
-        size,
-        weight,
-        rfid_epc,
-        categories (prefix)
-      `)
-      .in('categories.prefix', ['BR', 'IR', 'TP', 'WD'])
-      .eq('status', 'in_stock')
-      .order('created_at', { ascending: false })
-      .limit(10000);
+    // First, get category IDs for BR, IR, TP, WD prefixes
+    const { data: categories, error: catError } = await supabaseClient
+      .from('categories')
+      .select('id')
+      .in('prefix', ['BR', 'IR', 'TP', 'WD']);
 
-    if (error) {
-      console.error('Database error:', error);
+    if (catError) {
+      console.error('Category fetch error:', catError);
       return new Response(
-        JSON.stringify({ error: 'Failed to fetch items' }), 
+        JSON.stringify({ error: 'Failed to fetch categories' }), 
         { 
           status: 500, 
           headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
@@ -44,8 +34,49 @@ serve(async (req) => {
       );
     }
 
+    const categoryIds = categories.map(cat => cat.id);
+
+    // Fetch all items from these categories in batches
+    let allItems: any[] = [];
+    let from = 0;
+    const batchSize = 1000;
+    
+    while (true) {
+      const { data: items, error } = await supabaseClient
+        .from('items')
+        .select('item_code, particulars, size, weight, rfid_epc')
+        .in('category_id', categoryIds)
+        .eq('status', 'in_stock')
+        .order('created_at', { ascending: false })
+        .range(from, from + batchSize - 1);
+
+      if (error) {
+        console.error('Database error:', error);
+        return new Response(
+          JSON.stringify({ error: 'Failed to fetch items' }), 
+          { 
+            status: 500, 
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+          }
+        );
+      }
+
+      if (!items || items.length === 0) {
+        break;
+      }
+
+      allItems = allItems.concat(items);
+      
+      // If we got fewer items than batch size, we've reached the end
+      if (items.length < batchSize) {
+        break;
+      }
+
+      from += batchSize;
+    }
+
     // Format data for RFID scanner
-    const formattedData = items.map(item => ({
+    const formattedData = allItems.map(item => ({
       'ITEM CODE': item.item_code || '',
       'PARTICULARS': item.particulars || '',
       'SIZE': item.size || '',
