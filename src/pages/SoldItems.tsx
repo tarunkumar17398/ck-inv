@@ -66,22 +66,47 @@ const SoldItems = () => {
   };
 
   const loadSoldItems = async () => {
-    const { data, error } = await supabase
-      .from("items")
-      .select("*, categories(id, name, prefix)")
-      .eq("status", "sold")
-      .order("sold_date", { ascending: false });
+    try {
+      // Fetch all sold items (Supabase default limit is 1000, so we need to handle pagination)
+      let allItems: SoldItem[] = [];
+      let from = 0;
+      const batchSize = 1000;
+      let hasMore = true;
 
-    if (error) {
+      while (hasMore) {
+        const { data, error } = await supabase
+          .from("items")
+          .select("*, categories(id, name, prefix)")
+          .eq("status", "sold")
+          .order("sold_date", { ascending: false })
+          .range(from, from + batchSize - 1);
+
+        if (error) {
+          toast({
+            title: "Error loading sold items",
+            description: error.message,
+            variant: "destructive",
+          });
+          return;
+        }
+
+        if (data && data.length > 0) {
+          allItems = [...allItems, ...data];
+          from += batchSize;
+          hasMore = data.length === batchSize;
+        } else {
+          hasMore = false;
+        }
+      }
+
+      setItems(allItems);
+    } catch (error: any) {
       toast({
         title: "Error loading sold items",
         description: error.message,
         variant: "destructive",
       });
-      return;
     }
-
-    setItems(data || []);
   };
 
   const filteredItems = useMemo(() => {
