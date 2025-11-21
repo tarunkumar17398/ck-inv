@@ -48,6 +48,7 @@ serve(async (req) => {
         .in('category_id', categoryIds)
         .eq('status', 'in_stock')
         .order('created_at', { ascending: false })
+        .limit(5000)
         .range(from, from + batchSize - 1);
 
       if (error) {
