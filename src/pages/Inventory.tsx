@@ -39,6 +39,7 @@ const Inventory = () => {
   const [categories, setCategories] = useState<Category[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("all");
+  const [sortOrder, setSortOrder] = useState<"newest" | "oldest">("newest");
   const [advancedSearchOpen, setAdvancedSearchOpen] = useState(false);
   const [nameSearch, setNameSearch] = useState("");
   const [minWeight, setMinWeight] = useState("");
@@ -102,32 +103,41 @@ const Inventory = () => {
     setItems(data || []);
   };
 
-  const filteredItems = items.filter((item) => {
-    const matchesSearch =
-      item.item_code.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      item.item_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      item.categories.name.toLowerCase().includes(searchQuery.toLowerCase());
+  const filteredItems = items
+    .filter((item) => {
+      const matchesSearch =
+        item.item_code.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        item.item_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        item.categories.name.toLowerCase().includes(searchQuery.toLowerCase());
 
-    // Handle category ID filter (from dashboard links and dropdown)
-    const matchesCategory =
-      categoryFilter === "all" || 
-      item.category_id === categoryFilter;
+      // Handle category ID filter (from dashboard links and dropdown)
+      const matchesCategory =
+        categoryFilter === "all" || 
+        item.category_id === categoryFilter;
 
-    // Advanced search filters
-    const matchesName = !nameSearch || 
-      item.item_name.toLowerCase().includes(nameSearch.toLowerCase());
-    
-    const itemWeight = item.weight ? parseFloat(item.weight) : 0;
-    const matchesMinWeight = !minWeight || itemWeight >= parseFloat(minWeight);
-    const matchesMaxWeight = !maxWeight || itemWeight <= parseFloat(maxWeight);
-    
-    const itemSize = item.size ? parseFloat(item.size) : 0;
-    const matchesMinSize = !minSize || itemSize >= parseFloat(minSize);
-    const matchesMaxSize = !maxSize || itemSize <= parseFloat(maxSize);
+      // Advanced search filters
+      const matchesName = !nameSearch || 
+        item.item_name.toLowerCase().includes(nameSearch.toLowerCase());
+      
+      const itemWeight = item.weight ? parseFloat(item.weight) : 0;
+      const matchesMinWeight = !minWeight || itemWeight >= parseFloat(minWeight);
+      const matchesMaxWeight = !maxWeight || itemWeight <= parseFloat(maxWeight);
+      
+      const itemSize = item.size ? parseFloat(item.size) : 0;
+      const matchesMinSize = !minSize || itemSize >= parseFloat(minSize);
+      const matchesMaxSize = !maxSize || itemSize <= parseFloat(maxSize);
 
-    return matchesSearch && matchesCategory && matchesName && 
-           matchesMinWeight && matchesMaxWeight && matchesMinSize && matchesMaxSize;
-  });
+      return matchesSearch && matchesCategory && matchesName && 
+             matchesMinWeight && matchesMaxWeight && matchesMinSize && matchesMaxSize;
+    })
+    .sort((a, b) => {
+      // Sort by item code
+      if (sortOrder === "newest") {
+        return b.item_code.localeCompare(a.item_code);
+      } else {
+        return a.item_code.localeCompare(b.item_code);
+      }
+    });
 
   const clearAdvancedSearch = () => {
     setNameSearch("");
@@ -244,6 +254,15 @@ const Inventory = () => {
                     {cat.name}
                   </SelectItem>
                 ))}
+              </SelectContent>
+            </Select>
+            <Select value={sortOrder} onValueChange={(value) => setSortOrder(value as "newest" | "oldest")}>
+              <SelectTrigger className="w-full sm:w-48">
+                <SelectValue placeholder="Sort by" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="newest">Newest First</SelectItem>
+                <SelectItem value="oldest">Oldest First</SelectItem>
               </SelectContent>
             </Select>
             <Dialog open={advancedSearchOpen} onOpenChange={setAdvancedSearchOpen}>
