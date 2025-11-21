@@ -80,10 +80,10 @@ const Inventory = () => {
     loadCategories();
   }, [navigate, searchParams]);
 
-  // Reload items when category filter or search changes
+  // Reload items when category filter, search, or sort order changes
   useEffect(() => {
     loadItems(true);
-  }, [categoryFilter, searchQuery]);
+  }, [categoryFilter, searchQuery, sortOrder]);
 
   const loadCategories = async () => {
     const { data } = await supabase.from("categories").select("*").order("name");
@@ -116,6 +116,9 @@ const Inventory = () => {
       );
     }
     
+    // Apply sort order - CRITICAL: Sort in database before pagination
+    query = query.order("item_code", { ascending: sortOrder === "oldest" });
+    
     // Apply pagination
     const { data, error, count } = await query.range(from, to);
 
@@ -146,30 +149,22 @@ const Inventory = () => {
     loadingState(false);
   };
 
-  const filteredItems = items
-    .filter((item) => {
-      // Advanced search filters (client-side only, after DB results)
-      const matchesName = !nameSearch || 
-        item.item_name.toLowerCase().includes(nameSearch.toLowerCase());
-      
-      const itemWeight = item.weight ? parseFloat(item.weight) : 0;
-      const matchesMinWeight = !minWeight || itemWeight >= parseFloat(minWeight);
-      const matchesMaxWeight = !maxWeight || itemWeight <= parseFloat(maxWeight);
-      
-      const itemSize = item.size ? parseFloat(item.size) : 0;
-      const matchesMinSize = !minSize || itemSize >= parseFloat(minSize);
-      const matchesMaxSize = !maxSize || itemSize <= parseFloat(maxSize);
+  const filteredItems = items.filter((item) => {
+    // Advanced search filters (client-side only, after DB results)
+    const matchesName = !nameSearch || 
+      item.item_name.toLowerCase().includes(nameSearch.toLowerCase());
+    
+    const itemWeight = item.weight ? parseFloat(item.weight) : 0;
+    const matchesMinWeight = !minWeight || itemWeight >= parseFloat(minWeight);
+    const matchesMaxWeight = !maxWeight || itemWeight <= parseFloat(maxWeight);
+    
+    const itemSize = item.size ? parseFloat(item.size) : 0;
+    const matchesMinSize = !minSize || itemSize >= parseFloat(minSize);
+    const matchesMaxSize = !maxSize || itemSize <= parseFloat(maxSize);
 
-      return matchesName && matchesMinWeight && matchesMaxWeight && matchesMinSize && matchesMaxSize;
-    })
-    .sort((a, b) => {
-      // Sort by item code
-      if (sortOrder === "newest") {
-        return b.item_code.localeCompare(a.item_code);
-      } else {
-        return a.item_code.localeCompare(b.item_code);
-      }
-    });
+    return matchesName && matchesMinWeight && matchesMaxWeight && matchesMinSize && matchesMaxSize;
+  });
+  // No client-side sorting needed - database already sorts by item_code
 
   const clearAdvancedSearch = () => {
     setNameSearch("");
