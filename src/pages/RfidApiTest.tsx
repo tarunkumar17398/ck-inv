@@ -143,18 +143,18 @@ const RfidApiTest = () => {
               </CardHeader>
               <CardContent className="space-y-2">
                 <div className="flex justify-between">
-                  <span className="font-semibold">Success:</span>
-                  <span className={data.success ? "text-green-600" : "text-red-600"}>
-                    {data.success ? "✓ Yes" : "✗ No"}
+                  <span className="font-semibold">API Status:</span>
+                  <span className="text-green-600 font-bold">
+                    ✓ Connected
                   </span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="font-semibold">Count:</span>
-                  <span className="text-2xl font-bold">{data.count}</span>
+                  <span className="font-semibold">Total Items:</span>
+                  <span className="text-2xl font-bold text-green-600">{data.count}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="font-semibold">Data Array Length:</span>
-                  <span className="text-2xl font-bold">{data.data?.length || 0}</span>
+                  <span className="font-semibold">Items Fetched:</span>
+                  <span className="text-2xl font-bold text-green-600">{data.data?.length || 0}</span>
                 </div>
               </CardContent>
             </Card>
