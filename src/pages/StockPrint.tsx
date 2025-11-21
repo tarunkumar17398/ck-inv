@@ -177,11 +177,11 @@ const StockPrint = () => {
               <thead>
                 <tr className="border border-black">
                   <th className="text-left py-2 px-3 font-semibold text-sm border border-black w-[15%]">Item Code</th>
-                  <th className="text-left py-2 px-3 font-semibold text-sm border border-black w-[28%]">Particulars</th>
+                  <th className="text-left py-2 px-3 font-semibold text-sm border border-black w-[35%]">Particulars</th>
                   <th className="text-left py-2 px-3 font-semibold text-sm border border-black w-[12%]">Size</th>
                   <th className="text-left py-2 px-3 font-semibold text-sm border border-black w-[12%]">Weight</th>
                   <th className="text-center py-2 px-3 font-semibold text-sm border border-black w-[8%]">✓</th>
-                  <th className="text-left py-2 px-3 font-semibold text-sm border border-black w-[25%]">DOS</th>
+                  <th className="text-left py-2 px-3 font-semibold text-sm border border-black w-[13%]">DOS</th>
                 </tr>
               </thead>
               <tbody>
@@ -191,13 +191,13 @@ const StockPrint = () => {
                     className={`border border-black ${item.status === 'sold' ? 'text-gray-400 line-through' : ''}`}
                   >
                     <td className="py-2 px-3 text-sm font-bold border border-black w-[15%]">{item.item_code}</td>
-                    <td className="py-2 px-3 text-sm border border-black w-[28%]">{item.item_name}</td>
+                    <td className="py-2 px-3 text-sm border border-black w-[35%]">{item.item_name}</td>
                     <td className="py-2 px-3 text-sm font-bold border border-black w-[12%]">{item.size || ""}</td>
                     <td className="py-2 px-3 text-sm border border-black w-[12%]">{item.weight || ""}</td>
                     <td className="py-2 px-3 text-center border border-black w-[8%]">
                       <div className="inline-block w-4 h-4 border border-black"></div>
                     </td>
-                    <td className="py-2 px-3 text-sm border border-black w-[25%]">
+                    <td className="py-2 px-3 text-sm border border-black w-[13%]">
                       {item.sold_date 
                         ? new Date(item.sold_date).toLocaleDateString("en-GB")
                         : ""}
