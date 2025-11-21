@@ -44,7 +44,7 @@ serve(async (req) => {
     while (true) {
       const { data: items, error } = await supabaseClient
         .from('items')
-        .select('item_code, particulars, size, weight, rfid_epc')
+        .select('item_code, item_name, size, weight, rfid_epc')
         .in('category_id', categoryIds)
         .eq('status', 'in_stock')
         .order('created_at', { ascending: false })
@@ -78,7 +78,7 @@ serve(async (req) => {
     // Format data for RFID scanner
     const formattedData = allItems.map(item => ({
       'ITEM CODE': item.item_code || '',
-      'PARTICULARS': item.particulars || '',
+      'PARTICULARS': item.item_name || '',
       'SIZE': item.size || '',
       'Weight': item.weight || '',
       'RFID-EPC': item.rfid_epc || ''
