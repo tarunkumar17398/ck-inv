@@ -97,15 +97,20 @@ const Inventory = () => {
     const from = isInitialLoad ? 0 : items.length;
     const to = from + 999; // Load 1000 items at a time
     
+    console.log('Loading items with filters:', { categoryFilter, searchQuery, sortOrder, isInitialLoad });
+    
     // Build query with filters
     let query = supabase
       .from("items")
       .select("*, categories(name, prefix)", { count: 'exact' })
       .eq("status", "in_stock");
     
-    // Apply category filter
-    if (categoryFilter !== "all") {
+    // Apply category filter - MUST check for "all" string
+    if (categoryFilter && categoryFilter !== "all") {
+      console.log('Applying category filter:', categoryFilter);
       query = query.eq("category_id", categoryFilter);
+    } else {
+      console.log('No category filter applied (showing all)');
     }
     
     // Apply search filter ONLY if searchQuery is not empty
