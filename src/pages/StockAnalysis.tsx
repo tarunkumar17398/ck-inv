@@ -70,24 +70,53 @@ const StockAnalysis = () => {
   };
 
   const loadItems = async () => {
-    let query = supabase
-      .from("items")
-      .select("*, categories(name, prefix)")
-      .eq("status", statusFilter)
-      .order("created_at", { ascending: false });
+    try {
+      let allItems: Item[] = [];
+      let from = 0;
+      const batchSize = 1000;
+      let hasMore = true;
 
-    const { data, error } = await query;
+      while (hasMore) {
+        const { data, error } = await supabase
+          .from("items")
+          .select("*, categories(name, prefix)")
+          .eq("status", statusFilter)
+          .order("created_at", { ascending: false })
+          .range(from, from + batchSize - 1);
 
-    if (error) {
+        if (error) {
+          toast({
+            title: "Error loading items",
+            description: error.message,
+            variant: "destructive",
+          });
+          return;
+        }
+
+        if (!data || data.length === 0) {
+          hasMore = false;
+        } else {
+          allItems = [...allItems, ...data];
+          from += batchSize;
+          
+          if (data.length < batchSize) {
+            hasMore = false;
+          }
+        }
+      }
+
+      setItems(allItems);
       toast({
-        title: "Error loading items",
+        title: "Analysis Updated",
+        description: `Loaded ${allItems.length} items for analysis`,
+      });
+    } catch (error: any) {
+      toast({
+        title: "Error",
         description: error.message,
         variant: "destructive",
       });
-      return;
     }
-
-    setItems(data || []);
   };
 
   const filteredItems = selectedCategory === "all" 
