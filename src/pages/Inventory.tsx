@@ -10,7 +10,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Label } from "@/components/ui/label";
-import { formatPriceLabel, formatWeightLabel, formatSizeWithInches } from "@/lib/utils";
+import { formatPriceLabel, formatWeightLabel, formatSizeWithInches, cn } from "@/lib/utils";
 import { Textarea } from "@/components/ui/textarea";
 
 interface Item {
@@ -453,6 +453,7 @@ const Inventory = () => {
                     <TableHead>Weight (g)</TableHead>
                     <TableHead>Cost Price</TableHead>
                     <TableHead>Selling Price</TableHead>
+                    <TableHead>Price Ratio</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -466,6 +467,25 @@ const Inventory = () => {
                   <TableCell className="text-muted-foreground">{item.weight || "-"}</TableCell>
                   <TableCell>{item.cost_price ? `₹${item.cost_price}` : "-"}</TableCell>
                   <TableCell>{item.price ? `₹${item.price}` : "-"}</TableCell>
+                  <TableCell>
+                    {(() => {
+                      const weight = parseFloat(item.weight || "0");
+                      const price = parseFloat(item.price?.toString() || "0");
+                      if (weight > 0 && price > 0) {
+                        const ratio = (price / weight).toFixed(2);
+                        const isLow = parseFloat(ratio) < 3;
+                        return (
+                          <span className={cn(
+                            "px-2 py-1 rounded font-semibold",
+                            isLow && "bg-red-500 text-white"
+                          )}>
+                            {ratio}
+                          </span>
+                        );
+                      }
+                      return "-";
+                    })()}
+                  </TableCell>
                   <TableCell className="text-right">
                     <div className="flex gap-2 justify-end">
                       <Button
