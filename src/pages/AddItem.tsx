@@ -87,6 +87,9 @@ const AddItem = () => {
     setSelectedCategoryName(category?.name || "");
     setSelectedCategoryPrefix(category?.prefix || "");
     
+    // Clear item name when changing category
+    setItemName("");
+    
     // If Panchaloha Idols, load subcategories
     if (category?.name === "Panchaloha Idols") {
       loadSubcategories(categoryId);
@@ -503,6 +506,7 @@ const AddItem = () => {
                                   value={subcategory.subcategory_name}
                                   onSelect={() => {
                                     setSelectedSubcategory(subcategory.id);
+                                    setItemName(subcategory.subcategory_name);
                                     if (subcategory.default_price) {
                                       setCostPrice(subcategory.default_price.toString());
                                     }
