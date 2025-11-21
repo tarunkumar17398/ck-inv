@@ -29,6 +29,20 @@ export function formatWeightLabel(weight: number | string): string {
   return `CKBR${paddedGrams}`;
 }
 
+// Parse price from A{thousands}B{hundreds}C{tens} pattern back to numeric value
+export function parsePriceLabel(priceLabel: string): number {
+  if (!priceLabel) return 0;
+  
+  const match = priceLabel.match(/A(\d+)B(\d+)C(\d+)/);
+  if (!match) return 0;
+  
+  const thousands = parseInt(match[1]) * 1000;
+  const hundreds = parseInt(match[2]) * 100;
+  const tens = parseInt(match[3]) * 10;
+  
+  return thousands + hundreds + tens;
+}
+
 // Format size by adding inch symbol (") after all numbers that don't already have it
 export function formatSizeWithInches(size: string | null | undefined): string | null {
   if (!size || !size.trim()) return null;
