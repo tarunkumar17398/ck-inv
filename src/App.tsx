@@ -20,6 +20,7 @@ import SubcategoryManagement from "./pages/SubcategoryManagement";
 import PiecesManagement from "./pages/PiecesManagement";
 import DataImporter from "./pages/DataImporter";
 import UpdateBrassPrices from "./pages/UpdateBrassPrices";
+import RfidApiTest from "./pages/RfidApiTest";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -48,6 +49,7 @@ const App = () => (
           <Route path="/panchaloha-pieces" element={<PiecesManagement />} />
           <Route path="/data-importer" element={<DataImporter />} />
           <Route path="/update-brass-prices" element={<UpdateBrassPrices />} />
+          <Route path="/rfid-api-test" element={<RfidApiTest />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
