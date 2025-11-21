@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Printer, RotateCcw } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -28,6 +29,12 @@ interface Item {
   categories: { name: string; prefix: string };
 }
 
+interface Category {
+  id: string;
+  name: string;
+  prefix: string;
+}
+
 interface CategoryGroup {
   category: string;
   prefix: string;
@@ -36,6 +43,8 @@ interface CategoryGroup {
 
 const StockPrint = () => {
   const [categoryGroups, setCategoryGroups] = useState<CategoryGroup[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -45,16 +54,53 @@ const StockPrint = () => {
       navigate("/");
       return;
     }
-    loadStockData();
+    loadCategories();
   }, [navigate]);
 
+  useEffect(() => {
+    if (categories.length > 0 && selectedCategory === "all") {
+      // Set Brass as default category
+      const brassCategory = categories.find(cat => cat.prefix === "BR");
+      if (brassCategory) {
+        setSelectedCategory(brassCategory.id);
+      }
+    }
+  }, [categories]);
+
+  useEffect(() => {
+    if (selectedCategory && selectedCategory !== "all") {
+      loadStockData();
+    }
+  }, [selectedCategory]);
+
+  const loadCategories = async () => {
+    const { data, error } = await supabase
+      .from("categories")
+      .select("*")
+      .order("name");
+
+    if (error) {
+      toast({
+        title: "Error loading categories",
+        description: error.message,
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setCategories(data || []);
+  };
+
   const loadStockData = async () => {
+    if (selectedCategory === "all") return;
+    
     setLoading(true);
 
-    // Get all items (both in-stock and sold)
+    // Get all items (both in-stock and sold) for selected category
     const { data: items, error } = await supabase
       .from("items")
       .select("*, categories(name, prefix)")
+      .eq("category_id", selectedCategory)
       .order("item_code");
 
     if (error) {
@@ -128,39 +174,57 @@ const StockPrint = () => {
     <div className="min-h-screen bg-white text-black">
       {/* Action buttons - hidden during print */}
       <header className="border-b bg-white shadow-sm print:hidden">
-        <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-          <Button variant="ghost" size="sm" onClick={() => navigate("/dashboard")}>
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Back to Dashboard
-          </Button>
-          <div className="flex gap-2">
-            <AlertDialog>
-              <AlertDialogTrigger asChild>
-                <Button variant="destructive" size="sm">
-                  <RotateCcw className="w-4 h-4 mr-2" />
-                  Recycle Stock
-                </Button>
-              </AlertDialogTrigger>
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                  <AlertDialogDescription>
-                    This will permanently delete all sold items from the database. 
-                    This action cannot be undone. Make sure you have taken a backup if needed.
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel>Cancel</AlertDialogCancel>
-                  <AlertDialogAction onClick={handleRecycle}>
-                    Yes, Recycle
-                  </AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
-            <Button variant="default" size="sm" onClick={handlePrint}>
-              <Printer className="w-4 h-4 mr-2" />
-              Print
+        <div className="container mx-auto px-4 py-4">
+          <div className="flex items-center justify-between mb-4">
+            <Button variant="ghost" size="sm" onClick={() => navigate("/dashboard")}>
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              Back to Dashboard
             </Button>
+            <div className="flex gap-2">
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button variant="destructive" size="sm">
+                    <RotateCcw className="w-4 h-4 mr-2" />
+                    Recycle Stock
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      This will permanently delete all sold items from the database. 
+                      This action cannot be undone. Make sure you have taken a backup if needed.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction onClick={handleRecycle}>
+                      Yes, Recycle
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+              <Button variant="default" size="sm" onClick={handlePrint}>
+                <Printer className="w-4 h-4 mr-2" />
+                Print
+              </Button>
+            </div>
+          </div>
+          
+          <div className="flex items-center gap-2">
+            <label className="text-sm font-medium">Category:</label>
+            <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+              <SelectTrigger className="w-64 bg-background">
+                <SelectValue placeholder="Select category" />
+              </SelectTrigger>
+              <SelectContent className="bg-background z-50">
+                {categories.map((cat) => (
+                  <SelectItem key={cat.id} value={cat.id}>
+                    {cat.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
         </div>
       </header>
