@@ -409,6 +409,11 @@ const BulkImport = () => {
           }
         }
 
+        // Convert weight from kg to grams (multiply by 1000)
+        const weightInGrams = weight && weight.toLowerCase() !== 'na' 
+          ? (parseFloat(weight) * 1000).toString() 
+          : null;
+
         // Prepare item for bulk insert
         itemsToInsert.push({
           item_code: itemCode.toUpperCase(),
@@ -416,7 +421,7 @@ const BulkImport = () => {
           item_name: particulars,
           particulars: particulars,
           size: formatSizeWithInches(size),
-          weight: weight && weight.toLowerCase() !== 'na' ? weight : null,
+          weight: weightInGrams,
           cost_price: costPrice && costPrice.toLowerCase() !== 'na' ? parseFloat(costPrice) : null,
           status: "sold",
           sold_price: parseFloat(sellingPrice),
