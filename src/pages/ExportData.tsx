@@ -142,6 +142,46 @@ const ExportData = () => {
     }
   };
 
+  const copyFilteredDataOnly = () => {
+    const filteredItems = items.filter(item => item.item_code.toLowerCase().includes(searchQuery.toLowerCase()));
+    
+    if (filteredItems.length === 0) {
+      toast({
+        title: "No data to copy",
+        description: "No items match the current filter",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const rows = filteredItems.map(item => [
+      item.item_code,
+      item.item_name || "",
+      item.size || "",
+      item.weight || "",
+      item.weight ? formatWeightLabel(item.weight) : "",
+      `S.No:`,
+      item.item_code,
+      item.price ? formatPriceLabel(item.price) : "",
+      "O"
+    ]);
+
+    const tsv = rows.map(row => row.join("\t")).join("\n");
+
+    navigator.clipboard.writeText(tsv).then(() => {
+      toast({
+        title: "Data copied",
+        description: `${filteredItems.length} items copied without headers`,
+      });
+    }).catch(() => {
+      toast({
+        title: "Copy failed",
+        description: "Please try again",
+        variant: "destructive",
+      });
+    });
+  };
+
   const copyTableToClipboard = () => {
     const headers = ["ITEM CODE", "ITEM NAME", "SIZE", "Weight (g)", "Weight (CKBR)", "Sno", "Barcode", "Price", "O"];
     const rows = items.map(item => [
@@ -356,9 +396,9 @@ const ExportData = () => {
               <Database className="w-4 h-4 mr-2" />
               Backup All Data
             </Button>
-            <Button onClick={copyTableToClipboard} variant="outline">
+            <Button onClick={copyFilteredDataOnly} variant="outline">
               <Copy className="w-4 h-4 mr-2" />
-              Copy All Displayed
+              Copy Data Only
             </Button>
             <Button onClick={copySelectedToClipboard} variant="secondary" disabled={selectedItems.size === 0}>
               <Copy className="w-4 h-4 mr-2" />
