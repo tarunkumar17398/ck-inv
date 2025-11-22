@@ -395,9 +395,9 @@ const ExportData = () => {
 
         <div className="bg-card rounded-lg border shadow-sm overflow-auto">
           <Table>
-            <TableHeader className="select-none">
-              <TableRow className="select-none">
-                <TableHead className="w-12 select-none">
+            <TableHeader className="select-none" style={{ userSelect: 'none', WebkitUserSelect: 'none', MozUserSelect: 'none', msUserSelect: 'none' } as React.CSSProperties}>
+              <TableRow className="select-none" style={{ userSelect: 'none', WebkitUserSelect: 'none', MozUserSelect: 'none', msUserSelect: 'none' } as React.CSSProperties}>
+                <TableHead className="w-12 select-none" style={{ userSelect: 'none', WebkitUserSelect: 'none', MozUserSelect: 'none', msUserSelect: 'none' } as React.CSSProperties}>
                   <input
                     type="checkbox"
                     checked={selectedItems.size === items.length && items.length > 0}
@@ -405,15 +405,15 @@ const ExportData = () => {
                     className="cursor-pointer w-4 h-4"
                   />
                 </TableHead>
-                <TableHead className="font-bold select-none">ITEM CODE</TableHead>
-                <TableHead className="font-bold select-none">ITEM NAME</TableHead>
-                <TableHead className="font-bold select-none">SIZE</TableHead>
-                <TableHead className="font-bold select-none">Weight1</TableHead>
-                <TableHead className="font-bold select-none">Weight (CKBR format)</TableHead>
-                <TableHead className="font-bold select-none">Sno</TableHead>
-                <TableHead className="font-bold select-none">Barcode</TableHead>
-                <TableHead className="font-bold select-none">Price</TableHead>
-                <TableHead className="font-bold select-none">O</TableHead>
+                <TableHead className="font-bold select-none" style={{ userSelect: 'none', WebkitUserSelect: 'none', MozUserSelect: 'none', msUserSelect: 'none' } as React.CSSProperties}>ITEM CODE</TableHead>
+                <TableHead className="font-bold select-none" style={{ userSelect: 'none', WebkitUserSelect: 'none', MozUserSelect: 'none', msUserSelect: 'none' } as React.CSSProperties}>ITEM NAME</TableHead>
+                <TableHead className="font-bold select-none" style={{ userSelect: 'none', WebkitUserSelect: 'none', MozUserSelect: 'none', msUserSelect: 'none' } as React.CSSProperties}>SIZE</TableHead>
+                <TableHead className="font-bold select-none" style={{ userSelect: 'none', WebkitUserSelect: 'none', MozUserSelect: 'none', msUserSelect: 'none' } as React.CSSProperties}>Weight1</TableHead>
+                <TableHead className="font-bold select-none" style={{ userSelect: 'none', WebkitUserSelect: 'none', MozUserSelect: 'none', msUserSelect: 'none' } as React.CSSProperties}>Weight (CKBR format)</TableHead>
+                <TableHead className="font-bold select-none" style={{ userSelect: 'none', WebkitUserSelect: 'none', MozUserSelect: 'none', msUserSelect: 'none' } as React.CSSProperties}>Sno</TableHead>
+                <TableHead className="font-bold select-none" style={{ userSelect: 'none', WebkitUserSelect: 'none', MozUserSelect: 'none', msUserSelect: 'none' } as React.CSSProperties}>Barcode</TableHead>
+                <TableHead className="font-bold select-none" style={{ userSelect: 'none', WebkitUserSelect: 'none', MozUserSelect: 'none', msUserSelect: 'none' } as React.CSSProperties}>Price</TableHead>
+                <TableHead className="font-bold select-none" style={{ userSelect: 'none', WebkitUserSelect: 'none', MozUserSelect: 'none', msUserSelect: 'none' } as React.CSSProperties}>O</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
