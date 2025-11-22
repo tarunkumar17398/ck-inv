@@ -37,6 +37,7 @@ const Dashboard = () => {
   const [categories, setCategories] = useState<CategoryStats[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [salesDialogOpen, setSalesDialogOpen] = useState(false);
+  const [calendarOpen, setCalendarOpen] = useState(false);
   const [salesDate, setSalesDate] = useState<Date>(new Date());
   const [itemCode, setItemCode] = useState("");
   const [itemDetails, setItemDetails] = useState<any>(null);
@@ -202,12 +203,11 @@ const Dashboard = () => {
       description: `${itemDetails.item_code} marked as sold`,
     });
 
-    // Reset form
+    // Reset form but keep dialog open
     setItemCode("");
     setItemDetails(null);
     setSoldPrice("");
     setSalesDate(new Date());
-    setSalesDialogOpen(false);
     loadCategories(); // Refresh stats
   };
 
@@ -337,7 +337,7 @@ const Dashboard = () => {
           <div className="space-y-4">
             <div>
               <Label>Date</Label>
-              <Popover>
+              <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
                 <PopoverTrigger asChild>
                   <Button
                     variant="outline"
@@ -351,7 +351,12 @@ const Dashboard = () => {
                   <Calendar
                     mode="single"
                     selected={salesDate}
-                    onSelect={(date) => date && setSalesDate(date)}
+                    onSelect={(date) => {
+                      if (date) {
+                        setSalesDate(date);
+                        setCalendarOpen(false);
+                      }
+                    }}
                     initialFocus
                     className="pointer-events-auto"
                   />
