@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { ArrowLeft, Plus, Edit, Trash2, AlertTriangle } from "lucide-react";
+import { ArrowLeft, Plus, Edit, Trash2, AlertTriangle, Search } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
 
@@ -23,6 +23,7 @@ const SubcategoryManagement = () => {
   const [panchalohaCategory, setPanchalohaCategory] = useState<any>(null);
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [subcategoryName, setSubcategoryName] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -243,8 +244,22 @@ const SubcategoryManagement = () => {
           </Dialog>
         </div>
 
+        <div className="mb-6 relative">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
+          <Input
+            placeholder="Search subcategories..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-10"
+          />
+        </div>
+
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {subcategories.map((subcat) => (
+          {subcategories
+            .filter((subcat) =>
+              subcat.subcategory_name.toLowerCase().includes(searchQuery.toLowerCase())
+            )
+            .map((subcat) => (
             <Card key={subcat.id} className="hover:shadow-lg transition-shadow">
               <CardHeader>
                 <CardTitle className="flex justify-between items-start gap-2">
@@ -290,10 +305,12 @@ const SubcategoryManagement = () => {
           ))}
         </div>
 
-        {subcategories.length === 0 && (
-          <Card className="p-8 text-center">
+        {subcategories.filter((subcat) =>
+          subcat.subcategory_name.toLowerCase().includes(searchQuery.toLowerCase())
+        ).length === 0 && (
+          <Card className="p-8 text-center col-span-full">
             <p className="text-muted-foreground">
-              No subcategories found. Add your first subcategory to get started.
+              {searchQuery ? `No subcategories found matching "${searchQuery}"` : "No subcategories found. Add your first subcategory to get started."}
             </p>
           </Card>
         )}
