@@ -226,7 +226,6 @@ const ExportData = () => {
     }
 
     const selectedItemsData = items.filter(item => selectedItems.has(item.id));
-    const headers = ["ITEM CODE", "ITEM NAME", "SIZE", "Weight (g)", "Weight (CKBR)", "Sno", "Barcode", "Price", "O"];
     const rows = selectedItemsData.map(item => [
       item.item_code,
       item.item_name || "",
@@ -239,20 +238,17 @@ const ExportData = () => {
       "O"
     ]);
 
-    const tsv = [
-      headers.join("\t"),
-      ...rows.map(row => row.join("\t"))
-    ].join("\n");
+    const tsv = rows.map(row => row.join("\t")).join("\n");
 
     navigator.clipboard.writeText(tsv).then(() => {
       toast({
         title: "Copied to clipboard",
-        description: `${selectedItems.size} items copied in Excel/Access format`,
+        description: `${selectedItems.size} items copied without headers`,
       });
     }).catch(() => {
       toast({
         title: "Copy failed",
-        description: "Please try selecting and copying manually",
+        description: "Please try again",
         variant: "destructive",
       });
     });
