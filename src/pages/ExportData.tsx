@@ -397,7 +397,7 @@ const ExportData = () => {
           <Table>
             <TableHeader className="select-none">
               <TableRow className="select-none">
-                <TableHead className="w-12">
+                <TableHead className="w-12 select-none">
                   <input
                     type="checkbox"
                     checked={selectedItems.size === items.length && items.length > 0}
@@ -405,15 +405,15 @@ const ExportData = () => {
                     className="cursor-pointer w-4 h-4"
                   />
                 </TableHead>
-                <TableHead className="font-bold">ITEM CODE</TableHead>
-                <TableHead className="font-bold">ITEM NAME</TableHead>
-                <TableHead className="font-bold">SIZE</TableHead>
-                <TableHead className="font-bold">Weight1</TableHead>
-                <TableHead className="font-bold">Weight (CKBR format)</TableHead>
-                <TableHead className="font-bold">Sno</TableHead>
-                <TableHead className="font-bold">Barcode</TableHead>
-                <TableHead className="font-bold">Price</TableHead>
-                <TableHead className="font-bold">O</TableHead>
+                <TableHead className="font-bold select-none">ITEM CODE</TableHead>
+                <TableHead className="font-bold select-none">ITEM NAME</TableHead>
+                <TableHead className="font-bold select-none">SIZE</TableHead>
+                <TableHead className="font-bold select-none">Weight1</TableHead>
+                <TableHead className="font-bold select-none">Weight (CKBR format)</TableHead>
+                <TableHead className="font-bold select-none">Sno</TableHead>
+                <TableHead className="font-bold select-none">Barcode</TableHead>
+                <TableHead className="font-bold select-none">Price</TableHead>
+                <TableHead className="font-bold select-none">O</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
