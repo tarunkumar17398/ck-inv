@@ -242,7 +242,7 @@ const SoldItems = () => {
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder="Search by item code or particulars..."
+                placeholder="Search by item code or name..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="pl-10"
@@ -276,7 +276,7 @@ const SoldItems = () => {
               <TableRow>
                 <TableHead>Item Code</TableHead>
                 <TableHead>Category</TableHead>
-                <TableHead>Particulars</TableHead>
+                <TableHead>Item Name</TableHead>
                 <TableHead>Size</TableHead>
                 <TableHead>Weight</TableHead>
                 <TableHead>Sold Price</TableHead>
@@ -289,9 +289,9 @@ const SoldItems = () => {
                 <TableRow key={item.id}>
                   <TableCell className="font-mono font-semibold">{item.item_code}</TableCell>
                   <TableCell>{item.categories.name}</TableCell>
-                  <TableCell>{item.particulars || "-"}</TableCell>
+                  <TableCell>{item.item_name || "-"}</TableCell>
                   <TableCell>{cleanSizeDisplay(item.size)}</TableCell>
-                  <TableCell>{item.weight ? `${(parseFloat(item.weight) * 1000).toLocaleString()}g` : "-"}</TableCell>
+                  <TableCell>{item.weight ? `${parseFloat(item.weight).toLocaleString()}g` : "-"}</TableCell>
                   <TableCell className="font-semibold">
                     {item.sold_price ? `₹${item.sold_price}` : "-"}
                   </TableCell>
