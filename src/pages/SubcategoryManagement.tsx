@@ -22,7 +22,10 @@ const SubcategoryManagement = () => {
   const [subcategories, setSubcategories] = useState<Subcategory[]>([]);
   const [panchalohaCategory, setPanchalohaCategory] = useState<any>(null);
   const [showAddDialog, setShowAddDialog] = useState(false);
+  const [showEditDialog, setShowEditDialog] = useState(false);
   const [subcategoryName, setSubcategoryName] = useState("");
+  const [editingSubcategory, setEditingSubcategory] = useState<Subcategory | null>(null);
+  const [editSubcategoryName, setEditSubcategoryName] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
@@ -166,6 +169,49 @@ const SubcategoryManagement = () => {
     loadSubcategories(panchalohaCategory.id);
   };
 
+  const handleEditSubcategory = async () => {
+    if (!editSubcategoryName.trim()) {
+      toast({
+        title: "Missing field",
+        description: "Please enter a subcategory name",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!editingSubcategory) return;
+
+    setLoading(true);
+
+    const { error } = await supabase
+      .from("subcategories")
+      .update({ subcategory_name: editSubcategoryName.trim() })
+      .eq("id", editingSubcategory.id);
+
+    setLoading(false);
+
+    if (error) {
+      toast({
+        title: "Error updating subcategory",
+        description: error.message,
+        variant: "destructive",
+      });
+      return;
+    }
+
+    toast({
+      title: "Subcategory updated",
+      description: `Updated to ${editSubcategoryName}`,
+    });
+
+    setShowEditDialog(false);
+    setEditingSubcategory(null);
+    setEditSubcategoryName("");
+    if (panchalohaCategory) {
+      loadSubcategories(panchalohaCategory.id);
+    }
+  };
+
   const handleDeleteSubcategory = async (subcatId: string, name: string) => {
     if (!confirm(`Are you sure you want to delete "${name}"? This will also delete all associated pieces.`)) {
       return;
@@ -190,6 +236,12 @@ const SubcategoryManagement = () => {
     if (panchalohaCategory) {
       loadSubcategories(panchalohaCategory.id);
     }
+  };
+
+  const openEditDialog = (subcat: Subcategory) => {
+    setEditingSubcategory(subcat);
+    setEditSubcategoryName(subcat.subcategory_name);
+    setShowEditDialog(true);
   };
 
   const handleViewPieces = (subcategoryId: string, subcategoryName: string) => {
@@ -244,6 +296,31 @@ const SubcategoryManagement = () => {
           </Dialog>
         </div>
 
+        <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Edit Subcategory</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4 pt-4">
+              <div>
+                <Label>Subcategory Name *</Label>
+                <Input
+                  placeholder="Enter subcategory name"
+                  value={editSubcategoryName}
+                  onChange={(e) => setEditSubcategoryName(e.target.value)}
+                />
+              </div>
+              <Button
+                onClick={handleEditSubcategory}
+                disabled={loading}
+                className="w-full"
+              >
+                {loading ? "Updating..." : "Update Subcategory"}
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+
         <div className="mb-6 relative">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
           <Input
@@ -272,13 +349,22 @@ const SubcategoryManagement = () => {
                       </Badge>
                     )}
                   </div>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => handleDeleteSubcategory(subcat.id, subcat.subcategory_name)}
-                  >
-                    <Trash2 className="w-4 h-4 text-destructive" />
-                  </Button>
+                  <div className="flex gap-1">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => openEditDialog(subcat)}
+                    >
+                      <Edit className="w-4 h-4 text-primary" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleDeleteSubcategory(subcat.id, subcat.subcategory_name)}
+                    >
+                      <Trash2 className="w-4 h-4 text-destructive" />
+                    </Button>
+                  </div>
                 </CardTitle>
               </CardHeader>
               <CardContent>
