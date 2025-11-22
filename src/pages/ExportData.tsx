@@ -3,10 +3,11 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { ArrowLeft, Copy, Filter, Download, Database } from "lucide-react";
+import { ArrowLeft, Copy, Filter, Download, Database, Search } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { formatPriceLabel, formatWeightLabel, formatSizeWithInches } from "@/lib/utils";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
 import { format } from "date-fns";
 
 interface Item {
@@ -26,6 +27,7 @@ const ExportData = () => {
   const [items, setItems] = useState<Item[]>([]);
   const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
   const [filter, setFilter] = useState("today");
+  const [searchQuery, setSearchQuery] = useState("");
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -377,15 +379,24 @@ const ExportData = () => {
               <SelectItem value="month">Last 30 Days</SelectItem>
             </SelectContent>
           </Select>
+          <div className="relative flex-1 max-w-sm">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
+            <Input
+              placeholder="Search by item code..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-10"
+            />
+          </div>
           <span className="text-sm text-muted-foreground">
-            {items.length} items found
+            {items.filter(item => item.item_code.toLowerCase().includes(searchQuery.toLowerCase())).length} items found
           </span>
         </div>
 
         <div className="bg-card rounded-lg border shadow-sm overflow-auto">
           <Table>
-            <TableHeader>
-              <TableRow>
+            <TableHeader className="select-none">
+              <TableRow className="select-none">
                 <TableHead className="w-12">
                   <input
                     type="checkbox"
@@ -406,7 +417,9 @@ const ExportData = () => {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {items.map((item) => (
+              {items
+                .filter(item => item.item_code.toLowerCase().includes(searchQuery.toLowerCase()))
+                .map((item) => (
                 <TableRow key={item.id} className="font-mono text-sm">
                   <TableCell>
                     <input
@@ -429,9 +442,9 @@ const ExportData = () => {
               ))}
             </TableBody>
           </Table>
-          {items.length === 0 && (
+          {items.filter(item => item.item_code.toLowerCase().includes(searchQuery.toLowerCase())).length === 0 && (
             <div className="text-center py-12 text-muted-foreground">
-              No items found for the selected time period
+              {searchQuery ? `No items found matching "${searchQuery}"` : "No items found for the selected time period"}
             </div>
           )}
         </div>
