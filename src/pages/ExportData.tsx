@@ -142,18 +142,19 @@ const ExportData = () => {
     }
   };
 
-  const copyFilteredDataOnly = () => {
+  const downloadFilteredAsCSV = () => {
     const filteredItems = items.filter(item => item.item_code.toLowerCase().includes(searchQuery.toLowerCase()));
     
     if (filteredItems.length === 0) {
       toast({
-        title: "No data to copy",
+        title: "No data to download",
         description: "No items match the current filter",
         variant: "destructive",
       });
       return;
     }
 
+    const headers = ["ITEM CODE", "ITEM NAME", "SIZE", "Weight (g)", "Weight (CKBR)", "Sno", "Barcode", "Price", "O"];
     const rows = filteredItems.map(item => [
       item.item_code,
       item.item_name || "",
@@ -166,19 +167,24 @@ const ExportData = () => {
       "O"
     ]);
 
-    const tsv = rows.map(row => row.join("\t")).join("\n");
+    const csv = [
+      headers.join(","),
+      ...rows.map(row => row.map(cell => `"${cell}"`).join(","))
+    ].join("\n");
 
-    navigator.clipboard.writeText(tsv).then(() => {
-      toast({
-        title: "Data copied",
-        description: `${filteredItems.length} items copied without headers`,
-      });
-    }).catch(() => {
-      toast({
-        title: "Copy failed",
-        description: "Please try again",
-        variant: "destructive",
-      });
+    const blob = new Blob([csv], { type: "text/csv" });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `export_data_${format(new Date(), "yyyy-MM-dd_HHmmss")}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    window.URL.revokeObjectURL(url);
+
+    toast({
+      title: "CSV downloaded",
+      description: `${filteredItems.length} items exported to CSV`,
     });
   };
 
@@ -392,9 +398,9 @@ const ExportData = () => {
               <Database className="w-4 h-4 mr-2" />
               Backup All Data
             </Button>
-            <Button onClick={copyFilteredDataOnly} variant="outline">
-              <Copy className="w-4 h-4 mr-2" />
-              Copy Data Only
+            <Button onClick={downloadFilteredAsCSV} variant="outline">
+              <Download className="w-4 h-4 mr-2" />
+              Download CSV
             </Button>
             <Button onClick={copySelectedToClipboard} variant="secondary" disabled={selectedItems.size === 0}>
               <Copy className="w-4 h-4 mr-2" />
