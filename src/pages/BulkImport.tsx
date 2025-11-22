@@ -318,18 +318,15 @@ const BulkImport = () => {
     setIsSalesProcessing(true);
 
     try {
-      // Step 1: Delete all old sold items
-      console.log("Deleting all old sold items...");
-      const { error: deleteError } = await supabase
+      // Load existing sold item codes to avoid duplicates
+      console.log("Loading existing sold items...");
+      const { data: existingSoldItems } = await supabase
         .from("items")
-        .delete()
+        .select("item_code")
         .eq("status", "sold");
-
-      if (deleteError) {
-        console.error("Error deleting old sold items:", deleteError);
-        throw deleteError;
-      }
-      console.log("✓ Old sold items deleted");
+      
+      const existingCodes = new Set(existingSoldItems?.map(item => item.item_code) || []);
+      console.log(`Found ${existingCodes.size} existing sold items`);
 
       // Pre-load all categories for faster lookup
       const { data: allCategories } = await supabase
@@ -345,6 +342,7 @@ const BulkImport = () => {
       console.log(`Processing ${dataRows.length} rows...`);
       
       let skippedCount = 0;
+      let duplicateCount = 0;
       const skipReasons: string[] = [];
       const itemsToInsert: any[] = [];
 
@@ -383,6 +381,12 @@ const BulkImport = () => {
         }
         
         const categoryPrefix = prefixMatch[1].toUpperCase();
+
+        // Skip if item code already exists in sold items
+        if (existingCodes.has(itemCode.toUpperCase())) {
+          duplicateCount++;
+          continue;
+        }
 
         // Fast category lookup from pre-loaded map
         const categoryId = categoryMap.get(categoryPrefix);
@@ -459,10 +463,11 @@ const BulkImport = () => {
         console.log(`✓ Successfully inserted ${successCount} items`);
       }
 
-      const message = `✅ ${successCount} sold items imported. ${skippedCount > 0 ? `⚠️ ${skippedCount} skipped.` : ''}`;
+      const message = `✅ ${successCount} sold items imported. ${duplicateCount > 0 ? `⏭️ ${duplicateCount} duplicates skipped. ` : ''}${skippedCount > 0 ? `⚠️ ${skippedCount} skipped.` : ''}`;
       
       console.log('=== SALES IMPORT SUMMARY ===');
       console.log(message);
+      console.log(`New items: ${successCount}, Duplicates: ${duplicateCount}, Errors: ${skippedCount}`);
       if (skipReasons.length > 0) {
         console.log('\n=== SKIP REASONS (First 20) ===');
         skipReasons.slice(0, 20).forEach((reason, i) => console.log(`${i + 1}. ${reason}`));
