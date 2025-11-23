@@ -100,26 +100,42 @@ const AddItem = () => {
       setSelectedSubcategory("");
     }
     
-    // Generate preview item code by checking ALL items (including sold)
+    // Generate preview item code by checking ALL items/pieces (including sold)
     if (categoryId && category) {
       try {
         const prefix = category.prefix;
+        let highestCode = null;
         
-        // Find the highest item code from ALL items (in_stock and sold)
-        const { data: items, error: fetchError } = await supabase
-          .from('items')
-          .select('item_code')
-          .eq('category_id', categoryId)
-          .order('item_code', { ascending: false })
-          .limit(1);
+        // For Panchaloha Idols, check item_pieces table
+        if (category.name === "Panchaloha Idols") {
+          const { data: pieces, error: fetchError } = await supabase
+            .from('item_pieces')
+            .select('piece_code')
+            .order('piece_code', { ascending: false })
+            .limit(1);
 
-        if (fetchError) throw fetchError;
+          if (fetchError) throw fetchError;
+          if (pieces && pieces.length > 0) {
+            highestCode = pieces[0].piece_code;
+          }
+        } else {
+          // For regular categories, check items table
+          const { data: items, error: fetchError } = await supabase
+            .from('items')
+            .select('item_code')
+            .eq('category_id', categoryId)
+            .order('item_code', { ascending: false })
+            .limit(1);
+
+          if (fetchError) throw fetchError;
+          if (items && items.length > 0) {
+            highestCode = items[0].item_code;
+          }
+        }
 
         let nextCode = "";
 
-        if (items && items.length > 0) {
-          const highestCode = items[0].item_code;
-          
+        if (highestCode) {
           // Parse the code (e.g., CKBR0123 or CKBRA001)
           const codeSuffix = highestCode.substring(2 + prefix.length); // Remove 'CK' and prefix
           
@@ -147,7 +163,7 @@ const AddItem = () => {
             }
           }
         } else {
-          // No items found, start with 0001
+          // No items/pieces found, start with 0001
           nextCode = `CK${prefix}0001`;
         }
 
