@@ -198,7 +198,7 @@ const StockPrint = () => {
                 </AlertDialogContent>
               </AlertDialog>
               ) : (
-                <Button variant="outline" size="sm" onClick={() => { setShowSoldItems(true); loadStockData(); }}>
+                <Button variant="outline" size="sm" onClick={() => setShowSoldItems(true)}>
                   <RotateCcw className="w-4 h-4 mr-2" />
                   Show Sold Items
                 </Button>
