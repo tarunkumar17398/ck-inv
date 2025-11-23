@@ -72,7 +72,7 @@ const StockPrint = () => {
     if (selectedCategory && selectedCategory !== "all") {
       loadStockData();
     }
-  }, [selectedCategory]);
+  }, [selectedCategory, showSoldItems]);
 
   const loadCategories = async () => {
     const { data, error } = await supabase
@@ -149,8 +149,6 @@ const StockPrint = () => {
       title: "Sold items hidden",
       description: "Sold items are now hidden from the Stock Print view",
     });
-
-    loadStockData(); // Reload data with filter
   };
 
   const handlePrint = () => {
