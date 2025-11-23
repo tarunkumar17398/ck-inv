@@ -416,7 +416,16 @@ const AddItem = () => {
         description: `Item code: ${itemCode}`,
       });
 
-      navigate("/inventory");
+      // Clear form and stay on page for adding next item
+      setItemName("");
+      setSize("");
+      setWeight("");
+      setPrice("");
+      setCostPrice("");
+      setRfidEpc("");
+      
+      // Reload the category to update the item code preview
+      handleCategoryChange(selectedCategory);
     } catch (error: any) {
       toast({
         title: "Error adding item",
