@@ -100,33 +100,54 @@ const AddItem = () => {
       setSelectedSubcategory("");
     }
     
-    // Generate preview item code using the counter
+    // Generate preview item code by checking ALL items (including sold)
     if (categoryId && category) {
       try {
-        // Fetch the current counter value
-        const { data: counter, error: fetchError } = await supabase
-          .from('item_code_counters')
-          .select('current_number, current_letter')
+        const prefix = category.prefix;
+        
+        // Find the highest item code from ALL items (in_stock and sold)
+        const { data: items, error: fetchError } = await supabase
+          .from('items')
+          .select('item_code')
           .eq('category_id', categoryId)
-          .maybeSingle();
+          .order('item_code', { ascending: false })
+          .limit(1);
 
         if (fetchError) throw fetchError;
 
-        const prefix = category.prefix;
         let nextCode = "";
 
-        if (counter) {
-          const { current_number, current_letter } = counter;
+        if (items && items.length > 0) {
+          const highestCode = items[0].item_code;
           
-          if (current_letter) {
-            // Has letter series (e.g., CKBRA001)
-            nextCode = `CK${prefix}${current_letter}${String(current_number).padStart(3, '0')}`;
+          // Parse the code (e.g., CKBR0123 or CKBRA001)
+          const codeSuffix = highestCode.substring(2 + prefix.length); // Remove 'CK' and prefix
+          
+          // Check if there's a letter
+          if (/^[A-Z]/.test(codeSuffix)) {
+            const letter = codeSuffix[0];
+            const number = parseInt(codeSuffix.substring(1)) + 1;
+            
+            if (number > 999) {
+              // Rollover to next letter
+              const nextLetter = String.fromCharCode(letter.charCodeAt(0) + 1);
+              nextCode = `CK${prefix}${nextLetter}001`;
+            } else {
+              nextCode = `CK${prefix}${letter}${String(number).padStart(3, '0')}`;
+            }
           } else {
-            // No letter series (e.g., CKBR0001)
-            nextCode = `CK${prefix}${String(current_number).padStart(4, '0')}`;
+            // No letter series
+            const number = parseInt(codeSuffix) + 1;
+            
+            if (number > 9999) {
+              // Rollover to letter series
+              nextCode = `CK${prefix}A001`;
+            } else {
+              nextCode = `CK${prefix}${String(number).padStart(4, '0')}`;
+            }
           }
         } else {
-          // No counter found, start with 0001
+          // No items found, start with 0001
           nextCode = `CK${prefix}0001`;
         }
 
