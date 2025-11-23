@@ -46,6 +46,7 @@ const StockPrint = () => {
   const [categories, setCategories] = useState<Category[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [loading, setLoading] = useState(true);
+  const [showSoldItems, setShowSoldItems] = useState(true);
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -96,12 +97,18 @@ const StockPrint = () => {
     
     setLoading(true);
 
-    // Get all items (both in-stock and sold) for selected category
-    const { data: items, error } = await supabase
+    // Build query - filter by status if sold items are hidden
+    let query = supabase
       .from("items")
       .select("*, categories(name, prefix)")
-      .eq("category_id", selectedCategory)
-      .order("item_code");
+      .eq("category_id", selectedCategory);
+    
+    // Only show in-stock items if sold items are hidden
+    if (!showSoldItems) {
+      query = query.eq("status", "in_stock");
+    }
+    
+    const { data: items, error } = await query.order("item_code");
 
     if (error) {
       toast({
@@ -134,28 +141,16 @@ const StockPrint = () => {
     setLoading(false);
   };
 
-  const handleRecycle = async () => {
-    // Delete all sold items
-    const { error } = await supabase
-      .from("items")
-      .delete()
-      .eq("status", "sold");
-
-    if (error) {
-      toast({
-        title: "Error recycling",
-        description: error.message,
-        variant: "destructive",
-      });
-      return;
-    }
-
+  const handleRecycle = () => {
+    // Hide sold items from view (they remain in database)
+    setShowSoldItems(false);
+    
     toast({
-      title: "Recycled successfully",
-      description: "All sold items have been removed",
+      title: "Sold items hidden",
+      description: "Sold items are now hidden from the Stock Print view",
     });
 
-    loadStockData(); // Reload data
+    loadStockData(); // Reload data with filter
   };
 
   const handlePrint = () => {
@@ -181,29 +176,35 @@ const StockPrint = () => {
               Back to Dashboard
             </Button>
             <div className="flex gap-2">
-              <AlertDialog>
-                <AlertDialogTrigger asChild>
-                  <Button variant="destructive" size="sm">
-                    <RotateCcw className="w-4 h-4 mr-2" />
-                    Recycle Stock
-                  </Button>
-                </AlertDialogTrigger>
+              {showSoldItems ? (
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button variant="destructive" size="sm">
+                      <RotateCcw className="w-4 h-4 mr-2" />
+                      Recycle Stock
+                    </Button>
+                  </AlertDialogTrigger>
                 <AlertDialogContent>
                   <AlertDialogHeader>
-                    <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                    <AlertDialogTitle>Hide Sold Items?</AlertDialogTitle>
                     <AlertDialogDescription>
-                      This will permanently delete all sold items from the database. 
-                      This action cannot be undone. Make sure you have taken a backup if needed.
+                      This will hide all sold items from the Stock Print view. Sold items will remain in the database for history and business analysis.
                     </AlertDialogDescription>
                   </AlertDialogHeader>
                   <AlertDialogFooter>
                     <AlertDialogCancel>Cancel</AlertDialogCancel>
                     <AlertDialogAction onClick={handleRecycle}>
-                      Yes, Recycle
+                      Yes, Hide Sold Items
                     </AlertDialogAction>
                   </AlertDialogFooter>
                 </AlertDialogContent>
               </AlertDialog>
+              ) : (
+                <Button variant="outline" size="sm" onClick={() => { setShowSoldItems(true); loadStockData(); }}>
+                  <RotateCcw className="w-4 h-4 mr-2" />
+                  Show Sold Items
+                </Button>
+              )}
               <Button variant="default" size="sm" onClick={handlePrint}>
                 <Printer className="w-4 h-4 mr-2" />
                 Print
