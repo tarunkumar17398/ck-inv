@@ -381,8 +381,8 @@ const StockAnalysis = () => {
 
         {showAnalysis && (
           <div className="space-y-6">
-            {/* Panchaloha Idols Stats */}
-            {panchalohaStats && (
+            {/* Panchaloha Idols Stats - only show when Panchaloha category is selected */}
+            {panchalohaStats && categories.find(c => c.id === selectedCategory)?.name === "Panchaloha Idols" && (
               <Card className="bg-primary/5 border-primary/20">
                 <CardHeader className="pb-3">
                   <CardTitle className="text-lg font-semibold">Panchaloha Idols</CardTitle>
