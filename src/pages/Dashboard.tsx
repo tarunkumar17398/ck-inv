@@ -126,25 +126,53 @@ const Dashboard = () => {
     if (!itemCode.trim()) return;
 
     setLoading(true);
-    const { data, error } = await supabase
+    const code = itemCode.trim().toUpperCase();
+    
+    // First, try to find in regular items table
+    const { data: itemData, error: itemError } = await supabase
       .from("items")
       .select("*, categories(name, prefix)")
-      .eq("item_code", itemCode.trim().toUpperCase())
+      .eq("item_code", code)
       .eq("status", "in_stock")
       .maybeSingle();
 
-    setLoading(false);
-
-    if (error) {
+    if (itemError) {
+      setLoading(false);
       toast({
         title: "Error fetching item",
-        description: error.message,
+        description: itemError.message,
         variant: "destructive",
       });
       return;
     }
 
-    if (!data) {
+    if (itemData) {
+      setLoading(false);
+      setItemDetails({ ...itemData, isPiece: false });
+      setSoldPrice(itemData.price?.toString() || "");
+      return;
+    }
+
+    // If not found in items, check Panchaloha pieces (item_pieces table)
+    const { data: pieceData, error: pieceError } = await supabase
+      .from("item_pieces")
+      .select("*, subcategories(subcategory_name, category_id, categories(name, prefix))")
+      .eq("piece_code", code)
+      .eq("status", "available")
+      .maybeSingle();
+
+    setLoading(false);
+
+    if (pieceError) {
+      toast({
+        title: "Error fetching item",
+        description: pieceError.message,
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!pieceData) {
       toast({
         title: "Item not found",
         description: "No in-stock item found with this code",
@@ -154,8 +182,19 @@ const Dashboard = () => {
       return;
     }
 
-    setItemDetails(data);
-    setSoldPrice(data.price?.toString() || "");
+    // Map piece data to a consistent format
+    setItemDetails({
+      id: pieceData.id,
+      item_code: pieceData.piece_code,
+      item_name: pieceData.subcategories?.subcategory_name || "Panchaloha Item",
+      categories: pieceData.subcategories?.categories,
+      size: null,
+      weight: null,
+      price: pieceData.cost_price,
+      notes: pieceData.notes,
+      isPiece: true,
+    });
+    setSoldPrice(pieceData.cost_price?.toString() || "");
   };
 
   const handleSalesEntry = async () => {
@@ -178,14 +217,30 @@ const Dashboard = () => {
     }
 
     setLoading(true);
-    const { error } = await supabase
-      .from("items")
-      .update({
-        status: "sold",
-        sold_price: parseFloat(soldPrice),
-        sold_date: salesDate.toISOString(),
-      })
-      .eq("id", itemDetails.id);
+    let error;
+
+    if (itemDetails.isPiece) {
+      // Update item_pieces table for Panchaloha items
+      const { error: pieceError } = await supabase
+        .from("item_pieces")
+        .update({
+          status: "sold",
+          date_sold: salesDate.toISOString(),
+        })
+        .eq("id", itemDetails.id);
+      error = pieceError;
+    } else {
+      // Update items table for regular items
+      const { error: itemError } = await supabase
+        .from("items")
+        .update({
+          status: "sold",
+          sold_price: parseFloat(soldPrice),
+          sold_date: salesDate.toISOString(),
+        })
+        .eq("id", itemDetails.id);
+      error = itemError;
+    }
 
     setLoading(false);
 
