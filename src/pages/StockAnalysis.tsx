@@ -35,6 +35,13 @@ interface CategoryStats {
   avgWeight: number;
 }
 
+interface PanchalohaStats {
+  totalPieces: number;
+  availablePieces: number;
+  soldPieces: number;
+  totalValue: number;
+}
+
 const StockAnalysis = () => {
   const [items, setItems] = useState<Item[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -51,6 +58,7 @@ const StockAnalysis = () => {
     max: number;
     items: Item[];
   } | null>(null);
+  const [panchalohaStats, setPanchalohaStats] = useState<PanchalohaStats | null>(null);
 
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -62,6 +70,7 @@ const StockAnalysis = () => {
     }
     loadCategories();
     loadItems();
+    loadPanchalohaStats();
   }, [navigate, statusFilter]);
 
   const loadCategories = async () => {
@@ -116,6 +125,38 @@ const StockAnalysis = () => {
         description: error.message,
         variant: "destructive",
       });
+    }
+  };
+
+  const loadPanchalohaStats = async () => {
+    try {
+      // Get all Panchaloha pieces
+      const { data: pieces, error } = await supabase
+        .from("item_pieces")
+        .select("status, cost_price");
+
+      if (error) {
+        console.error("Error loading Panchaloha stats:", error);
+        return;
+      }
+
+      if (!pieces) {
+        setPanchalohaStats(null);
+        return;
+      }
+
+      const available = pieces.filter(p => p.status === "available");
+      const sold = pieces.filter(p => p.status === "sold");
+      const totalValue = available.reduce((sum, p) => sum + (p.cost_price || 0), 0);
+
+      setPanchalohaStats({
+        totalPieces: pieces.length,
+        availablePieces: available.length,
+        soldPieces: sold.length,
+        totalValue,
+      });
+    } catch (error: any) {
+      console.error("Error loading Panchaloha stats:", error);
     }
   };
 
@@ -340,6 +381,35 @@ const StockAnalysis = () => {
 
         {showAnalysis && (
           <div className="space-y-6">
+            {/* Panchaloha Idols Stats */}
+            {panchalohaStats && (
+              <Card className="bg-primary/5 border-primary/20">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-lg font-semibold">Panchaloha Idols</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                    <div>
+                      <p className="text-sm text-muted-foreground">Total Pieces</p>
+                      <p className="text-xl font-bold">{panchalohaStats.totalPieces}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground">Available</p>
+                      <p className="text-xl font-bold text-green-600">{panchalohaStats.availablePieces}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground">Sold</p>
+                      <p className="text-xl font-bold text-orange-600">{panchalohaStats.soldPieces}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground">Stock Value</p>
+                      <p className="text-xl font-bold text-primary">₹{panchalohaStats.totalValue.toLocaleString()}</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
             {/* Stats Cards */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               <Card>
