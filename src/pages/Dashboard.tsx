@@ -258,11 +258,11 @@ const Dashboard = () => {
       description: `${itemDetails.item_code} marked as sold`,
     });
 
-    // Reset form but keep dialog open
+    // Reset form but keep dialog open for batch entry
     setItemCode("");
     setItemDetails(null);
     setSoldPrice("");
-    setSalesDate(new Date());
+    // salesDate is intentionally NOT reset - keeps previous date for batch entry
     loadCategories(); // Refresh stats
   };
 
