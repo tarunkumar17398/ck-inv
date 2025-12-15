@@ -25,6 +25,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn, formatSizeWithInches } from "@/lib/utils";
 import { format } from "date-fns";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface CategoryStats {
   id: string;
@@ -45,14 +46,11 @@ const Dashboard = () => {
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { signOut } = useAuth();
 
   useEffect(() => {
-    if (!sessionStorage.getItem("admin_logged_in")) {
-      navigate("/");
-      return;
-    }
     loadCategories();
-  }, [navigate]);
+  }, []);
 
   const loadCategories = async () => {
     const { data: categoriesData, error: catError } = await supabase.from("categories").select("*").order("name");
@@ -109,8 +107,8 @@ const Dashboard = () => {
     setCategories(stats);
   };
 
-  const handleLogout = () => {
-    sessionStorage.removeItem("admin_logged_in");
+  const handleLogout = async () => {
+    await signOut();
     navigate("/");
   };
 

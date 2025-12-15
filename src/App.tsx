@@ -4,6 +4,8 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { OfflineIndicator } from "@/components/OfflineIndicator";
+import { AuthProvider } from "@/contexts/AuthContext";
+import { ProtectedRoute } from "@/components/ProtectedRoute";
 import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
 import AddItem from "./pages/AddItem";
@@ -32,27 +34,29 @@ const App = () => (
       <Sonner />
       <OfflineIndicator />
       <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<Login />} />
-        <Route path="/dashboard" element={<Dashboard />} />
-        <Route path="/add-item" element={<AddItem />} />
-        <Route path="/bulk-import" element={<BulkImport />} />
-        <Route path="/inventory" element={<Inventory />} />
-        <Route path="/sold-items" element={<SoldItems />} />
-        <Route path="/categories" element={<Categories />} />
-        <Route path="/reports" element={<Reports />} />
-          <Route path="/export-data" element={<ExportData />} />
-          <Route path="/stock-analysis" element={<StockAnalysis />} />
-          <Route path="/stock-print" element={<StockPrint />} />
-          <Route path="/backup-restore" element={<BackupRestore />} />
-          <Route path="/panchaloha-subcategories" element={<SubcategoryManagement />} />
-          <Route path="/panchaloha-pieces" element={<PiecesManagement />} />
-          <Route path="/data-importer" element={<DataImporter />} />
-          <Route path="/update-brass-prices" element={<UpdateBrassPrices />} />
-          <Route path="/rfid-api-test" element={<RfidApiTest />} />
-          {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-          <Route path="*" element={<NotFound />} />
-        </Routes>
+        <AuthProvider>
+          <Routes>
+            <Route path="/" element={<Login />} />
+            <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+            <Route path="/add-item" element={<ProtectedRoute><AddItem /></ProtectedRoute>} />
+            <Route path="/bulk-import" element={<ProtectedRoute><BulkImport /></ProtectedRoute>} />
+            <Route path="/inventory" element={<ProtectedRoute><Inventory /></ProtectedRoute>} />
+            <Route path="/sold-items" element={<ProtectedRoute><SoldItems /></ProtectedRoute>} />
+            <Route path="/categories" element={<ProtectedRoute><Categories /></ProtectedRoute>} />
+            <Route path="/reports" element={<ProtectedRoute><Reports /></ProtectedRoute>} />
+            <Route path="/export-data" element={<ProtectedRoute><ExportData /></ProtectedRoute>} />
+            <Route path="/stock-analysis" element={<ProtectedRoute><StockAnalysis /></ProtectedRoute>} />
+            <Route path="/stock-print" element={<ProtectedRoute><StockPrint /></ProtectedRoute>} />
+            <Route path="/backup-restore" element={<ProtectedRoute><BackupRestore /></ProtectedRoute>} />
+            <Route path="/panchaloha-subcategories" element={<ProtectedRoute><SubcategoryManagement /></ProtectedRoute>} />
+            <Route path="/panchaloha-pieces" element={<ProtectedRoute><PiecesManagement /></ProtectedRoute>} />
+            <Route path="/data-importer" element={<ProtectedRoute><DataImporter /></ProtectedRoute>} />
+            <Route path="/update-brass-prices" element={<ProtectedRoute><UpdateBrassPrices /></ProtectedRoute>} />
+            <Route path="/rfid-api-test" element={<ProtectedRoute><RfidApiTest /></ProtectedRoute>} />
+            {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </AuthProvider>
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>

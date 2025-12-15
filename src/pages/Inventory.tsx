@@ -67,11 +67,6 @@ const Inventory = () => {
   const [searchParams] = useSearchParams();
 
   useEffect(() => {
-    if (!sessionStorage.getItem("admin_logged_in")) {
-      navigate("/");
-      return;
-    }
-
     const initialSearch = searchParams.get("search");
     const initialCategory = searchParams.get("category");
     
@@ -80,7 +75,7 @@ const Inventory = () => {
 
     loadCategories();
     setIsInitialized(true);
-  }, [navigate, searchParams]);
+  }, [searchParams]);
 
   // Reload items when category filter, search, or sort order changes (but only after initialization)
   useEffect(() => {

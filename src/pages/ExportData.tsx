@@ -32,12 +32,8 @@ const ExportData = () => {
   const { toast } = useToast();
 
   useEffect(() => {
-    if (!sessionStorage.getItem("admin_logged_in")) {
-      navigate("/");
-      return;
-    }
     loadItems();
-  }, [navigate, filter]);
+  }, [filter]);
 
   const loadItems = async () => {
     const now = new Date();

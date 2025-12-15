@@ -51,12 +51,8 @@ const StockPrint = () => {
   const { toast } = useToast();
 
   useEffect(() => {
-    if (!sessionStorage.getItem("admin_logged_in")) {
-      navigate("/");
-      return;
-    }
     loadCategories();
-  }, [navigate]);
+  }, []);
 
   useEffect(() => {
     if (categories.length > 0 && selectedCategory === "all") {

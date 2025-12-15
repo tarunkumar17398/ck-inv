@@ -43,13 +43,9 @@ const SoldItems = () => {
   const { toast } = useToast();
 
   useEffect(() => {
-    if (!sessionStorage.getItem("admin_logged_in")) {
-      navigate("/");
-      return;
-    }
     loadSoldItems();
     loadCategories();
-  }, [navigate]);
+  }, []);
 
   const loadCategories = async () => {
     const { data, error } = await supabase
