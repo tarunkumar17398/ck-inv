@@ -36,14 +36,10 @@ const PiecesManagement = () => {
   const { toast } = useToast();
 
   useEffect(() => {
-    if (!sessionStorage.getItem("admin_logged_in")) {
-      navigate("/");
-      return;
-    }
     if (subcategoryId) {
       loadPieces();
     }
-  }, [navigate, subcategoryId]);
+  }, [subcategoryId]);
 
   const loadPieces = async () => {
     if (!subcategoryId) return;

@@ -16,6 +16,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { useAuth } from '@/contexts/AuthContext';
 
 export default function BackupRestore() {
   const navigate = useNavigate();
@@ -23,15 +24,11 @@ export default function BackupRestore() {
   const [loading, setLoading] = useState(false);
   const [restoring, setRestoring] = useState(false);
   const [selectedBackup, setSelectedBackup] = useState<string | null>(null);
+  const { session } = useAuth();
 
   useEffect(() => {
-    const isAdmin = localStorage.getItem('adminLoggedIn');
-    if (!isAdmin) {
-      navigate('/');
-      return;
-    }
     loadBackups();
-  }, [navigate]);
+  }, []);
 
   const loadBackups = async () => {
     setLoading(true);
@@ -54,7 +51,11 @@ export default function BackupRestore() {
   const createBackup = async () => {
     setLoading(true);
     try {
-      const { data, error } = await supabase.functions.invoke('backup-database');
+      const { data, error } = await supabase.functions.invoke('backup-database', {
+        headers: {
+          Authorization: `Bearer ${session?.access_token}`,
+        },
+      });
       
       if (error) throw error;
       
@@ -81,6 +82,9 @@ export default function BackupRestore() {
     try {
       const { data, error } = await supabase.functions.invoke('restore-backup', {
         body: { fileName },
+        headers: {
+          Authorization: `Bearer ${session?.access_token}`,
+        },
       });
       
       if (error) throw error;

@@ -55,12 +55,8 @@ const AddItem = () => {
   const { toast } = useToast();
 
   useEffect(() => {
-    if (!sessionStorage.getItem("admin_logged_in")) {
-      navigate("/");
-      return;
-    }
     loadCategories();
-  }, [navigate]);
+  }, []);
 
   const loadCategories = async () => {
     const { data, error } = await supabase

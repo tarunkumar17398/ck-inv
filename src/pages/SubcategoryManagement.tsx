@@ -32,12 +32,8 @@ const SubcategoryManagement = () => {
   const { toast } = useToast();
 
   useEffect(() => {
-    if (!sessionStorage.getItem("admin_logged_in")) {
-      navigate("/");
-      return;
-    }
     loadPanchalohaCategory();
-  }, [navigate]);
+  }, []);
 
   const loadPanchalohaCategory = async () => {
     // Find Panchaloha Idols category

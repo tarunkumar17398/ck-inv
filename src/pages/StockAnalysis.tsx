@@ -64,14 +64,10 @@ const StockAnalysis = () => {
   const { toast } = useToast();
 
   useEffect(() => {
-    if (!sessionStorage.getItem("admin_logged_in")) {
-      navigate("/");
-      return;
-    }
     loadCategories();
     loadItems();
     loadPanchalohaStats();
-  }, [navigate, statusFilter]);
+  }, [statusFilter]);
 
   const loadCategories = async () => {
     const { data } = await supabase.from("categories").select("*").order("name");

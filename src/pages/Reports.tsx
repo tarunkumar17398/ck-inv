@@ -52,13 +52,9 @@ const Reports = () => {
   const { toast } = useToast();
 
   useEffect(() => {
-    if (!sessionStorage.getItem("admin_logged_in")) {
-      navigate("/");
-      return;
-    }
     loadCategories();
     loadReportData();
-  }, [navigate, dateRange, selectedCategory, customStartDate, customEndDate]);
+  }, [dateRange, selectedCategory, customStartDate, customEndDate]);
 
   const loadCategories = async () => {
     const { data } = await supabase.from("categories").select("*").order("name");
