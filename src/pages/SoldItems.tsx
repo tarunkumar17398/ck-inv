@@ -24,6 +24,7 @@ interface SoldItem {
   sold_price: number | null;
   sold_date: string | null;
   categories: { name: string; prefix: string; id: string };
+  source: 'items' | 'pieces'; // Track source table for updates
 }
 
 const SoldItems = () => {
@@ -63,8 +64,9 @@ const SoldItems = () => {
 
   const loadSoldItems = async () => {
     try {
-      // Fetch all sold items (Supabase default limit is 1000, so we need to handle pagination)
       let allItems: SoldItem[] = [];
+      
+      // Fetch sold items from items table (BR, IR, WD, TP)
       let from = 0;
       const batchSize = 1000;
       let hasMore = true;
@@ -87,13 +89,82 @@ const SoldItems = () => {
         }
 
         if (data && data.length > 0) {
-          allItems = [...allItems, ...data];
+          const mappedItems: SoldItem[] = data.map(item => ({
+            id: item.id,
+            item_code: item.item_code,
+            item_name: item.item_name,
+            particulars: item.particulars,
+            size: item.size,
+            weight: item.weight,
+            sold_price: item.sold_price,
+            sold_date: item.sold_date,
+            categories: item.categories,
+            source: 'items' as const,
+          }));
+          allItems = [...allItems, ...mappedItems];
           from += batchSize;
           hasMore = data.length === batchSize;
         } else {
           hasMore = false;
         }
       }
+
+      // Fetch sold pieces from item_pieces table (Panchaloha Idols)
+      const { data: panchalohaCategory } = await supabase
+        .from("categories")
+        .select("id, name, prefix")
+        .eq("name", "Panchaloha Idols")
+        .maybeSingle();
+
+      if (panchalohaCategory) {
+        from = 0;
+        hasMore = true;
+
+        while (hasMore) {
+          const { data: piecesData, error: piecesError } = await supabase
+            .from("item_pieces")
+            .select("*, subcategories(id, subcategory_name, category_id)")
+            .eq("status", "sold")
+            .order("date_sold", { ascending: false })
+            .range(from, from + batchSize - 1);
+
+          if (piecesError) {
+            console.error("Error loading sold pieces:", piecesError);
+            break;
+          }
+
+          if (piecesData && piecesData.length > 0) {
+            const mappedPieces: SoldItem[] = piecesData.map(piece => ({
+              id: piece.id,
+              item_code: piece.piece_code,
+              item_name: piece.subcategories?.subcategory_name || "",
+              particulars: piece.notes,
+              size: null, // Pieces don't have size field
+              weight: null, // Pieces don't have weight field
+              sold_price: piece.cost_price, // Using cost_price as sold_price for pieces
+              sold_date: piece.date_sold,
+              categories: {
+                id: panchalohaCategory.id,
+                name: panchalohaCategory.name,
+                prefix: panchalohaCategory.prefix,
+              },
+              source: 'pieces' as const,
+            }));
+            allItems = [...allItems, ...mappedPieces];
+            from += batchSize;
+            hasMore = piecesData.length === batchSize;
+          } else {
+            hasMore = false;
+          }
+        }
+      }
+
+      // Sort all items by sold date
+      allItems.sort((a, b) => {
+        const dateA = a.sold_date ? new Date(a.sold_date).getTime() : 0;
+        const dateB = b.sold_date ? new Date(b.sold_date).getTime() : 0;
+        return dateB - dateA;
+      });
 
       setItems(allItems);
     } catch (error: any) {
@@ -121,19 +192,35 @@ const SoldItems = () => {
     });
   }, [items, searchQuery, selectedCategory]);
 
-  const updateSoldDate = async (itemId: string, newDate: Date) => {
-    const { error } = await supabase
-      .from("items")
-      .update({ sold_date: newDate.toISOString() })
-      .eq("id", itemId);
+  const updateSoldDate = async (itemId: string, newDate: Date, source: 'items' | 'pieces') => {
+    if (source === 'items') {
+      const { error } = await supabase
+        .from("items")
+        .update({ sold_date: newDate.toISOString() })
+        .eq("id", itemId);
 
-    if (error) {
-      toast({
-        title: "Error updating date",
-        description: error.message,
-        variant: "destructive",
-      });
-      return;
+      if (error) {
+        toast({
+          title: "Error updating date",
+          description: error.message,
+          variant: "destructive",
+        });
+        return;
+      }
+    } else {
+      const { error } = await supabase
+        .from("item_pieces")
+        .update({ date_sold: newDate.toISOString() })
+        .eq("id", itemId);
+
+      if (error) {
+        toast({
+          title: "Error updating date",
+          description: error.message,
+          variant: "destructive",
+        });
+        return;
+      }
     }
 
     toast({
@@ -190,23 +277,43 @@ const SoldItems = () => {
       return;
     }
 
-    const { error } = await supabase
-      .from("items")
-      .update({
-        particulars: editForm.particulars.trim() || null,
-        size: formatSizeWithInches(editForm.size),
-        weight: weight || null,
-        sold_price: editForm.sold_price ? soldPrice : null,
-      })
-      .eq("id", editingItem.id);
+    if (editingItem.source === 'items') {
+      const { error } = await supabase
+        .from("items")
+        .update({
+          particulars: editForm.particulars.trim() || null,
+          size: formatSizeWithInches(editForm.size),
+          weight: weight || null,
+          sold_price: editForm.sold_price ? soldPrice : null,
+        })
+        .eq("id", editingItem.id);
 
-    if (error) {
-      toast({
-        title: "Error updating item",
-        description: error.message,
-        variant: "destructive",
-      });
-      return;
+      if (error) {
+        toast({
+          title: "Error updating item",
+          description: error.message,
+          variant: "destructive",
+        });
+        return;
+      }
+    } else {
+      // For pieces, we can only update notes (particulars) and cost_price
+      const { error } = await supabase
+        .from("item_pieces")
+        .update({
+          notes: editForm.particulars.trim() || null,
+          cost_price: editForm.sold_price ? soldPrice : null,
+        })
+        .eq("id", editingItem.id);
+
+      if (error) {
+        toast({
+          title: "Error updating piece",
+          description: error.message,
+          variant: "destructive",
+        });
+        return;
+      }
     }
 
     toast({
@@ -311,7 +418,7 @@ const SoldItems = () => {
                         <Calendar
                           mode="single"
                           selected={item.sold_date ? new Date(item.sold_date) : undefined}
-                          onSelect={(date) => date && updateSoldDate(item.id, date)}
+                          onSelect={(date) => date && updateSoldDate(item.id, date, item.source)}
                           initialFocus
                           className={cn("p-3 pointer-events-auto")}
                         />
