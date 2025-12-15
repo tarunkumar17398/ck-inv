@@ -79,10 +79,18 @@ const Reports = () => {
     
     const monthsData: SalesData[] = [];
     
+    // Get Panchaloha Idols category ID
+    const { data: piCategory } = await supabase
+      .from("categories")
+      .select("id")
+      .eq("name", "Panchaloha Idols")
+      .single();
+    const piCategoryId = piCategory?.id;
+    
     // Generate monthly sales data
     if (dateRange === "custom" && customStartDate && customEndDate) {
       // For custom range, query once and group by month
-      let query = supabase
+      let itemsQuery = supabase
         .from("items")
         .select("sold_price, sold_date, category_id")
         .eq("status", "sold")
@@ -90,10 +98,22 @@ const Reports = () => {
         .lte("sold_date", customEndDate.toISOString());
       
       if (selectedCategory !== "all") {
-        query = query.eq("category_id", selectedCategory);
+        itemsQuery = itemsQuery.eq("category_id", selectedCategory);
       }
       
-      const { data: soldItems } = await query;
+      const { data: soldItems } = await itemsQuery;
+      
+      // Also fetch from item_pieces if Panchaloha is selected or all categories
+      let soldPieces: any[] = [];
+      if (selectedCategory === "all" || selectedCategory === piCategoryId) {
+        const { data: pieces } = await supabase
+          .from("item_pieces")
+          .select("cost_price, date_sold")
+          .eq("status", "sold")
+          .gte("date_sold", customStartDate.toISOString())
+          .lte("date_sold", customEndDate.toISOString());
+        soldPieces = pieces || [];
+      }
       
       // Group by month
       const monthsMap = new Map<string, { revenue: number; count: number }>();
@@ -103,6 +123,16 @@ const Reports = () => {
         const existing = monthsMap.get(month) || { revenue: 0, count: 0 };
         monthsMap.set(month, {
           revenue: existing.revenue + (item.sold_price || 0),
+          count: existing.count + 1,
+        });
+      });
+      
+      // Add Panchaloha pieces to the same map
+      soldPieces.forEach((piece) => {
+        const month = format(new Date(piece.date_sold!), "MMM yyyy");
+        const existing = monthsMap.get(month) || { revenue: 0, count: 0 };
+        monthsMap.set(month, {
+          revenue: existing.revenue + (piece.cost_price || 0), // Using cost_price as sold_price for pieces
           count: existing.count + 1,
         });
       });
@@ -124,7 +154,7 @@ const Reports = () => {
         const monthStart = startOfMonth(date);
         const monthEnd = endOfMonth(date);
         
-        let query = supabase
+        let itemsQuery = supabase
           .from("items")
           .select("sold_price, category_id")
           .eq("status", "sold")
@@ -132,17 +162,32 @@ const Reports = () => {
           .lte("sold_date", monthEnd.toISOString());
         
         if (selectedCategory !== "all") {
-          query = query.eq("category_id", selectedCategory);
+          itemsQuery = itemsQuery.eq("category_id", selectedCategory);
         }
         
-        const { data: soldItems } = await query;
+        const { data: soldItems } = await itemsQuery;
         
-        const revenue = soldItems?.reduce((sum, item) => sum + (item.sold_price || 0), 0) || 0;
+        // Also fetch from item_pieces if Panchaloha is selected or all categories
+        let soldPieces: any[] = [];
+        if (selectedCategory === "all" || selectedCategory === piCategoryId) {
+          const { data: pieces } = await supabase
+            .from("item_pieces")
+            .select("cost_price")
+            .eq("status", "sold")
+            .gte("date_sold", monthStart.toISOString())
+            .lte("date_sold", monthEnd.toISOString());
+          soldPieces = pieces || [];
+        }
+        
+        const itemsRevenue = soldItems?.reduce((sum, item) => sum + (item.sold_price || 0), 0) || 0;
+        const piecesRevenue = soldPieces.reduce((sum, piece) => sum + (piece.cost_price || 0), 0);
+        const revenue = itemsRevenue + piecesRevenue;
+        const totalCount = (soldItems?.length || 0) + soldPieces.length;
         
         monthsData.push({
           month: format(date, "MMM yyyy"),
-          sales: soldItems?.length || 0,
-          items_sold: soldItems?.length || 0,
+          sales: totalCount,
+          items_sold: totalCount,
           revenue: revenue,
         });
       }
@@ -155,73 +200,113 @@ const Reports = () => {
     const categorySales: CategorySales[] = [];
     
     for (const cat of allCategories || []) {
-      const { data: soldItems } = await supabase
-        .from("items")
-        .select("sold_price")
-        .eq("status", "sold")
-        .eq("category_id", cat.id);
-      
-      const revenue = soldItems?.reduce((sum, item) => sum + (item.sold_price || 0), 0) || 0;
-      
-      categorySales.push({
-        name: cat.name,
-        total_sales: soldItems?.length || 0,
-        items_sold: soldItems?.length || 0,
-        revenue: revenue,
-      });
+      if (cat.name === "Panchaloha Idols") {
+        // Fetch from item_pieces for Panchaloha Idols
+        const { data: soldPieces } = await supabase
+          .from("item_pieces")
+          .select("cost_price")
+          .eq("status", "sold");
+        
+        const revenue = soldPieces?.reduce((sum, piece) => sum + (piece.cost_price || 0), 0) || 0;
+        
+        categorySales.push({
+          name: cat.name,
+          total_sales: soldPieces?.length || 0,
+          items_sold: soldPieces?.length || 0,
+          revenue: revenue,
+        });
+      } else {
+        // Fetch from items for other categories
+        const { data: soldItems } = await supabase
+          .from("items")
+          .select("sold_price")
+          .eq("status", "sold")
+          .eq("category_id", cat.id);
+        
+        const revenue = soldItems?.reduce((sum, item) => sum + (item.sold_price || 0), 0) || 0;
+        
+        categorySales.push({
+          name: cat.name,
+          total_sales: soldItems?.length || 0,
+          items_sold: soldItems?.length || 0,
+          revenue: revenue,
+        });
+      }
     }
     
     setCategoryData(categorySales.filter(c => c.total_sales > 0));
     
     // Calculate key metrics
-    await calculateMetrics(monthsData);
+    await calculateMetrics(monthsData, piCategoryId);
     
     setLoading(false);
   };
 
-  const calculateMetrics = async (monthsData: SalesData[]) => {
+  const calculateMetrics = async (monthsData: SalesData[], piCategoryId?: string) => {
     const currentMonth = monthsData[monthsData.length - 1];
     const previousMonth = monthsData[monthsData.length - 2];
     
     // Total revenue
     const totalRevenue = monthsData.reduce((sum, m) => sum + m.revenue, 0);
-    const revenueChange = previousMonth 
+    const revenueChange = previousMonth && previousMonth.revenue > 0
       ? ((currentMonth.revenue - previousMonth.revenue) / previousMonth.revenue * 100).toFixed(1)
       : "0";
     
     // Total items sold
     const totalItemsSold = monthsData.reduce((sum, m) => sum + m.items_sold, 0);
-    const itemsChange = previousMonth 
+    const itemsChange = previousMonth && previousMonth.items_sold > 0
       ? ((currentMonth.items_sold - previousMonth.items_sold) / previousMonth.items_sold * 100).toFixed(1)
       : "0";
     
     // Average sale price
     const avgSalePrice = totalItemsSold > 0 ? (totalRevenue / totalItemsSold).toFixed(0) : "0";
     
-    // Current stock count
-    const { count: stockCount } = await supabase
+    // Current stock count (items + pieces)
+    const { count: itemsStockCount } = await supabase
       .from("items")
       .select("*", { count: "exact", head: true })
       .eq("status", "in_stock");
     
-    // Total stock value (based on cost prices)
+    const { count: piecesStockCount } = await supabase
+      .from("item_pieces")
+      .select("*", { count: "exact", head: true })
+      .eq("status", "available");
+    
+    const stockCount = (itemsStockCount || 0) + (piecesStockCount || 0);
+    
+    // Total stock value (based on cost prices from items + pieces)
     const { data: stockItems } = await supabase
       .from("items")
       .select("cost_price")
       .eq("status", "in_stock");
     
-    const stockValue = stockItems?.reduce((sum, item) => sum + (item.cost_price || 0), 0) || 0;
+    const { data: stockPieces } = await supabase
+      .from("item_pieces")
+      .select("cost_price")
+      .eq("status", "available");
+    
+    const itemsStockValue = stockItems?.reduce((sum, item) => sum + (item.cost_price || 0), 0) || 0;
+    const piecesStockValue = stockPieces?.reduce((sum, piece) => sum + (piece.cost_price || 0), 0) || 0;
+    const stockValue = itemsStockValue + piecesStockValue;
 
-    // Items sold this month
+    // Items sold this month (items + pieces)
     const startOfThisMonth = new Date();
     startOfThisMonth.setDate(1);
     startOfThisMonth.setHours(0, 0, 0, 0);
 
-    const { count: soldThisMonth } = await supabase
+    const { count: itemsSoldThisMonth } = await supabase
       .from("items")
       .select("*", { count: "exact", head: true })
       .eq("status", "sold")
       .gte("sold_date", startOfThisMonth.toISOString());
+    
+    const { count: piecesSoldThisMonth } = await supabase
+      .from("item_pieces")
+      .select("*", { count: "exact", head: true })
+      .eq("status", "sold")
+      .gte("date_sold", startOfThisMonth.toISOString());
+    
+    const soldThisMonth = (itemsSoldThisMonth || 0) + (piecesSoldThisMonth || 0);
     
     setMetrics([
       {
@@ -232,13 +317,13 @@ const Reports = () => {
       },
       {
         title: "Total Items in Stock",
-        value: stockCount?.toString() || "0",
+        value: stockCount.toString(),
         icon: Package,
         description: "Available for sale",
       },
       {
         title: "Sold This Month",
-        value: soldThisMonth?.toString() || "0",
+        value: soldThisMonth.toString(),
         icon: ShoppingCart,
         description: format(new Date(), "MMMM yyyy"),
       },
