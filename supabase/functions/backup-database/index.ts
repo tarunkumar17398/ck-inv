@@ -5,6 +5,165 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// Google Drive API helper functions
+async function getGoogleAccessToken(serviceAccountJson: string): Promise<string> {
+  const serviceAccount = JSON.parse(serviceAccountJson);
+  
+  // Create JWT header and claim
+  const header = { alg: 'RS256', typ: 'JWT' };
+  const now = Math.floor(Date.now() / 1000);
+  const claim = {
+    iss: serviceAccount.client_email,
+    scope: 'https://www.googleapis.com/auth/drive.file',
+    aud: 'https://oauth2.googleapis.com/token',
+    exp: now + 3600,
+    iat: now,
+  };
+
+  // Base64url encode
+  const base64url = (str: string) => btoa(str).replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
+  const encodedHeader = base64url(JSON.stringify(header));
+  const encodedClaim = base64url(JSON.stringify(claim));
+
+  // Sign with RSA
+  const privateKey = serviceAccount.private_key;
+  const encoder = new TextEncoder();
+  const signatureInput = encoder.encode(`${encodedHeader}.${encodedClaim}`);
+  
+  // Import the private key
+  const pemContents = privateKey
+    .replace('-----BEGIN PRIVATE KEY-----', '')
+    .replace('-----END PRIVATE KEY-----', '')
+    .replace(/\s/g, '');
+  const binaryKey = Uint8Array.from(atob(pemContents), c => c.charCodeAt(0));
+  
+  const cryptoKey = await crypto.subtle.importKey(
+    'pkcs8',
+    binaryKey,
+    { name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-256' },
+    false,
+    ['sign']
+  );
+
+  const signature = await crypto.subtle.sign('RSASSA-PKCS1-v1_5', cryptoKey, signatureInput);
+  const encodedSignature = base64url(String.fromCharCode(...new Uint8Array(signature)));
+
+  const jwt = `${encodedHeader}.${encodedClaim}.${encodedSignature}`;
+
+  // Exchange JWT for access token
+  const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: `grant_type=urn:ietf:params:oauth:grant-type:jwt-bearer&assertion=${jwt}`,
+  });
+
+  const tokenData = await tokenResponse.json();
+  if (!tokenData.access_token) {
+    throw new Error(`Failed to get Google access token: ${JSON.stringify(tokenData)}`);
+  }
+  
+  return tokenData.access_token;
+}
+
+async function findOrCreateFolder(accessToken: string, folderName: string): Promise<string> {
+  // Search for existing folder
+  const searchResponse = await fetch(
+    `https://www.googleapis.com/drive/v3/files?q=name='${folderName}' and mimeType='application/vnd.google-apps.folder' and trashed=false`,
+    { headers: { Authorization: `Bearer ${accessToken}` } }
+  );
+  const searchData = await searchResponse.json();
+
+  if (searchData.files && searchData.files.length > 0) {
+    return searchData.files[0].id;
+  }
+
+  // Create new folder
+  const createResponse = await fetch('https://www.googleapis.com/drive/v3/files', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      name: folderName,
+      mimeType: 'application/vnd.google-apps.folder',
+    }),
+  });
+  const createData = await createResponse.json();
+  console.log(`Created Google Drive folder: ${folderName} (${createData.id})`);
+  return createData.id;
+}
+
+async function uploadToGoogleDrive(
+  accessToken: string,
+  folderId: string,
+  fileName: string,
+  content: string
+): Promise<string> {
+  const metadata = {
+    name: fileName,
+    parents: [folderId],
+    mimeType: 'application/json',
+  };
+
+  const boundary = '-------314159265358979323846';
+  const delimiter = `\r\n--${boundary}\r\n`;
+  const closeDelimiter = `\r\n--${boundary}--`;
+
+  const body =
+    delimiter +
+    'Content-Type: application/json; charset=UTF-8\r\n\r\n' +
+    JSON.stringify(metadata) +
+    delimiter +
+    'Content-Type: application/json\r\n\r\n' +
+    content +
+    closeDelimiter;
+
+  const response = await fetch(
+    'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart',
+    {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        'Content-Type': `multipart/related; boundary=${boundary}`,
+      },
+      body,
+    }
+  );
+
+  const data = await response.json();
+  if (!data.id) {
+    throw new Error(`Failed to upload to Google Drive: ${JSON.stringify(data)}`);
+  }
+  console.log(`Uploaded to Google Drive: ${fileName} (${data.id})`);
+  return data.id;
+}
+
+async function cleanupOldGoogleDriveBackups(accessToken: string, folderId: string, daysToKeep: number): Promise<void> {
+  const cutoffDate = new Date();
+  cutoffDate.setDate(cutoffDate.getDate() - daysToKeep);
+
+  // List files in folder
+  const response = await fetch(
+    `https://www.googleapis.com/drive/v3/files?q='${folderId}' in parents and trashed=false&fields=files(id,name,createdTime)`,
+    { headers: { Authorization: `Bearer ${accessToken}` } }
+  );
+  const data = await response.json();
+
+  if (data.files) {
+    for (const file of data.files) {
+      const fileDate = new Date(file.createdTime);
+      if (fileDate < cutoffDate) {
+        await fetch(`https://www.googleapis.com/drive/v3/files/${file.id}`, {
+          method: 'DELETE',
+          headers: { Authorization: `Bearer ${accessToken}` },
+        });
+        console.log(`Deleted old Google Drive backup: ${file.name}`);
+      }
+    }
+  }
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -14,6 +173,7 @@ Deno.serve(async (req) => {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
+    const googleServiceAccountJson = Deno.env.get('GOOGLE_SERVICE_ACCOUNT_JSON');
     
     // Verify JWT token and check admin role
     const authHeader = req.headers.get('authorization');
@@ -90,7 +250,7 @@ Deno.serve(async (req) => {
     const fileName = `backup-${new Date().toISOString().split('T')[0]}.json`;
     const fileContent = JSON.stringify(backupData, null, 2);
 
-    // Upload to storage
+    // Upload to Lovable Cloud Storage
     const { error: uploadError } = await supabaseAdmin.storage
       .from('backups')
       .upload(fileName, fileContent, {
@@ -100,9 +260,29 @@ Deno.serve(async (req) => {
 
     if (uploadError) throw uploadError;
 
-    console.log(`Backup created: ${fileName} by ${user.email}`);
+    console.log(`Backup created in Cloud Storage: ${fileName} by ${user.email}`);
 
-    // Clean up old backups (keep last 30 days)
+    // Upload to Google Drive if configured
+    let googleDriveFileId = null;
+    if (googleServiceAccountJson) {
+      try {
+        console.log('Starting Google Drive upload...');
+        const accessToken = await getGoogleAccessToken(googleServiceAccountJson);
+        const folderId = await findOrCreateFolder(accessToken, 'CK Inventory Backups');
+        googleDriveFileId = await uploadToGoogleDrive(accessToken, folderId, fileName, fileContent);
+        
+        // Cleanup old backups from Google Drive (keep 30 days)
+        await cleanupOldGoogleDriveBackups(accessToken, folderId, 30);
+        console.log('Google Drive backup completed successfully');
+      } catch (googleError) {
+        console.error('Google Drive upload failed:', googleError);
+        // Don't fail the whole backup if Google Drive fails
+      }
+    } else {
+      console.log('Google Drive not configured, skipping...');
+    }
+
+    // Clean up old backups from Cloud Storage (keep last 30 days)
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
@@ -113,13 +293,18 @@ Deno.serve(async (req) => {
         const fileDate = new Date(file.created_at);
         if (fileDate < thirtyDaysAgo) {
           await supabaseAdmin.storage.from('backups').remove([file.name]);
-          console.log(`Deleted old backup: ${file.name}`);
+          console.log(`Deleted old Cloud Storage backup: ${file.name}`);
         }
       }
     }
 
     return new Response(
-      JSON.stringify({ success: true, fileName }),
+      JSON.stringify({ 
+        success: true, 
+        fileName,
+        googleDriveUploaded: !!googleDriveFileId,
+        googleDriveFileId 
+      }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   } catch (error) {
