@@ -1,11 +1,11 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { toast } from '@/hooks/use-toast';
-import { Database, Download, Upload, ArrowLeft, RefreshCw, AlertTriangle, Cloud, CheckCircle2 } from 'lucide-react';
+import { Database, Download, Upload, ArrowLeft, RefreshCw, AlertTriangle, Cloud, CheckCircle2, FileUp } from 'lucide-react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -18,6 +18,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useAuth } from '@/contexts/AuthContext';
 import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
 
 export default function BackupRestore() {
   const navigate = useNavigate();
@@ -25,7 +26,10 @@ export default function BackupRestore() {
   const [loading, setLoading] = useState(false);
   const [restoring, setRestoring] = useState(false);
   const [selectedBackup, setSelectedBackup] = useState<string | null>(null);
+  const [uploadedFile, setUploadedFile] = useState<File | null>(null);
+  const [showUploadConfirm, setShowUploadConfirm] = useState(false);
   const [lastGoogleDriveSync, setLastGoogleDriveSync] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const { session } = useAuth();
 
   useEffect(() => {
@@ -110,6 +114,66 @@ export default function BackupRestore() {
       toast({
         title: 'Restore Failed',
         description: 'Failed to restore backup',
+        variant: 'destructive',
+      });
+    } finally {
+      setRestoring(false);
+    }
+  };
+
+  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      if (!file.name.endsWith('.json')) {
+        toast({
+          title: 'Invalid File',
+          description: 'Please upload a JSON backup file',
+          variant: 'destructive',
+        });
+        return;
+      }
+      setUploadedFile(file);
+      setShowUploadConfirm(true);
+    }
+  };
+
+  const restoreFromUploadedFile = async () => {
+    if (!uploadedFile) return;
+    
+    setRestoring(true);
+    try {
+      const fileContent = await uploadedFile.text();
+      const backupData = JSON.parse(fileContent);
+      
+      // Validate backup structure
+      if (!backupData.items && !backupData.categories) {
+        throw new Error('Invalid backup file format');
+      }
+      
+      const { data, error } = await supabase.functions.invoke('restore-backup', {
+        body: { backupData },
+        headers: {
+          Authorization: `Bearer ${session?.access_token}`,
+        },
+      });
+      
+      if (error) throw error;
+      
+      toast({
+        title: 'Restore Complete',
+        description: `Database restored from uploaded file`,
+      });
+      
+      setShowUploadConfirm(false);
+      setUploadedFile(null);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    } catch (error) {
+      console.error('Error restoring from file:', error);
+      toast({
+        title: 'Restore Failed',
+        description: error instanceof Error ? error.message : 'Failed to restore from uploaded file',
         variant: 'destructive',
       });
     } finally {
@@ -260,6 +324,32 @@ export default function BackupRestore() {
             )}
           </CardContent>
         </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <FileUp className="h-5 w-5" />
+              Restore from File
+            </CardTitle>
+            <CardDescription>
+              Upload a backup file downloaded from Google Drive or local storage
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center gap-4">
+              <Input
+                ref={fileInputRef}
+                type="file"
+                accept=".json"
+                onChange={handleFileUpload}
+                className="max-w-xs"
+              />
+              <span className="text-sm text-muted-foreground">
+                JSON backup files only
+              </span>
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
       <AlertDialog open={!!selectedBackup} onOpenChange={() => setSelectedBackup(null)}>
@@ -274,6 +364,34 @@ export default function BackupRestore() {
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction
               onClick={() => selectedBackup && restoreBackup(selectedBackup)}
+              disabled={restoring}
+            >
+              {restoring ? 'Restoring...' : 'Restore'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={showUploadConfirm} onOpenChange={(open) => {
+        setShowUploadConfirm(open);
+        if (!open) {
+          setUploadedFile(null);
+          if (fileInputRef.current) {
+            fileInputRef.current.value = '';
+          }
+        }
+      }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Restore from Uploaded File?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will replace all current data with the backup from "{uploadedFile?.name}". This action cannot be undone. Make sure you have a recent backup before proceeding.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={restoreFromUploadedFile}
               disabled={restoring}
             >
               {restoring ? 'Restoring...' : 'Restore'}
