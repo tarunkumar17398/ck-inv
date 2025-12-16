@@ -11,10 +11,10 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { fileName } = await req.json();
+    const { fileName, backupData: directBackupData } = await req.json();
     
-    if (!fileName) {
-      throw new Error('fileName is required');
+    if (!fileName && !directBackupData) {
+      throw new Error('Either fileName or backupData is required');
     }
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
@@ -66,17 +66,24 @@ Deno.serve(async (req) => {
       );
     }
 
-    console.log(`Starting database restore from ${fileName} by admin: ${user.id}`);
+    let backupData;
 
-    // Download backup file
-    const { data: fileData, error: downloadError } = await supabaseAdmin.storage
-      .from('backups')
-      .download(fileName);
+    if (directBackupData) {
+      // Use directly provided backup data (from file upload)
+      console.log(`Starting database restore from uploaded file by admin: ${user.id}`);
+      backupData = directBackupData;
+    } else {
+      // Download backup file from storage
+      console.log(`Starting database restore from ${fileName} by admin: ${user.id}`);
+      const { data: fileData, error: downloadError } = await supabaseAdmin.storage
+        .from('backups')
+        .download(fileName);
 
-    if (downloadError) throw downloadError;
+      if (downloadError) throw downloadError;
 
-    const backupContent = await fileData.text();
-    const backupData = JSON.parse(backupContent);
+      const backupContent = await fileData.text();
+      backupData = JSON.parse(backupContent);
+    }
 
     // Clear existing data (in reverse order of dependencies)
     console.log('Clearing existing data...');
