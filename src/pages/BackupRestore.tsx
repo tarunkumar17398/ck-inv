@@ -55,11 +55,20 @@ export default function BackupRestore() {
   };
 
   const createBackup = async () => {
+    if (!session?.access_token) {
+      toast({
+        title: 'Authentication Error',
+        description: 'Please log in again to create a backup',
+        variant: 'destructive',
+      });
+      return;
+    }
+    
     setLoading(true);
     try {
       const { data, error } = await supabase.functions.invoke('backup-database', {
         headers: {
-          Authorization: `Bearer ${session?.access_token}`,
+          Authorization: `Bearer ${session.access_token}`,
         },
       });
       
