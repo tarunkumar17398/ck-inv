@@ -264,22 +264,42 @@ Deno.serve(async (req) => {
 
     // Upload to Google Drive if configured
     let googleDriveFileId = null;
+    let googleDriveError = null;
     if (googleServiceAccountJson) {
       try {
         console.log('Starting Google Drive upload...');
+        console.log('Service account JSON length:', googleServiceAccountJson.length);
+        
+        // Validate JSON format
+        let parsedAccount;
+        try {
+          parsedAccount = JSON.parse(googleServiceAccountJson);
+          console.log('Service account email:', parsedAccount.client_email);
+          console.log('Has private key:', !!parsedAccount.private_key);
+        } catch (parseError: unknown) {
+          const msg = parseError instanceof Error ? parseError.message : String(parseError);
+          throw new Error(`Invalid JSON format: ${msg}`);
+        }
+        
         const accessToken = await getGoogleAccessToken(googleServiceAccountJson);
+        console.log('Got Google access token');
+        
         const folderId = await findOrCreateFolder(accessToken, 'CK Inventory Backups');
+        console.log('Folder ID:', folderId);
+        
         googleDriveFileId = await uploadToGoogleDrive(accessToken, folderId, fileName, fileContent);
+        console.log('Upload complete, file ID:', googleDriveFileId);
         
         // Cleanup old backups from Google Drive (keep 30 days)
         await cleanupOldGoogleDriveBackups(accessToken, folderId, 30);
         console.log('Google Drive backup completed successfully');
       } catch (googleError) {
         console.error('Google Drive upload failed:', googleError);
+        googleDriveError = googleError instanceof Error ? googleError.message : String(googleError);
         // Don't fail the whole backup if Google Drive fails
       }
     } else {
-      console.log('Google Drive not configured, skipping...');
+      console.log('Google Drive not configured (GOOGLE_SERVICE_ACCOUNT_JSON not set)');
     }
 
     // Clean up old backups from Cloud Storage (keep last 30 days)
@@ -303,7 +323,8 @@ Deno.serve(async (req) => {
         success: true, 
         fileName,
         googleDriveUploaded: !!googleDriveFileId,
-        googleDriveFileId 
+        googleDriveFileId,
+        googleDriveError
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );

@@ -76,7 +76,9 @@ export default function BackupRestore() {
       
       const googleDriveMsg = data?.googleDriveUploaded 
         ? ' Also synced to Google Drive.' 
-        : '';
+        : data?.googleDriveError 
+          ? ` Google Drive sync failed: ${data.googleDriveError}` 
+          : '';
       
       if (data?.googleDriveUploaded) {
         setLastGoogleDriveSync(new Date().toISOString());
@@ -85,6 +87,7 @@ export default function BackupRestore() {
       toast({
         title: 'Backup Created',
         description: `Database backup created successfully.${googleDriveMsg}`,
+        variant: data?.googleDriveError ? 'destructive' : 'default',
       });
       
       await loadBackups();
