@@ -39,7 +39,9 @@ export default function BackupRestore() {
   const loadBackups = async () => {
     setLoading(true);
     try {
-      const { data, error } = await supabase.storage.from('backups').list();
+      const { data, error } = await supabase.storage.from('backups').list('', {
+        sortBy: { column: 'created_at', order: 'desc' }
+      });
       if (error) throw error;
       setBackups(data || []);
     } catch (error) {
