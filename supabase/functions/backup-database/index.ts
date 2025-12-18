@@ -119,8 +119,9 @@ async function uploadToGoogleDrive(
     content +
     closeDelimiter;
 
+  // Add supportsAllDrives=true to work with shared folders
   const response = await fetch(
-    'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart',
+    'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&supportsAllDrives=true',
     {
       method: 'POST',
       headers: {
@@ -143,9 +144,9 @@ async function cleanupOldGoogleDriveBackups(accessToken: string, folderId: strin
   const cutoffDate = new Date();
   cutoffDate.setDate(cutoffDate.getDate() - daysToKeep);
 
-  // List files in folder
+  // List files in folder with supportsAllDrives for shared folders
   const response = await fetch(
-    `https://www.googleapis.com/drive/v3/files?q='${folderId}' in parents and trashed=false&fields=files(id,name,createdTime)`,
+    `https://www.googleapis.com/drive/v3/files?q='${folderId}' in parents and trashed=false&fields=files(id,name,createdTime)&supportsAllDrives=true&includeItemsFromAllDrives=true`,
     { headers: { Authorization: `Bearer ${accessToken}` } }
   );
   const data = await response.json();
@@ -154,7 +155,7 @@ async function cleanupOldGoogleDriveBackups(accessToken: string, folderId: strin
     for (const file of data.files) {
       const fileDate = new Date(file.createdTime);
       if (fileDate < cutoffDate) {
-        await fetch(`https://www.googleapis.com/drive/v3/files/${file.id}`, {
+        await fetch(`https://www.googleapis.com/drive/v3/files/${file.id}?supportsAllDrives=true`, {
           method: 'DELETE',
           headers: { Authorization: `Bearer ${accessToken}` },
         });
@@ -174,6 +175,7 @@ Deno.serve(async (req) => {
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
     const googleServiceAccountJson = Deno.env.get('GOOGLE_SERVICE_ACCOUNT_JSON');
+    const googleDriveFolderId = Deno.env.get('GOOGLE_DRIVE_FOLDER_ID');
     
     // Verify JWT token and check admin role
     const authHeader = req.headers.get('authorization');
@@ -265,17 +267,16 @@ Deno.serve(async (req) => {
     // Upload to Google Drive if configured
     let googleDriveFileId = null;
     let googleDriveError = null;
-    if (googleServiceAccountJson) {
+    if (googleServiceAccountJson && googleDriveFolderId) {
       try {
         console.log('Starting Google Drive upload...');
-        console.log('Service account JSON length:', googleServiceAccountJson.length);
+        console.log('Using folder ID from secret:', googleDriveFolderId);
         
         // Validate JSON format
         let parsedAccount;
         try {
           parsedAccount = JSON.parse(googleServiceAccountJson);
           console.log('Service account email:', parsedAccount.client_email);
-          console.log('Has private key:', !!parsedAccount.private_key);
         } catch (parseError: unknown) {
           const msg = parseError instanceof Error ? parseError.message : String(parseError);
           throw new Error(`Invalid JSON format: ${msg}`);
@@ -284,14 +285,12 @@ Deno.serve(async (req) => {
         const accessToken = await getGoogleAccessToken(googleServiceAccountJson);
         console.log('Got Google access token');
         
-        const folderId = await findOrCreateFolder(accessToken, 'CK Inventory Backups');
-        console.log('Folder ID:', folderId);
-        
-        googleDriveFileId = await uploadToGoogleDrive(accessToken, folderId, fileName, fileContent);
+        // Use folder ID directly from environment variable (shared folder)
+        googleDriveFileId = await uploadToGoogleDrive(accessToken, googleDriveFolderId, fileName, fileContent);
         console.log('Upload complete, file ID:', googleDriveFileId);
         
         // Cleanup old backups from Google Drive (keep 30 days)
-        await cleanupOldGoogleDriveBackups(accessToken, folderId, 30);
+        await cleanupOldGoogleDriveBackups(accessToken, googleDriveFolderId, 30);
         console.log('Google Drive backup completed successfully');
       } catch (googleError) {
         console.error('Google Drive upload failed:', googleError);
@@ -299,7 +298,7 @@ Deno.serve(async (req) => {
         // Don't fail the whole backup if Google Drive fails
       }
     } else {
-      console.log('Google Drive not configured (GOOGLE_SERVICE_ACCOUNT_JSON not set)');
+      console.log('Google Drive not configured - missing GOOGLE_SERVICE_ACCOUNT_JSON or GOOGLE_DRIVE_FOLDER_ID');
     }
 
     // Clean up old backups from Cloud Storage (keep last 30 days)
