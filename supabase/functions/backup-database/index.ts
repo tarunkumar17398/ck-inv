@@ -175,7 +175,19 @@ Deno.serve(async (req) => {
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
     const googleServiceAccountJson = Deno.env.get('GOOGLE_SERVICE_ACCOUNT_JSON');
-    const googleDriveFolderId = Deno.env.get('GOOGLE_DRIVE_FOLDER_ID');
+    
+    // Helper function to extract folder ID from URL or return as-is if already an ID
+    const extractFolderId = (folderIdOrUrl: string): string => {
+      // Check if it's a full Google Drive URL
+      const urlMatch = folderIdOrUrl.match(/\/folders\/([a-zA-Z0-9_-]+)/);
+      if (urlMatch) {
+        return urlMatch[1];
+      }
+      // Otherwise assume it's already just the folder ID
+      return folderIdOrUrl;
+    };
+    const googleDriveFolderIdRaw = Deno.env.get('GOOGLE_DRIVE_FOLDER_ID');
+    const googleDriveFolderId = googleDriveFolderIdRaw ? extractFolderId(googleDriveFolderIdRaw) : null;
     
     // Verify JWT token and check admin role
     const authHeader = req.headers.get('authorization');
@@ -270,7 +282,7 @@ Deno.serve(async (req) => {
     if (googleServiceAccountJson && googleDriveFolderId) {
       try {
         console.log('Starting Google Drive upload...');
-        console.log('Using folder ID from secret:', googleDriveFolderId);
+        console.log('Extracted folder ID:', googleDriveFolderId);
         
         // Validate JSON format
         let parsedAccount;
