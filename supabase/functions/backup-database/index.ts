@@ -189,52 +189,68 @@ Deno.serve(async (req) => {
     const googleDriveFolderIdRaw = Deno.env.get('GOOGLE_DRIVE_FOLDER_ID');
     const googleDriveFolderId = googleDriveFolderIdRaw ? extractFolderId(googleDriveFolderIdRaw) : null;
     
-    // Verify JWT token and check admin role
+    // Check for scheduled job (cron) - uses service role for authentication
     const authHeader = req.headers.get('authorization');
-    if (!authHeader) {
-      console.error('No authorization header provided');
-      return new Response(
-        JSON.stringify({ error: 'Unauthorized - No authorization header' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+    const isScheduledJob = authHeader === `Bearer ${supabaseAnonKey}`;
+    
+    let userEmail = 'scheduled-backup';
+    
+    if (isScheduledJob) {
+      // Scheduled job - bypass user auth, use service role
+      console.log('Running as scheduled backup job');
+    } else {
+      // Manual trigger - verify JWT token and check admin role
+      if (!authHeader) {
+        console.error('No authorization header provided');
+        return new Response(
+          JSON.stringify({ error: 'Unauthorized - No authorization header' }),
+          { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      const token = authHeader.replace('Bearer ', '');
+      
+      // Create client with anon key to verify the user's JWT
+      const supabaseAuth = createClient(supabaseUrl, supabaseAnonKey, {
+        auth: { persistSession: false }
+      });
+      
+      const { data: { user }, error: userError } = await supabaseAuth.auth.getUser(token);
+      
+      if (userError || !user) {
+        console.error('Invalid token:', userError?.message);
+        return new Response(
+          JSON.stringify({ error: 'Unauthorized - Invalid token' }),
+          { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      // Check if user has admin role using service role key
+      const supabaseAdminCheck = createClient(supabaseUrl, supabaseServiceKey);
+      
+      const { data: roleData, error: roleError } = await supabaseAdminCheck
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', user.id)
+        .eq('role', 'admin')
+        .maybeSingle();
+
+      if (roleError || !roleData) {
+        console.error('User is not an admin:', user.id);
+        return new Response(
+          JSON.stringify({ error: 'Forbidden - Admin access required' }),
+          { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      
+      userEmail = user.email || 'unknown';
+      console.log('Starting database backup by admin:', user.id);
     }
 
-    const token = authHeader.replace('Bearer ', '');
-    
-    // Create client with anon key to verify the user's JWT
-    const supabaseAuth = createClient(supabaseUrl, supabaseAnonKey, {
-      auth: { persistSession: false }
-    });
-    
-    const { data: { user }, error: userError } = await supabaseAuth.auth.getUser(token);
-    
-    if (userError || !user) {
-      console.error('Invalid token:', userError?.message);
-      return new Response(
-        JSON.stringify({ error: 'Unauthorized - Invalid token' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
+    console.log('Starting database backup, triggered by:', userEmail);
 
-    // Check if user has admin role using service role key
+    // Create admin client for all operations
     const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
-    
-    const { data: roleData, error: roleError } = await supabaseAdmin
-      .from('user_roles')
-      .select('role')
-      .eq('user_id', user.id)
-      .eq('role', 'admin')
-      .maybeSingle();
-
-    if (roleError || !roleData) {
-      console.error('User is not an admin:', user.id);
-      return new Response(
-        JSON.stringify({ error: 'Forbidden - Admin access required' }),
-        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    console.log('Starting database backup by admin:', user.id);
 
     // Fetch all data using service role (bypasses RLS for backup)
     const [itemsRes, categoriesRes, countersRes, subcategoriesRes, piecesRes] = await Promise.all([
@@ -253,7 +269,7 @@ Deno.serve(async (req) => {
 
     const backupData = {
       timestamp: new Date().toISOString(),
-      created_by: user.email,
+      created_by: userEmail,
       items: itemsRes.data,
       categories: categoriesRes.data,
       item_code_counters: countersRes.data,
@@ -274,7 +290,7 @@ Deno.serve(async (req) => {
 
     if (uploadError) throw uploadError;
 
-    console.log(`Backup created in Cloud Storage: ${fileName} by ${user.email}`);
+    console.log(`Backup created in Cloud Storage: ${fileName} by ${userEmail}`);
 
     // Upload to Google Drive if configured
     let googleDriveFileId = null;
