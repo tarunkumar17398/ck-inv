@@ -93,33 +93,50 @@ const StockPrint = () => {
     
     setLoading(true);
 
-    // Build query - filter by status if sold items are hidden
-    let query = supabase
-      .from("items")
-      .select("*, categories(name, prefix)")
-      .eq("category_id", selectedCategory);
-    
-    // Only show in-stock items if sold items are hidden
-    if (!showSoldItems) {
-      query = query.eq("status", "in_stock");
-    }
-    
-    const { data: items, error } = await query.order("item_code");
+    // Fetch all items using pagination to bypass 1000 row limit
+    let allItems: Item[] = [];
+    let from = 0;
+    const pageSize = 1000;
+    let hasMore = true;
 
-    if (error) {
-      toast({
-        title: "Error loading data",
-        description: error.message,
-        variant: "destructive",
-      });
-      setLoading(false);
-      return;
+    while (hasMore) {
+      let query = supabase
+        .from("items")
+        .select("*, categories(name, prefix)")
+        .eq("category_id", selectedCategory);
+      
+      // Only show in-stock items if sold items are hidden
+      if (!showSoldItems) {
+        query = query.eq("status", "in_stock");
+      }
+      
+      const { data: items, error } = await query
+        .order("item_code")
+        .range(from, from + pageSize - 1);
+
+      if (error) {
+        toast({
+          title: "Error loading data",
+          description: error.message,
+          variant: "destructive",
+        });
+        setLoading(false);
+        return;
+      }
+
+      if (items && items.length > 0) {
+        allItems = [...allItems, ...items];
+        from += pageSize;
+        hasMore = items.length === pageSize;
+      } else {
+        hasMore = false;
+      }
     }
 
     // Group by category
     const grouped = new Map<string, CategoryGroup>();
 
-    items?.forEach((item) => {
+    allItems.forEach((item) => {
       const categoryKey = item.categories.name;
       
       if (!grouped.has(categoryKey)) {
@@ -231,16 +248,16 @@ const StockPrint = () => {
             {/* Category Name Header */}
             <h1 className="text-xl font-bold mb-4 print:text-lg print:mb-3 text-center uppercase">{group.category}</h1>
 
-            {/* Items Table with Borders */}
-            <table className="w-full border-collapse border border-black">
+            {/* Items Table with Borders - Compact for print */}
+            <table className="w-full border-collapse border border-black text-xs">
               <thead>
                 <tr className="border border-black">
-                  <th className="text-center py-2 px-3 font-bold text-sm border border-black w-[15%]">Item Code</th>
-                  <th className="text-center py-2 px-3 font-bold text-sm border border-black w-[35%]">Particulars</th>
-                  <th className="text-center py-2 px-3 font-bold text-sm border border-black w-[12%]">Size</th>
-                  <th className="text-center py-2 px-3 font-bold text-sm border border-black w-[12%]">Weight</th>
-                  <th className="text-center py-2 px-3 font-bold text-sm border border-black w-[8%]">✓</th>
-                  <th className="text-center py-2 px-3 font-bold text-sm border border-black w-[13%]">DOS</th>
+                  <th className="text-center py-1 px-1 font-bold border border-black w-[15%]">Item Code</th>
+                  <th className="text-center py-1 px-1 font-bold border border-black w-[35%]">Particulars</th>
+                  <th className="text-center py-1 px-1 font-bold border border-black w-[12%]">Size</th>
+                  <th className="text-center py-1 px-1 font-bold border border-black w-[12%]">Weight</th>
+                  <th className="text-center py-1 px-1 font-bold border border-black w-[8%]">✓</th>
+                  <th className="text-center py-1 px-1 font-bold border border-black w-[13%]">DOS</th>
                 </tr>
               </thead>
               <tbody>
@@ -249,14 +266,14 @@ const StockPrint = () => {
                     key={item.id} 
                     className={`border border-black ${item.status === 'sold' ? 'text-gray-400 line-through' : ''}`}
                   >
-                    <td className="py-2 px-3 text-sm font-bold text-center border border-black w-[15%]">{item.item_code}</td>
-                    <td className="py-2 px-3 text-sm border border-black w-[35%]">{item.item_name}</td>
-                    <td className="py-2 px-3 text-sm font-bold text-center border border-black w-[12%]">{item.size || ""}</td>
-                    <td className="py-2 px-3 text-sm text-center border border-black w-[12%]">{item.weight || ""}</td>
-                    <td className="py-2 px-3 text-center border border-black w-[8%]">
-                      <div className="inline-block w-4 h-4 border border-black"></div>
+                    <td className="py-0.5 px-1 font-bold text-center border border-black">{item.item_code}</td>
+                    <td className="py-0.5 px-1 border border-black truncate max-w-0">{item.item_name}</td>
+                    <td className="py-0.5 px-1 font-bold text-center border border-black">{item.size || ""}</td>
+                    <td className="py-0.5 px-1 text-center border border-black">{item.weight || ""}</td>
+                    <td className="py-0.5 px-1 text-center border border-black">
+                      <div className="inline-block w-3 h-3 border border-black"></div>
                     </td>
-                    <td className="py-2 px-3 text-sm text-center border border-black w-[13%]">
+                    <td className="py-0.5 px-1 text-center border border-black">
                       {item.sold_date 
                         ? new Date(item.sold_date).toLocaleDateString("en-GB")
                         : ""}
@@ -269,17 +286,18 @@ const StockPrint = () => {
         ))}
       </main>
 
-      {/* Print styles */}
+      {/* Print styles - Optimized for 40-45 items per page */}
       <style>{`
         @media print {
           @page {
             size: A4;
-            margin: 15mm 10mm;
+            margin: 8mm 8mm;
           }
           
           body {
             print-color-adjust: exact;
             -webkit-print-color-adjust: exact;
+            font-size: 9pt !important;
           }
           
           .print\\:hidden {
@@ -291,11 +309,11 @@ const StockPrint = () => {
           }
           
           .print\\:mb-3 {
-            margin-bottom: 0.75rem !important;
+            margin-bottom: 0.5rem !important;
           }
           
           .print\\:mb-6 {
-            margin-bottom: 1.5rem !important;
+            margin-bottom: 1rem !important;
           }
           
           .print\\:px-0 {
@@ -304,26 +322,38 @@ const StockPrint = () => {
           }
           
           .print\\:py-4 {
-            padding-top: 1rem !important;
-            padding-bottom: 1rem !important;
+            padding-top: 0.5rem !important;
+            padding-bottom: 0.5rem !important;
           }
           
           .print\\:text-lg {
-            font-size: 1.125rem !important;
-            line-height: 1.75rem !important;
+            font-size: 1rem !important;
+            line-height: 1.25rem !important;
           }
           
           table {
             page-break-inside: auto;
+            font-size: 8pt !important;
+          }
+          
+          th, td {
+            padding: 2px 4px !important;
+            line-height: 1.2 !important;
           }
           
           tr {
             page-break-inside: avoid;
             page-break-after: auto;
+            height: auto !important;
           }
           
           thead {
             display: table-header-group;
+          }
+          
+          h1 {
+            margin-bottom: 4px !important;
+            font-size: 12pt !important;
           }
         }
       `}</style>
