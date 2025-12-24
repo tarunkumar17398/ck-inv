@@ -47,6 +47,7 @@ const StockPrint = () => {
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [loading, setLoading] = useState(true);
   const [showSoldItems, setShowSoldItems] = useState(true);
+  const [totalItemCount, setTotalItemCount] = useState(0);
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -126,12 +127,16 @@ const StockPrint = () => {
 
       if (items && items.length > 0) {
         allItems = [...allItems, ...items];
+        console.log(`Fetched batch: ${items.length} items, total so far: ${allItems.length}`);
         from += pageSize;
         hasMore = items.length === pageSize;
       } else {
         hasMore = false;
       }
     }
+    
+    console.log(`Total items fetched: ${allItems.length}`);
+    setTotalItemCount(allItems.length);
 
     // Group by category
     const grouped = new Map<string, CategoryGroup>();
@@ -223,20 +228,25 @@ const StockPrint = () => {
             </div>
           </div>
           
-          <div className="flex items-center gap-2">
-            <label className="text-sm font-medium">Category:</label>
-            <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-              <SelectTrigger className="w-64 bg-background">
-                <SelectValue placeholder="Select category" />
-              </SelectTrigger>
-              <SelectContent className="bg-background z-50">
-                {categories.map((cat) => (
-                  <SelectItem key={cat.id} value={cat.id}>
-                    {cat.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2">
+              <label className="text-sm font-medium">Category:</label>
+              <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+                <SelectTrigger className="w-64 bg-background">
+                  <SelectValue placeholder="Select category" />
+                </SelectTrigger>
+                <SelectContent className="bg-background z-50">
+                  {categories.map((cat) => (
+                    <SelectItem key={cat.id} value={cat.id}>
+                      {cat.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <span className="text-sm text-muted-foreground">
+              Total Items: <strong>{totalItemCount}</strong>
+            </span>
           </div>
         </div>
       </header>
