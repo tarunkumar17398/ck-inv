@@ -296,12 +296,12 @@ const StockPrint = () => {
         ))}
       </main>
 
-      {/* Print styles - Optimized for 40-45 items per page */}
+      {/* Print styles - Optimized for 30-35 items per page */}
       <style>{`
         @media print {
           @page {
             size: A4;
-            margin: 8mm 8mm 15mm 8mm;
+            margin: 10mm 10mm 18mm 10mm;
             @bottom-center {
               content: "Page " counter(page) " of " counter(pages);
               font-size: 9pt;
@@ -311,7 +311,7 @@ const StockPrint = () => {
           body {
             print-color-adjust: exact;
             -webkit-print-color-adjust: exact;
-            font-size: 9pt !important;
+            font-size: 10pt !important;
             counter-reset: page;
           }
           
@@ -324,11 +324,11 @@ const StockPrint = () => {
           }
           
           .print\\:mb-3 {
-            margin-bottom: 0.5rem !important;
+            margin-bottom: 0.75rem !important;
           }
           
           .print\\:mb-6 {
-            margin-bottom: 1rem !important;
+            margin-bottom: 1.5rem !important;
           }
           
           .print\\:px-0 {
@@ -337,23 +337,23 @@ const StockPrint = () => {
           }
           
           .print\\:py-4 {
-            padding-top: 0.5rem !important;
-            padding-bottom: 0.5rem !important;
+            padding-top: 0.75rem !important;
+            padding-bottom: 0.75rem !important;
           }
           
           .print\\:text-lg {
-            font-size: 1rem !important;
-            line-height: 1.25rem !important;
+            font-size: 1.125rem !important;
+            line-height: 1.5rem !important;
           }
           
           table {
             page-break-inside: auto;
-            font-size: 8pt !important;
+            font-size: 10pt !important;
           }
           
           th, td {
-            padding: 2px 4px !important;
-            line-height: 1.2 !important;
+            padding: 4px 6px !important;
+            line-height: 1.4 !important;
           }
           
           tr {
@@ -367,18 +367,8 @@ const StockPrint = () => {
           }
           
           h1 {
-            margin-bottom: 4px !important;
-            font-size: 12pt !important;
-          }
-          
-          .page-footer {
-            position: fixed;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            text-align: center;
-            font-size: 9pt;
-            padding: 5mm 0;
+            margin-bottom: 8px !important;
+            font-size: 14pt !important;
           }
         }
       `}</style>
