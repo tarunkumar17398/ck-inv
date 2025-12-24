@@ -301,13 +301,18 @@ const StockPrint = () => {
         @media print {
           @page {
             size: A4;
-            margin: 8mm 8mm;
+            margin: 8mm 8mm 15mm 8mm;
+            @bottom-center {
+              content: "Page " counter(page) " of " counter(pages);
+              font-size: 9pt;
+            }
           }
           
           body {
             print-color-adjust: exact;
             -webkit-print-color-adjust: exact;
             font-size: 9pt !important;
+            counter-reset: page;
           }
           
           .print\\:hidden {
@@ -364,6 +369,16 @@ const StockPrint = () => {
           h1 {
             margin-bottom: 4px !important;
             font-size: 12pt !important;
+          }
+          
+          .page-footer {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            text-align: center;
+            font-size: 9pt;
+            padding: 5mm 0;
           }
         }
       `}</style>
