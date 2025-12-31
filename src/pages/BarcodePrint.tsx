@@ -62,10 +62,11 @@ const BarcodePrint = () => {
 
   useEffect(() => {
     if (searchTerm) {
-      const filtered = items.filter(item =>
-        item.item_code.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        item.item_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (item.particulars && item.particulars.toLowerCase().includes(searchTerm.toLowerCase()))
+      const filtered = items.filter(
+        (item) =>
+          item.item_code.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          item.item_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          (item.particulars && item.particulars.toLowerCase().includes(searchTerm.toLowerCase())),
       );
       setFilteredItems(filtered);
     } else {
@@ -83,10 +84,7 @@ const BarcodePrint = () => {
   }, [labels]);
 
   const fetchCategories = async () => {
-    const { data, error } = await supabase
-      .from("categories")
-      .select("*")
-      .order("name");
+    const { data, error } = await supabase.from("categories").select("*").order("name");
 
     if (error) {
       toast.error("Failed to fetch categories");
@@ -146,7 +144,7 @@ const BarcodePrint = () => {
   };
 
   const selectAll = () => {
-    setSelectedItems(new Set(filteredItems.map(item => item.id)));
+    setSelectedItems(new Set(filteredItems.map((item) => item.id)));
   };
 
   const clearSelection = () => {
@@ -154,9 +152,9 @@ const BarcodePrint = () => {
   };
 
   const generateLabels = () => {
-    const selectedItemsList = items.filter(item => selectedItems.has(item.id));
-    
-    const labelData: BarcodeLabel[] = selectedItemsList.map(item => ({
+    const selectedItemsList = items.filter((item) => selectedItems.has(item.id));
+
+    const labelData: BarcodeLabel[] = selectedItemsList.map((item) => ({
       itemCode: item.item_code,
       particulars: item.particulars || item.item_name,
       price: item.price ? formatPriceLabel(item.price) : "",
@@ -187,7 +185,7 @@ const BarcodePrint = () => {
           console.error("Barcode generation error:", e);
         }
       }
-      
+
       // Generate print barcode
       const printCanvas = document.getElementById(`barcode-print-${index}`) as HTMLCanvasElement;
       if (printCanvas) {
@@ -228,7 +226,7 @@ const BarcodePrint = () => {
         }
       }
     });
-    
+
     // Small delay to ensure barcodes are rendered
     setTimeout(() => {
       window.print();
@@ -342,11 +340,7 @@ const BarcodePrint = () => {
                     )}
                   </div>
 
-                  <Button
-                    onClick={generateLabels}
-                    disabled={selectedItems.size === 0}
-                    className="w-full"
-                  >
+                  <Button onClick={generateLabels} disabled={selectedItems.size === 0} className="w-full">
                     Generate Labels ({selectedItems.size})
                   </Button>
                 </>
@@ -377,18 +371,32 @@ const BarcodePrint = () => {
                     <div
                       key={index}
                       className="border border-foreground bg-white text-black p-2 rounded"
-                      style={{ width: "110mm", height: "28mm", position: "relative", fontFamily: "Calibri, Arial, sans-serif" }}
+                      style={{
+                        width: "110mm",
+                        height: "28mm",
+                        position: "relative",
+                        fontFamily: "Calibri, Arial, sans-serif",
+                      }}
                     >
                       {/* O */}
-                      <div style={{ position: "absolute", left: "1.9mm", top: "8mm", fontSize: "11pt" }}>
-                        O
-                      </div>
+                      <div style={{ position: "absolute", left: "1.9mm", top: "8mm", fontSize: "11pt" }}>O</div>
                       {/* S.No */}
                       <div style={{ position: "absolute", left: "7mm", top: "0.8mm", fontSize: "11pt" }}>
                         S.No: {label.itemCode}
                       </div>
                       {/* Particulars */}
-                      <div style={{ position: "absolute", left: "6mm", top: "6mm", fontSize: "9pt", width: "44mm", overflow: "hidden", whiteSpace: "nowrap", textOverflow: "ellipsis" }}>
+                      <div
+                        style={{
+                          position: "absolute",
+                          left: "6mm",
+                          top: "6mm",
+                          fontSize: "9pt",
+                          width: "44mm",
+                          overflow: "hidden",
+                          whiteSpace: "nowrap",
+                          textOverflow: "ellipsis",
+                        }}
+                      >
                         {label.particulars}
                       </div>
                       {/* Price */}
@@ -400,19 +408,37 @@ const BarcodePrint = () => {
                         {label.size}
                       </div>
                       {/* Barcode */}
-                      <div style={{ position: "absolute", left: "57mm", top: "0mm", width: "38mm", height: "16mm", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                      <div
+                        style={{
+                          position: "absolute",
+                          left: "57mm",
+                          top: "0mm",
+                          width: "38mm",
+                          height: "16mm",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                        }}
+                      >
                         <canvas id={`barcode-${index}`} style={{ maxWidth: "100%", maxHeight: "100%" }}></canvas>
                       </div>
                       {/* Weight */}
-                      <div style={{ position: "absolute", left: "57mm", top: "15mm", fontSize: "11pt", width: "38mm", textAlign: "center" }}>
+                      <div
+                        style={{
+                          position: "absolute",
+                          left: "57mm",
+                          top: "15mm",
+                          fontSize: "11pt",
+                          width: "38mm",
+                          textAlign: "center",
+                        }}
+                      >
                         {label.weight}
                       </div>
                     </div>
                   ))}
                   {labels.length > 5 && (
-                    <div className="text-center text-muted-foreground">
-                      ... and {labels.length - 5} more labels
-                    </div>
+                    <div className="text-center text-muted-foreground">... and {labels.length - 5} more labels</div>
                   )}
                 </div>
               )}
@@ -441,41 +467,84 @@ const BarcodePrint = () => {
             }}
           >
             {/* Rotated content container - 90 degrees clockwise */}
-            <div style={{
-              position: "absolute",
-              width: "110mm",
-              height: "28mm",
-              transformOrigin: "0 0",
-              transform: "rotate(90deg) translateY(-28mm)",
-              left: "-5mm",
-              top: "8mm",
-            }}>
+            <div
+              style={{
+                position: "absolute",
+                width: "110mm",
+                height: "28mm",
+                transformOrigin: "0 0",
+                transform: "rotate(90deg) translateY(-28mm)",
+                left: "-3mm",
+                top: "5mm",
+              }}
+            >
               {/* O */}
-              <div style={{ position: "absolute", left: "1.9048mm", top: "8.0423mm", fontSize: "11pt", fontWeight: 400 }}>
+              <div
+                style={{ position: "absolute", left: "1.9048mm", top: "8.0423mm", fontSize: "11pt", fontWeight: 400 }}
+              >
                 O
               </div>
               {/* S.No */}
-              <div style={{ position: "absolute", left: "6.9841mm", top: "0.8466mm", fontSize: "11pt", fontWeight: 400 }}>
+              <div
+                style={{ position: "absolute", left: "6.9841mm", top: "0.8466mm", fontSize: "11pt", fontWeight: 400 }}
+              >
                 S.No: {label.itemCode}
               </div>
               {/* Particulars */}
-              <div style={{ position: "absolute", left: "5.9259mm", top: "5.9259mm", width: "44.0212mm", fontSize: "9pt", fontWeight: 400, overflow: "hidden", whiteSpace: "nowrap", textOverflow: "clip" }}>
+              <div
+                style={{
+                  position: "absolute",
+                  left: "5.9259mm",
+                  top: "5.9259mm",
+                  width: "44.0212mm",
+                  fontSize: "9pt",
+                  fontWeight: 400,
+                  overflow: "hidden",
+                  whiteSpace: "nowrap",
+                  textOverflow: "clip",
+                }}
+              >
                 {label.particulars}
               </div>
               {/* Price */}
-              <div style={{ position: "absolute", left: "6.9841mm", top: "13.9683mm", fontSize: "11pt", fontWeight: 400 }}>
+              <div
+                style={{ position: "absolute", left: "6.9841mm", top: "13.9683mm", fontSize: "11pt", fontWeight: 400 }}
+              >
                 {label.price}
               </div>
               {/* Size */}
-              <div style={{ position: "absolute", left: "32.9277mm", top: "13.9683mm", fontSize: "11pt", fontWeight: 400 }}>
+              <div
+                style={{ position: "absolute", left: "32.9277mm", top: "13.9683mm", fontSize: "11pt", fontWeight: 400 }}
+              >
                 {label.size}
               </div>
               {/* Barcode */}
-              <div style={{ position: "absolute", left: "56.9665mm", top: "0mm", width: "38.0423mm", height: "16.0847mm", display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <div
+                style={{
+                  position: "absolute",
+                  left: "56.9665mm",
+                  top: "0mm",
+                  width: "38.0423mm",
+                  height: "16.0847mm",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+              >
                 <canvas id={`barcode-print-${index}`} style={{ maxWidth: "100%", maxHeight: "100%" }}></canvas>
               </div>
               {/* Weight */}
-              <div style={{ position: "absolute", left: "56.9312mm", top: "15.0265mm", width: "38.0423mm", fontSize: "11pt", fontWeight: 400, textAlign: "center" }}>
+              <div
+                style={{
+                  position: "absolute",
+                  left: "56.9312mm",
+                  top: "15.0265mm",
+                  width: "38.0423mm",
+                  fontSize: "11pt",
+                  fontWeight: 400,
+                  textAlign: "center",
+                }}
+              >
                 {label.weight}
               </div>
             </div>
