@@ -10,8 +10,13 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { ArrowLeft, Printer, Search, X } from "lucide-react";
 import { toast } from "sonner";
 import { formatPriceLabel, formatWeightLabel, formatSizeWithInches } from "@/lib/utils";
-// @ts-ignore
 import bwipjs from "bwip-js";
+import type { RenderOptions } from "bwip-js";
+
+// Type for bwip-js SVG generation
+const bwipjsLib = bwipjs as typeof bwipjs & { 
+  toSVG: (opts: RenderOptions) => string 
+};
 
 interface Category {
   id: string;
@@ -37,6 +42,7 @@ interface BarcodeLabel {
   size: string;
   weight: string;
   barcodeValue: string;
+  barcodeSvg?: string;
 }
 
 const BarcodePrint = () => {
@@ -167,7 +173,7 @@ const BarcodePrint = () => {
   };
 
   const generateBarcodes = () => {
-    labels.forEach((label, index) => {
+    const updatedLabels = labels.map((label, index) => {
       // Generate preview barcode
       const canvas = document.getElementById(`barcode-${index}`) as HTMLCanvasElement;
       if (canvas) {
@@ -186,51 +192,29 @@ const BarcodePrint = () => {
         }
       }
 
-      // Generate print barcode
-      const printCanvas = document.getElementById(`barcode-print-${index}`) as HTMLCanvasElement;
-      if (printCanvas) {
-        try {
-          bwipjs.toCanvas(printCanvas, {
-            bcid: "code128",
-            text: label.barcodeValue,
-            scale: 2,
-            height: 12,
-            includetext: true,
-            textxalign: "center",
-            textsize: 8,
-          });
-        } catch (e) {
-          console.error("Print barcode generation error:", e);
-        }
+      // Generate SVG for print (vector = crystal clear at any resolution)
+      let barcodeSvg = "";
+      try {
+        barcodeSvg = bwipjsLib.toSVG({
+          bcid: "code128",
+          text: label.barcodeValue,
+          height: 12,
+          includetext: true,
+          textxalign: "center",
+          textsize: 10,
+        });
+      } catch (e) {
+        console.error("SVG barcode generation error:", e);
       }
+
+      return { ...label, barcodeSvg };
     });
+    
+    setLabels(updatedLabels);
   };
 
   const handlePrint = () => {
-    // Generate print barcodes before printing
-    labels.forEach((label, index) => {
-      const printCanvas = document.getElementById(`barcode-print-${index}`) as HTMLCanvasElement;
-      if (printCanvas) {
-        try {
-          bwipjs.toCanvas(printCanvas, {
-            bcid: "code128",
-            text: label.barcodeValue,
-            scale: 4,
-            height: 12,
-            includetext: true,
-            textxalign: "center",
-            textsize: 10,
-          });
-        } catch (e) {
-          console.error("Print barcode generation error:", e);
-        }
-      }
-    });
-
-    // Small delay to ensure barcodes are rendered
-    setTimeout(() => {
-      window.print();
-    }, 200);
+    window.print();
   };
 
   return (
@@ -518,7 +502,7 @@ const BarcodePrint = () => {
               >
                 {label.size}
               </div>
-              {/* Barcode */}
+              {/* Barcode - SVG for crystal clear printing */}
               <div
                 style={{
                   position: "absolute",
@@ -530,16 +514,8 @@ const BarcodePrint = () => {
                   alignItems: "center",
                   justifyContent: "center",
                 }}
-              >
-                <canvas 
-                  id={`barcode-print-${index}`} 
-                  style={{ 
-                    maxWidth: "100%", 
-                    maxHeight: "100%",
-                    imageRendering: "crisp-edges",
-                  }}
-                ></canvas>
-              </div>
+                dangerouslySetInnerHTML={{ __html: label.barcodeSvg || "" }}
+              />
               {/* Weight */}
               <div
                 style={{
@@ -611,10 +587,9 @@ const BarcodePrint = () => {
             page-break-after: auto !important;
           }
           
-          .label-page canvas {
-            display: block !important;
-            image-rendering: crisp-edges !important;
-            image-rendering: -webkit-optimize-contrast !important;
+          .label-page svg {
+            max-width: 100% !important;
+            max-height: 100% !important;
           }
         }
       `}</style>
