@@ -38,10 +38,16 @@ export default function BackupRestore() {
     setLoading(true);
     try {
       const { data, error } = await supabase.storage.from('backups').list('', {
-        sortBy: { column: 'created_at', order: 'desc' }
+        sortBy: { column: 'created_at', order: 'desc' },
+        limit: 100,
       });
       if (error) throw error;
-      setBackups(data || []);
+      // Filter to only show .json files and sort by name descending (newest first)
+      const jsonBackups = (data || [])
+        .filter(file => file.name.endsWith('.json'))
+        .sort((a, b) => b.name.localeCompare(a.name));
+      setBackups(jsonBackups);
+      console.log('Loaded backups:', jsonBackups.map(b => b.name));
     } catch (error) {
       console.error('Error loading backups:', error);
       toast({
