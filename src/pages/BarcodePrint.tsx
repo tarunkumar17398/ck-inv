@@ -448,7 +448,7 @@ const BarcodePrint = () => {
               transformOrigin: "0 0",
               transform: "rotate(90deg) translateY(-28mm)",
               left: "5mm",
-              top: "4mm",
+              top: "8mm",
             }}>
               {/* O */}
               <div style={{ position: "absolute", left: "1.9048mm", top: "8.0423mm", fontSize: "11pt", fontWeight: 400 }}>
