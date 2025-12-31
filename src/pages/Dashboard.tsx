@@ -13,10 +13,10 @@ import {
   BarChart3,
   DollarSign,
   Calendar as CalendarIcon,
-  FileSpreadsheet,
   TrendingUp,
   FileCheck,
   Database,
+  Barcode,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -363,9 +363,9 @@ const Dashboard = () => {
             <BarChart3 className="w-6 h-6 mr-2" />
             Business Reports
           </Button>
-          <Button variant="outline" className="h-24 text-lg" onClick={() => navigate("/export-data")}>
-            <FileSpreadsheet className="w-6 h-6 mr-2" />
-            Export to Access
+          <Button variant="outline" className="h-24 text-lg" onClick={() => navigate("/barcode-print")}>
+            <Barcode className="w-6 h-6 mr-2" />
+            Barcode Printer
           </Button>
           <Button variant="outline" className="h-24 text-lg" onClick={() => navigate("/stock-analysis")}>
             <TrendingUp className="w-6 h-6 mr-2" />

@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
-import { ArrowLeft, Printer, Search, X } from "lucide-react";
+import { ArrowLeft, Printer, Search, X, FileSpreadsheet } from "lucide-react";
 import { toast } from "sonner";
 import { formatPriceLabel, formatWeightLabel, formatSizeWithInches } from "@/lib/utils";
 import bwipjs from "bwip-js";
@@ -229,6 +229,12 @@ const BarcodePrint = () => {
               </Button>
             </Link>
             <h1 className="text-2xl font-bold text-foreground">Barcode Label Printing</h1>
+            <Link to="/export-data">
+              <Button variant="outline" size="sm" className="ml-4">
+                <FileSpreadsheet className="h-4 w-4 mr-2" />
+                Export to Access
+              </Button>
+            </Link>
           </div>
           <div className="flex items-center gap-2">
             {labels.length > 0 && (
