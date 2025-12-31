@@ -457,7 +457,7 @@ const BarcodePrint = () => {
               style={{ 
                 position: "absolute", 
                 left: "6.9mm", 
-                top: "7mm", 
+                top: "6mm", 
                 fontSize: "11pt", 
                 fontWeight: 400,
                 color: "hsl(0 0% 0%)",
@@ -470,7 +470,7 @@ const BarcodePrint = () => {
               style={{ 
                 position: "absolute", 
                 left: "12mm", 
-                top: "0mm", 
+                top: "-1mm", 
                 fontSize: "11pt", 
                 fontWeight: 400,
                 color: "hsl(0 0% 0%)",
@@ -483,7 +483,7 @@ const BarcodePrint = () => {
               style={{
                 position: "absolute",
                 left: "11mm",
-                top: "5mm",
+                top: "4mm",
                 width: "44mm",
                 fontSize: "9pt",
                 fontWeight: 400,
@@ -500,7 +500,7 @@ const BarcodePrint = () => {
               style={{ 
                 position: "absolute", 
                 left: "12mm", 
-                top: "13mm", 
+                top: "12mm", 
                 fontSize: "11pt", 
                 fontWeight: 400,
                 color: "hsl(0 0% 0%)",
@@ -513,7 +513,7 @@ const BarcodePrint = () => {
               style={{ 
                 position: "absolute", 
                 left: "38mm", 
-                top: "13mm", 
+                top: "12mm", 
                 fontSize: "11pt", 
                 fontWeight: 400,
                 color: "hsl(0 0% 0%)",
@@ -526,7 +526,7 @@ const BarcodePrint = () => {
               style={{
                 position: "absolute",
                 left: "62mm",
-                top: "0mm",
+                top: "-1mm",
                 width: "38mm",
                 height: "16mm",
                 display: "flex",
@@ -540,7 +540,7 @@ const BarcodePrint = () => {
               style={{
                 position: "absolute",
                 left: "62mm",
-                top: "14mm",
+                top: "13mm",
                 width: "38mm",
                 fontSize: "11pt",
                 fontWeight: 400,
