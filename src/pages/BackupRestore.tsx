@@ -29,12 +29,98 @@ export default function BackupRestore() {
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [showUploadConfirm, setShowUploadConfirm] = useState(false);
   const [lastGoogleDriveSync, setLastGoogleDriveSync] = useState<string | null>(null);
+  const [googleDriveConnected, setGoogleDriveConnected] = useState(false);
+  const [checkingGoogleDrive, setCheckingGoogleDrive] = useState(true);
+  const [connectingGoogleDrive, setConnectingGoogleDrive] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { session } = useAuth();
 
   useEffect(() => {
     loadBackups();
+    checkGoogleDriveConnection();
+    
+    // Listen for OAuth callback
+    const handleMessage = (event: MessageEvent) => {
+      if (event.data?.type === 'google-drive-auth' && event.data?.success) {
+        setGoogleDriveConnected(true);
+        toast({
+          title: 'Google Drive Connected',
+          description: 'Your Google Drive is now connected for backups',
+        });
+      }
+    };
+    
+    window.addEventListener('message', handleMessage);
+    return () => window.removeEventListener('message', handleMessage);
   }, []);
+
+  const checkGoogleDriveConnection = async () => {
+    if (!session?.user?.id) {
+      setCheckingGoogleDrive(false);
+      return;
+    }
+    
+    try {
+      const { data, error } = await supabase
+        .from('google_drive_tokens')
+        .select('id, expires_at')
+        .eq('user_id', session.user.id)
+        .maybeSingle();
+      
+      if (data && !error) {
+        setGoogleDriveConnected(true);
+      }
+    } catch (error) {
+      console.error('Error checking Google Drive connection:', error);
+    } finally {
+      setCheckingGoogleDrive(false);
+    }
+  };
+
+  const connectGoogleDrive = async () => {
+    if (!session?.access_token) {
+      toast({
+        title: 'Authentication Error',
+        description: 'Please log in to connect Google Drive',
+        variant: 'destructive',
+      });
+      return;
+    }
+    
+    setConnectingGoogleDrive(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('google-drive-auth', {
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+        },
+      });
+      
+      if (error) throw error;
+      
+      if (data?.authUrl) {
+        // Open OAuth popup
+        const popup = window.open(data.authUrl, 'google-drive-auth', 'width=600,height=700');
+        
+        // Check if popup was blocked
+        if (!popup) {
+          toast({
+            title: 'Popup Blocked',
+            description: 'Please allow popups to connect Google Drive',
+            variant: 'destructive',
+          });
+        }
+      }
+    } catch (error) {
+      console.error('Error connecting Google Drive:', error);
+      toast({
+        title: 'Connection Failed',
+        description: 'Failed to start Google Drive connection',
+        variant: 'destructive',
+      });
+    } finally {
+      setConnectingGoogleDrive(false);
+    }
+  };
 
   const loadBackups = async () => {
     setLoading(true);
@@ -249,23 +335,46 @@ export default function BackupRestore() {
               Google Drive Sync
             </CardTitle>
             <CardDescription>
-              Backups are automatically synced to your Google Drive
+              Connect your Google Drive to sync backups automatically
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="flex items-center gap-2">
-              <Badge variant="outline" className="flex items-center gap-1">
-                <CheckCircle2 className="h-3 w-3 text-green-500" />
-                Connected
-              </Badge>
-              <span className="text-sm text-muted-foreground">
-                Folder: CK Inventory Backups
-              </span>
-            </div>
-            {lastGoogleDriveSync && (
-              <p className="text-sm text-muted-foreground mt-2">
-                Last sync: {new Date(lastGoogleDriveSync).toLocaleString()}
-              </p>
+            {checkingGoogleDrive ? (
+              <div className="flex items-center gap-2 text-muted-foreground">
+                <RefreshCw className="h-4 w-4 animate-spin" />
+                Checking connection...
+              </div>
+            ) : googleDriveConnected ? (
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <Badge variant="outline" className="flex items-center gap-1">
+                    <CheckCircle2 className="h-3 w-3 text-green-500" />
+                    Connected
+                  </Badge>
+                  <span className="text-sm text-muted-foreground">
+                    Your Google Drive is connected for backups
+                  </span>
+                </div>
+                {lastGoogleDriveSync && (
+                  <p className="text-sm text-muted-foreground">
+                    Last sync: {new Date(lastGoogleDriveSync).toLocaleString()}
+                  </p>
+                )}
+              </div>
+            ) : (
+              <div className="space-y-3">
+                <p className="text-sm text-muted-foreground">
+                  Connect your personal Google Drive to automatically sync backups
+                </p>
+                <Button 
+                  onClick={connectGoogleDrive} 
+                  disabled={connectingGoogleDrive}
+                  variant="outline"
+                >
+                  <Cloud className="mr-2 h-4 w-4" />
+                  {connectingGoogleDrive ? 'Connecting...' : 'Connect Google Drive'}
+                </Button>
+              </div>
             )}
           </CardContent>
         </Card>
