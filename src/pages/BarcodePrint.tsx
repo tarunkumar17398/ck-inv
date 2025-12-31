@@ -428,8 +428,8 @@ const BarcodePrint = () => {
             key={index}
             className="label-page"
             style={{
-              width: "110mm",
-              height: "28mm",
+              width: "28mm",
+              height: "110mm",
               position: "relative",
               boxSizing: "border-box",
               background: "#fff",
@@ -437,35 +437,47 @@ const BarcodePrint = () => {
               fontFamily: "Calibri, Arial, sans-serif",
               pageBreakAfter: "always",
               pageBreakInside: "avoid",
+              overflow: "hidden",
             }}
           >
-            {/* O */}
-            <div style={{ position: "absolute", left: "1.9048mm", top: "8.0423mm", fontSize: "11pt", fontWeight: 400 }}>
-              O
-            </div>
-            {/* S.No */}
-            <div style={{ position: "absolute", left: "6.9841mm", top: "0.8466mm", fontSize: "11pt", fontWeight: 400 }}>
-              S.No: {label.itemCode}
-            </div>
-            {/* Particulars */}
-            <div style={{ position: "absolute", left: "5.9259mm", top: "5.9259mm", width: "44.0212mm", fontSize: "9pt", fontWeight: 400, overflow: "hidden", whiteSpace: "nowrap", textOverflow: "clip" }}>
-              {label.particulars}
-            </div>
-            {/* Price */}
-            <div style={{ position: "absolute", left: "6.9841mm", top: "13.9683mm", fontSize: "11pt", fontWeight: 400 }}>
-              {label.price}
-            </div>
-            {/* Size */}
-            <div style={{ position: "absolute", left: "32.9277mm", top: "13.9683mm", fontSize: "11pt", fontWeight: 400 }}>
-              {label.size}
-            </div>
-            {/* Barcode */}
-            <div style={{ position: "absolute", left: "56.9665mm", top: "0mm", width: "38.0423mm", height: "16.0847mm", display: "flex", alignItems: "center", justifyContent: "center" }}>
-              <canvas id={`barcode-print-${index}`} style={{ maxWidth: "100%", maxHeight: "100%" }}></canvas>
-            </div>
-            {/* Weight */}
-            <div style={{ position: "absolute", left: "56.9312mm", top: "15.0265mm", width: "38.0423mm", fontSize: "11pt", fontWeight: 400, textAlign: "center" }}>
-              {label.weight}
+            {/* Rotated content container - 90 degrees clockwise */}
+            <div style={{
+              position: "absolute",
+              width: "110mm",
+              height: "28mm",
+              transformOrigin: "0 0",
+              transform: "rotate(90deg) translateY(-28mm)",
+              left: "0",
+              top: "0",
+            }}>
+              {/* O */}
+              <div style={{ position: "absolute", left: "1.9048mm", top: "8.0423mm", fontSize: "11pt", fontWeight: 400 }}>
+                O
+              </div>
+              {/* S.No */}
+              <div style={{ position: "absolute", left: "6.9841mm", top: "0.8466mm", fontSize: "11pt", fontWeight: 400 }}>
+                S.No: {label.itemCode}
+              </div>
+              {/* Particulars */}
+              <div style={{ position: "absolute", left: "5.9259mm", top: "5.9259mm", width: "44.0212mm", fontSize: "9pt", fontWeight: 400, overflow: "hidden", whiteSpace: "nowrap", textOverflow: "clip" }}>
+                {label.particulars}
+              </div>
+              {/* Price */}
+              <div style={{ position: "absolute", left: "6.9841mm", top: "13.9683mm", fontSize: "11pt", fontWeight: 400 }}>
+                {label.price}
+              </div>
+              {/* Size */}
+              <div style={{ position: "absolute", left: "32.9277mm", top: "13.9683mm", fontSize: "11pt", fontWeight: 400 }}>
+                {label.size}
+              </div>
+              {/* Barcode */}
+              <div style={{ position: "absolute", left: "56.9665mm", top: "0mm", width: "38.0423mm", height: "16.0847mm", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <canvas id={`barcode-print-${index}`} style={{ maxWidth: "100%", maxHeight: "100%" }}></canvas>
+              </div>
+              {/* Weight */}
+              <div style={{ position: "absolute", left: "56.9312mm", top: "15.0265mm", width: "38.0423mm", fontSize: "11pt", fontWeight: 400, textAlign: "center" }}>
+                {label.weight}
+              </div>
             </div>
           </div>
         ))}
@@ -483,7 +495,7 @@ const BarcodePrint = () => {
         
         @media print {
           @page {
-            size: 110mm 28mm;
+            size: 28mm 110mm;
             margin: 0;
           }
           
@@ -507,8 +519,8 @@ const BarcodePrint = () => {
           }
           
           .label-page {
-            width: 110mm !important;
-            height: 28mm !important;
+            width: 28mm !important;
+            height: 110mm !important;
             margin: 0 !important;
             padding: 0 !important;
             page-break-after: always !important;
@@ -516,25 +528,15 @@ const BarcodePrint = () => {
             position: relative !important;
             background: white !important;
             border: 1px solid #000 !important;
+            overflow: hidden !important;
           }
           
           .label-page:last-child {
             page-break-after: auto !important;
           }
           
-          .label-page * {
-            margin: 0;
-            padding: 0;
-          }
-          
           .label-page canvas {
             display: block !important;
-            max-width: 100% !important;
-            max-height: 100% !important;
-          }
-          
-          .label-page div {
-            position: absolute !important;
           }
         }
       `}</style>
