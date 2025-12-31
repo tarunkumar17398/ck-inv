@@ -215,11 +215,11 @@ const BarcodePrint = () => {
           bwipjs.toCanvas(printCanvas, {
             bcid: "code128",
             text: label.barcodeValue,
-            scale: 2,
+            scale: 4,
             height: 12,
             includetext: true,
             textxalign: "center",
-            textsize: 8,
+            textsize: 10,
           });
         } catch (e) {
           console.error("Print barcode generation error:", e);
@@ -531,7 +531,14 @@ const BarcodePrint = () => {
                   justifyContent: "center",
                 }}
               >
-                <canvas id={`barcode-print-${index}`} style={{ maxWidth: "100%", maxHeight: "100%" }}></canvas>
+                <canvas 
+                  id={`barcode-print-${index}`} 
+                  style={{ 
+                    maxWidth: "100%", 
+                    maxHeight: "100%",
+                    imageRendering: "crisp-edges",
+                  }}
+                ></canvas>
               </div>
               {/* Weight */}
               <div
@@ -606,6 +613,8 @@ const BarcodePrint = () => {
           
           .label-page canvas {
             display: block !important;
+            image-rendering: crisp-edges !important;
+            image-rendering: -webkit-optimize-contrast !important;
           }
         }
       `}</style>
