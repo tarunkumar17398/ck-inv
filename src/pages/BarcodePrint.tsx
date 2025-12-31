@@ -484,33 +484,57 @@ const BarcodePrint = () => {
         @media print {
           @page {
             size: 110mm 28mm;
-            margin: 0;
+            margin: 0 !important;
+          }
+          
+          * {
+            margin: 0 !important;
+            padding: 0 !important;
           }
           
           html, body {
-            margin: 0;
-            padding: 0;
+            margin: 0 !important;
+            padding: 0 !important;
+            width: 110mm !important;
+            height: 28mm !important;
             print-color-adjust: exact;
             -webkit-print-color-adjust: exact;
           }
           
-          .print\\:hidden, header, main {
+          body > *:not(.print-layout) {
             display: none !important;
+          }
+          
+          .print\\:hidden, header, main, nav, footer {
+            display: none !important;
+            visibility: hidden !important;
+            height: 0 !important;
+            width: 0 !important;
+            overflow: hidden !important;
           }
           
           .print-layout {
             position: static !important;
             left: auto !important;
             display: block !important;
+            margin: 0 !important;
+            padding: 0 !important;
           }
           
           .label-page {
+            width: 110mm !important;
+            height: 28mm !important;
+            margin: 0 !important;
+            padding: 0 !important;
             page-break-after: always;
             page-break-inside: avoid;
+            break-after: page;
+            break-inside: avoid;
           }
           
           .label-page:last-child {
-            page-break-after: auto;
+            page-break-after: avoid;
+            break-after: avoid;
           }
           
           canvas {
