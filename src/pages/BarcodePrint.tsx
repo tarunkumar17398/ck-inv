@@ -457,7 +457,7 @@ const BarcodePrint = () => {
               style={{ 
                 position: "absolute", 
                 left: "6.9mm", 
-                top: "8mm", 
+                top: "7mm", 
                 fontSize: "11pt", 
                 fontWeight: 400,
                 color: "hsl(0 0% 0%)",
@@ -470,7 +470,7 @@ const BarcodePrint = () => {
               style={{ 
                 position: "absolute", 
                 left: "12mm", 
-                top: "0.85mm", 
+                top: "0mm", 
                 fontSize: "11pt", 
                 fontWeight: 400,
                 color: "hsl(0 0% 0%)",
@@ -483,7 +483,7 @@ const BarcodePrint = () => {
               style={{
                 position: "absolute",
                 left: "11mm",
-                top: "6mm",
+                top: "5mm",
                 width: "44mm",
                 fontSize: "9pt",
                 fontWeight: 400,
@@ -500,7 +500,7 @@ const BarcodePrint = () => {
               style={{ 
                 position: "absolute", 
                 left: "12mm", 
-                top: "14mm", 
+                top: "13mm", 
                 fontSize: "11pt", 
                 fontWeight: 400,
                 color: "hsl(0 0% 0%)",
@@ -513,7 +513,7 @@ const BarcodePrint = () => {
               style={{ 
                 position: "absolute", 
                 left: "38mm", 
-                top: "14mm", 
+                top: "13mm", 
                 fontSize: "11pt", 
                 fontWeight: 400,
                 color: "hsl(0 0% 0%)",
@@ -540,7 +540,7 @@ const BarcodePrint = () => {
               style={{
                 position: "absolute",
                 left: "62mm",
-                top: "15mm",
+                top: "14mm",
                 width: "38mm",
                 fontSize: "11pt",
                 fontWeight: 400,
