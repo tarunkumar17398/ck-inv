@@ -475,50 +475,35 @@ const BarcodePrint = () => {
       <style>{`
         @media screen {
           .print-layout {
-            position: absolute;
-            left: -9999px;
-            top: 0;
+            position: absolute !important;
+            left: -9999px !important;
+            top: 0 !important;
           }
         }
         
         @media print {
           @page {
             size: 110mm 28mm;
-            margin: 0 !important;
-          }
-          
-          * {
-            margin: 0 !important;
-            padding: 0 !important;
+            margin: 0;
           }
           
           html, body {
             margin: 0 !important;
             padding: 0 !important;
-            width: 110mm !important;
-            height: 28mm !important;
             print-color-adjust: exact;
             -webkit-print-color-adjust: exact;
+            background: white !important;
           }
           
-          body > *:not(.print-layout) {
+          header, main, nav, footer, .min-h-screen > header, .min-h-screen > main {
             display: none !important;
-          }
-          
-          .print\\:hidden, header, main, nav, footer {
-            display: none !important;
-            visibility: hidden !important;
-            height: 0 !important;
-            width: 0 !important;
-            overflow: hidden !important;
           }
           
           .print-layout {
             position: static !important;
             left: auto !important;
+            top: auto !important;
             display: block !important;
-            margin: 0 !important;
-            padding: 0 !important;
           }
           
           .label-page {
@@ -526,19 +511,30 @@ const BarcodePrint = () => {
             height: 28mm !important;
             margin: 0 !important;
             padding: 0 !important;
-            page-break-after: always;
-            page-break-inside: avoid;
-            break-after: page;
-            break-inside: avoid;
+            page-break-after: always !important;
+            page-break-inside: avoid !important;
+            position: relative !important;
+            background: white !important;
+            border: 1px solid #000 !important;
           }
           
           .label-page:last-child {
-            page-break-after: avoid;
-            break-after: avoid;
+            page-break-after: auto !important;
           }
           
-          canvas {
+          .label-page * {
+            margin: 0;
+            padding: 0;
+          }
+          
+          .label-page canvas {
             display: block !important;
+            max-width: 100% !important;
+            max-height: 100% !important;
+          }
+          
+          .label-page div {
+            position: absolute !important;
           }
         }
       `}</style>
