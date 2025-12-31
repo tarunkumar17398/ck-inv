@@ -442,7 +442,7 @@ const BarcodePrint = () => {
               height: "28mm",
               position: "relative",
               boxSizing: "border-box",
-              background: "#fff",
+              background: "hsl(0 0% 100%)",
               border: "none",
               fontFamily: "Calibri, Arial, sans-serif",
               pageBreakAfter: "always",
@@ -460,7 +460,7 @@ const BarcodePrint = () => {
                 top: "8mm", 
                 fontSize: "11pt", 
                 fontWeight: 400,
-                color: "#000",
+                color: "hsl(0 0% 0%)",
               }}
             >
               O
@@ -473,7 +473,7 @@ const BarcodePrint = () => {
                 top: "0.85mm", 
                 fontSize: "11pt", 
                 fontWeight: 400,
-                color: "#000",
+                color: "hsl(0 0% 0%)",
               }}
             >
               S.No: {label.itemCode}
@@ -490,7 +490,7 @@ const BarcodePrint = () => {
                 overflow: "hidden",
                 whiteSpace: "nowrap",
                 textOverflow: "clip",
-                color: "#000",
+                color: "hsl(0 0% 0%)",
               }}
             >
               {label.particulars}
@@ -503,7 +503,7 @@ const BarcodePrint = () => {
                 top: "14mm", 
                 fontSize: "11pt", 
                 fontWeight: 400,
-                color: "#000",
+                color: "hsl(0 0% 0%)",
               }}
             >
               {label.price}
@@ -516,7 +516,7 @@ const BarcodePrint = () => {
                 top: "14mm", 
                 fontSize: "11pt", 
                 fontWeight: 400,
-                color: "#000",
+                color: "hsl(0 0% 0%)",
               }}
             >
               {label.size}
@@ -545,7 +545,7 @@ const BarcodePrint = () => {
                 fontSize: "11pt",
                 fontWeight: 400,
                 textAlign: "center",
-                color: "#000",
+                color: "hsl(0 0% 0%)",
               }}
             >
               {label.weight}
@@ -578,10 +578,11 @@ const BarcodePrint = () => {
           html, body {
             margin: 0 !important;
             padding: 0 !important;
-            background: white !important;
+            background: hsl(0 0% 100%) !important;
             font-family: Calibri, Arial, sans-serif !important;
+            -webkit-text-size-adjust: 100% !important;
             -webkit-font-smoothing: antialiased !important;
-            text-rendering: optimizeLegibility !important;
+            text-rendering: geometricPrecision !important;
           }
           
           header, main, nav, footer, .min-h-screen > header, .min-h-screen > main {
@@ -603,11 +604,11 @@ const BarcodePrint = () => {
             page-break-after: always !important;
             page-break-inside: avoid !important;
             position: relative !important;
-            background: white !important;
+            background: hsl(0 0% 100%) !important;
             border: none !important;
             overflow: hidden !important;
             font-family: Calibri, Arial, sans-serif !important;
-            color: #000 !important;
+            color: hsl(0 0% 0%) !important;
           }
           
           .label-page:last-child {
@@ -621,7 +622,7 @@ const BarcodePrint = () => {
           }
           
           .label-page div {
-            color: #000 !important;
+            color: hsl(0 0% 0%) !important;
           }
         }
       `}</style>
