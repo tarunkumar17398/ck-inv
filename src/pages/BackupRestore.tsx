@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { toast } from '@/hooks/use-toast';
-import { Database, Download, Upload, ArrowLeft, RefreshCw, AlertTriangle, Cloud, CheckCircle2, FileUp } from 'lucide-react';
+import { Database, Download, Upload, ArrowLeft, RefreshCw, AlertTriangle, FileUp } from 'lucide-react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -17,7 +17,6 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { useAuth } from '@/contexts/AuthContext';
-import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 
 export default function BackupRestore() {
@@ -28,99 +27,12 @@ export default function BackupRestore() {
   const [selectedBackup, setSelectedBackup] = useState<string | null>(null);
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [showUploadConfirm, setShowUploadConfirm] = useState(false);
-  const [lastGoogleDriveSync, setLastGoogleDriveSync] = useState<string | null>(null);
-  const [googleDriveConnected, setGoogleDriveConnected] = useState(false);
-  const [checkingGoogleDrive, setCheckingGoogleDrive] = useState(true);
-  const [connectingGoogleDrive, setConnectingGoogleDrive] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { session } = useAuth();
 
   useEffect(() => {
     loadBackups();
-    checkGoogleDriveConnection();
-    
-    // Listen for OAuth callback
-    const handleMessage = (event: MessageEvent) => {
-      if (event.data?.type === 'google-drive-auth' && event.data?.success) {
-        setGoogleDriveConnected(true);
-        toast({
-          title: 'Google Drive Connected',
-          description: 'Your Google Drive is now connected for backups',
-        });
-      }
-    };
-    
-    window.addEventListener('message', handleMessage);
-    return () => window.removeEventListener('message', handleMessage);
   }, []);
-
-  const checkGoogleDriveConnection = async () => {
-    if (!session?.user?.id) {
-      setCheckingGoogleDrive(false);
-      return;
-    }
-    
-    try {
-      const { data, error } = await supabase
-        .from('google_drive_tokens')
-        .select('id, expires_at')
-        .eq('user_id', session.user.id)
-        .maybeSingle();
-      
-      if (data && !error) {
-        setGoogleDriveConnected(true);
-      }
-    } catch (error) {
-      console.error('Error checking Google Drive connection:', error);
-    } finally {
-      setCheckingGoogleDrive(false);
-    }
-  };
-
-  const connectGoogleDrive = async () => {
-    if (!session?.access_token) {
-      toast({
-        title: 'Authentication Error',
-        description: 'Please log in to connect Google Drive',
-        variant: 'destructive',
-      });
-      return;
-    }
-    
-    setConnectingGoogleDrive(true);
-    try {
-      const { data, error } = await supabase.functions.invoke('google-drive-auth', {
-        headers: {
-          Authorization: `Bearer ${session.access_token}`,
-        },
-      });
-      
-      if (error) throw error;
-      
-      if (data?.authUrl) {
-        // Open OAuth popup
-        const popup = window.open(data.authUrl, 'google-drive-auth', 'width=600,height=700');
-        
-        // Check if popup was blocked
-        if (!popup) {
-          toast({
-            title: 'Popup Blocked',
-            description: 'Please allow popups to connect Google Drive',
-            variant: 'destructive',
-          });
-        }
-      }
-    } catch (error) {
-      console.error('Error connecting Google Drive:', error);
-      toast({
-        title: 'Connection Failed',
-        description: 'Failed to start Google Drive connection',
-        variant: 'destructive',
-      });
-    } finally {
-      setConnectingGoogleDrive(false);
-    }
-  };
 
   const loadBackups = async () => {
     setLoading(true);
@@ -162,20 +74,9 @@ export default function BackupRestore() {
       
       if (error) throw error;
       
-      const googleDriveMsg = data?.googleDriveUploaded 
-        ? ' Also synced to Google Drive.' 
-        : data?.googleDriveError 
-          ? ` Google Drive sync failed: ${data.googleDriveError}` 
-          : '';
-      
-      if (data?.googleDriveUploaded) {
-        setLastGoogleDriveSync(new Date().toISOString());
-      }
-      
       toast({
         title: 'Backup Created',
-        description: `Database backup created successfully.${googleDriveMsg}`,
-        variant: data?.googleDriveError ? 'destructive' : 'default',
+        description: 'Database backup created successfully.',
       });
       
       await loadBackups();
@@ -245,7 +146,6 @@ export default function BackupRestore() {
       const fileContent = await uploadedFile.text();
       const backupData = JSON.parse(fileContent);
       
-      // Validate backup structure
       if (!backupData.items && !backupData.categories) {
         throw new Error('Invalid backup file format');
       }
@@ -324,60 +224,9 @@ export default function BackupRestore() {
         <Alert>
           <AlertTriangle className="h-4 w-4" />
           <AlertDescription>
-            Automated daily backups are enabled. Backups are retained for 30 days and synced to Google Drive. Restoring a backup will replace all current data.
+            Automated daily backups are enabled. Backups are retained for 30 days. Restoring a backup will replace all current data.
           </AlertDescription>
         </Alert>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Cloud className="h-5 w-5" />
-              Google Drive Sync
-            </CardTitle>
-            <CardDescription>
-              Connect your Google Drive to sync backups automatically
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            {checkingGoogleDrive ? (
-              <div className="flex items-center gap-2 text-muted-foreground">
-                <RefreshCw className="h-4 w-4 animate-spin" />
-                Checking connection...
-              </div>
-            ) : googleDriveConnected ? (
-              <div className="space-y-2">
-                <div className="flex items-center gap-2">
-                  <Badge variant="outline" className="flex items-center gap-1">
-                    <CheckCircle2 className="h-3 w-3 text-green-500" />
-                    Connected
-                  </Badge>
-                  <span className="text-sm text-muted-foreground">
-                    Your Google Drive is connected for backups
-                  </span>
-                </div>
-                {lastGoogleDriveSync && (
-                  <p className="text-sm text-muted-foreground">
-                    Last sync: {new Date(lastGoogleDriveSync).toLocaleString()}
-                  </p>
-                )}
-              </div>
-            ) : (
-              <div className="space-y-3">
-                <p className="text-sm text-muted-foreground">
-                  Connect your personal Google Drive to automatically sync backups
-                </p>
-                <Button 
-                  onClick={connectGoogleDrive} 
-                  disabled={connectingGoogleDrive}
-                  variant="outline"
-                >
-                  <Cloud className="mr-2 h-4 w-4" />
-                  {connectingGoogleDrive ? 'Connecting...' : 'Connect Google Drive'}
-                </Button>
-              </div>
-            )}
-          </CardContent>
-        </Card>
 
         <Card>
           <CardHeader>
@@ -455,7 +304,7 @@ export default function BackupRestore() {
               Restore from File
             </CardTitle>
             <CardDescription>
-              Upload a backup file downloaded from Google Drive or local storage
+              Upload a backup file from local storage
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -506,9 +355,9 @@ export default function BackupRestore() {
       }}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Restore from Uploaded File?</AlertDialogTitle>
+            <AlertDialogTitle>Restore from File?</AlertDialogTitle>
             <AlertDialogDescription>
-              This will replace all current data with the backup from "{uploadedFile?.name}". This action cannot be undone. Make sure you have a recent backup before proceeding.
+              This will replace all current data with the backup from "{uploadedFile?.name}". This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
