@@ -456,7 +456,7 @@ const BarcodePrint = () => {
             <div
               style={{ 
                 position: "absolute", 
-                left: "1.9mm", 
+                left: "6.9mm", 
                 top: "8mm", 
                 fontSize: "11pt", 
                 fontWeight: 400,
@@ -469,7 +469,7 @@ const BarcodePrint = () => {
             <div
               style={{ 
                 position: "absolute", 
-                left: "7mm", 
+                left: "12mm", 
                 top: "0.85mm", 
                 fontSize: "11pt", 
                 fontWeight: 400,
@@ -482,7 +482,7 @@ const BarcodePrint = () => {
             <div
               style={{
                 position: "absolute",
-                left: "6mm",
+                left: "11mm",
                 top: "6mm",
                 width: "44mm",
                 fontSize: "9pt",
@@ -499,7 +499,7 @@ const BarcodePrint = () => {
             <div
               style={{ 
                 position: "absolute", 
-                left: "7mm", 
+                left: "12mm", 
                 top: "14mm", 
                 fontSize: "11pt", 
                 fontWeight: 400,
@@ -512,7 +512,7 @@ const BarcodePrint = () => {
             <div
               style={{ 
                 position: "absolute", 
-                left: "33mm", 
+                left: "38mm", 
                 top: "14mm", 
                 fontSize: "11pt", 
                 fontWeight: 400,
@@ -525,7 +525,7 @@ const BarcodePrint = () => {
             <div
               style={{
                 position: "absolute",
-                left: "57mm",
+                left: "62mm",
                 top: "0mm",
                 width: "38mm",
                 height: "16mm",
@@ -539,7 +539,7 @@ const BarcodePrint = () => {
             <div
               style={{
                 position: "absolute",
-                left: "57mm",
+                left: "62mm",
                 top: "15mm",
                 width: "38mm",
                 fontSize: "11pt",
