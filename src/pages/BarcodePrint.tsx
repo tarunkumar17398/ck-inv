@@ -170,6 +170,7 @@ const BarcodePrint = () => {
 
   const generateBarcodes = () => {
     labels.forEach((label, index) => {
+      // Generate preview barcode
       const canvas = document.getElementById(`barcode-${index}`) as HTMLCanvasElement;
       if (canvas) {
         try {
@@ -186,11 +187,52 @@ const BarcodePrint = () => {
           console.error("Barcode generation error:", e);
         }
       }
+      
+      // Generate print barcode
+      const printCanvas = document.getElementById(`barcode-print-${index}`) as HTMLCanvasElement;
+      if (printCanvas) {
+        try {
+          bwipjs.toCanvas(printCanvas, {
+            bcid: "code128",
+            text: label.barcodeValue,
+            scale: 2,
+            height: 12,
+            includetext: true,
+            textxalign: "center",
+            textsize: 8,
+          });
+        } catch (e) {
+          console.error("Print barcode generation error:", e);
+        }
+      }
     });
   };
 
   const handlePrint = () => {
-    window.print();
+    // Generate print barcodes before printing
+    labels.forEach((label, index) => {
+      const printCanvas = document.getElementById(`barcode-print-${index}`) as HTMLCanvasElement;
+      if (printCanvas) {
+        try {
+          bwipjs.toCanvas(printCanvas, {
+            bcid: "code128",
+            text: label.barcodeValue,
+            scale: 2,
+            height: 12,
+            includetext: true,
+            textxalign: "center",
+            textsize: 8,
+          });
+        } catch (e) {
+          console.error("Print barcode generation error:", e);
+        }
+      }
+    });
+    
+    // Small delay to ensure barcodes are rendered
+    setTimeout(() => {
+      window.print();
+    }, 200);
   };
 
   return (
@@ -345,10 +387,6 @@ const BarcodePrint = () => {
                       <div style={{ position: "absolute", left: "7mm", top: "0.8mm", fontSize: "11pt" }}>
                         S.No: {label.itemCode}
                       </div>
-                      {/* Item Code */}
-                      <div style={{ position: "absolute", left: "45mm", top: "0.8mm", fontSize: "11pt" }}>
-                        {label.itemCode}
-                      </div>
                       {/* Particulars */}
                       <div style={{ position: "absolute", left: "6mm", top: "6mm", fontSize: "9pt", width: "44mm", overflow: "hidden", whiteSpace: "nowrap", textOverflow: "ellipsis" }}>
                         {label.particulars}
@@ -383,8 +421,8 @@ const BarcodePrint = () => {
         </div>
       </main>
 
-      {/* Print Layout - Only visible when printing */}
-      <div ref={printRef} className="hidden print:block">
+      {/* Print Layout - Rendered offscreen for barcode generation, visible when printing */}
+      <div ref={printRef} className="print-layout" style={{ position: "absolute", left: "-9999px", top: 0 }}>
         {labels.map((label, index) => (
           <div
             key={index}
@@ -408,10 +446,6 @@ const BarcodePrint = () => {
             {/* S.No */}
             <div style={{ position: "absolute", left: "6.9841mm", top: "0.8466mm", fontSize: "11pt", fontWeight: 400 }}>
               S.No: {label.itemCode}
-            </div>
-            {/* Item Code */}
-            <div style={{ position: "absolute", left: "45mm", top: "0.8466mm", fontSize: "11pt", fontWeight: 400 }}>
-              {label.itemCode}
             </div>
             {/* Particulars */}
             <div style={{ position: "absolute", left: "5.9259mm", top: "5.9259mm", width: "44.0212mm", fontSize: "9pt", fontWeight: 400, overflow: "hidden", whiteSpace: "nowrap", textOverflow: "clip" }}>
@@ -439,6 +473,14 @@ const BarcodePrint = () => {
 
       {/* Print Styles */}
       <style>{`
+        @media screen {
+          .print-layout {
+            position: absolute;
+            left: -9999px;
+            top: 0;
+          }
+        }
+        
         @media print {
           @page {
             size: 110mm 28mm;
@@ -452,11 +494,13 @@ const BarcodePrint = () => {
             -webkit-print-color-adjust: exact;
           }
           
-          .print\\:hidden {
+          .print\\:hidden, header, main {
             display: none !important;
           }
           
-          .print\\:block {
+          .print-layout {
+            position: static !important;
+            left: auto !important;
             display: block !important;
           }
           
@@ -467,6 +511,10 @@ const BarcodePrint = () => {
           
           .label-page:last-child {
             page-break-after: auto;
+          }
+          
+          canvas {
+            display: block !important;
           }
         }
       `}</style>
