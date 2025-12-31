@@ -5,93 +5,69 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-// Google Drive API helper functions
-async function getGoogleAccessToken(serviceAccountJson: string): Promise<string> {
-  const serviceAccount = JSON.parse(serviceAccountJson);
+// Get OAuth access token (refresh if needed)
+async function getOAuthAccessToken(
+  supabase: any,
+  userId: string,
+  clientId: string,
+  clientSecret: string
+): Promise<{ accessToken: string | null; error: string | null }> {
+  // Get stored tokens
+  const { data: tokenData, error: tokenError } = await supabase
+    .from('google_drive_tokens')
+    .select('*')
+    .eq('user_id', userId)
+    .maybeSingle();
+
+  if (tokenError) {
+    return { accessToken: null, error: `Failed to fetch tokens: ${tokenError.message}` };
+  }
+
+  if (!tokenData) {
+    return { accessToken: null, error: 'Google Drive not connected. Please authorize first.' };
+  }
+
+  // Check if token is expired
+  const expiresAt = new Date(tokenData.expires_at);
+  const now = new Date();
   
-  // Create JWT header and claim
-  const header = { alg: 'RS256', typ: 'JWT' };
-  const now = Math.floor(Date.now() / 1000);
-  const claim = {
-    iss: serviceAccount.client_email,
-    scope: 'https://www.googleapis.com/auth/drive.file',
-    aud: 'https://oauth2.googleapis.com/token',
-    exp: now + 3600,
-    iat: now,
-  };
+  if (expiresAt > now) {
+    // Token is still valid
+    return { accessToken: tokenData.access_token, error: null };
+  }
 
-  // Base64url encode
-  const base64url = (str: string) => btoa(str).replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
-  const encodedHeader = base64url(JSON.stringify(header));
-  const encodedClaim = base64url(JSON.stringify(claim));
-
-  // Sign with RSA
-  const privateKey = serviceAccount.private_key;
-  const encoder = new TextEncoder();
-  const signatureInput = encoder.encode(`${encodedHeader}.${encodedClaim}`);
+  // Token expired, refresh it
+  console.log('Refreshing expired OAuth token...');
   
-  // Import the private key
-  const pemContents = privateKey
-    .replace('-----BEGIN PRIVATE KEY-----', '')
-    .replace('-----END PRIVATE KEY-----', '')
-    .replace(/\s/g, '');
-  const binaryKey = Uint8Array.from(atob(pemContents), c => c.charCodeAt(0));
-  
-  const cryptoKey = await crypto.subtle.importKey(
-    'pkcs8',
-    binaryKey,
-    { name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-256' },
-    false,
-    ['sign']
-  );
-
-  const signature = await crypto.subtle.sign('RSASSA-PKCS1-v1_5', cryptoKey, signatureInput);
-  const encodedSignature = base64url(String.fromCharCode(...new Uint8Array(signature)));
-
-  const jwt = `${encodedHeader}.${encodedClaim}.${encodedSignature}`;
-
-  // Exchange JWT for access token
   const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
     method: 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    body: `grant_type=urn:ietf:params:oauth:grant-type:jwt-bearer&assertion=${jwt}`,
-  });
-
-  const tokenData = await tokenResponse.json();
-  if (!tokenData.access_token) {
-    throw new Error(`Failed to get Google access token: ${JSON.stringify(tokenData)}`);
-  }
-  
-  return tokenData.access_token;
-}
-
-async function findOrCreateFolder(accessToken: string, folderName: string): Promise<string> {
-  // Search for existing folder
-  const searchResponse = await fetch(
-    `https://www.googleapis.com/drive/v3/files?q=name='${folderName}' and mimeType='application/vnd.google-apps.folder' and trashed=false`,
-    { headers: { Authorization: `Bearer ${accessToken}` } }
-  );
-  const searchData = await searchResponse.json();
-
-  if (searchData.files && searchData.files.length > 0) {
-    return searchData.files[0].id;
-  }
-
-  // Create new folder
-  const createResponse = await fetch('https://www.googleapis.com/drive/v3/files', {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${accessToken}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      name: folderName,
-      mimeType: 'application/vnd.google-apps.folder',
+    body: new URLSearchParams({
+      client_id: clientId,
+      client_secret: clientSecret,
+      refresh_token: tokenData.refresh_token,
+      grant_type: 'refresh_token',
     }),
   });
-  const createData = await createResponse.json();
-  console.log(`Created Google Drive folder: ${folderName} (${createData.id})`);
-  return createData.id;
+
+  const newTokenData = await tokenResponse.json();
+
+  if (!newTokenData.access_token) {
+    return { accessToken: null, error: `Failed to refresh token: ${JSON.stringify(newTokenData)}` };
+  }
+
+  // Update stored token
+  await supabase
+    .from('google_drive_tokens')
+    .update({
+      access_token: newTokenData.access_token,
+      expires_at: new Date(Date.now() + newTokenData.expires_in * 1000).toISOString(),
+      updated_at: new Date().toISOString(),
+    })
+    .eq('user_id', userId);
+
+  console.log('OAuth token refreshed successfully');
+  return { accessToken: newTokenData.access_token, error: null };
 }
 
 async function uploadToGoogleDrive(
@@ -119,9 +95,8 @@ async function uploadToGoogleDrive(
     content +
     closeDelimiter;
 
-  // Add supportsAllDrives=true to work with shared folders
   const response = await fetch(
-    'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&supportsAllDrives=true',
+    'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart',
     {
       method: 'POST',
       headers: {
@@ -144,9 +119,8 @@ async function cleanupOldGoogleDriveBackups(accessToken: string, folderId: strin
   const cutoffDate = new Date();
   cutoffDate.setDate(cutoffDate.getDate() - daysToKeep);
 
-  // List files in folder with supportsAllDrives for shared folders
   const response = await fetch(
-    `https://www.googleapis.com/drive/v3/files?q='${folderId}' in parents and trashed=false&fields=files(id,name,createdTime)&supportsAllDrives=true&includeItemsFromAllDrives=true`,
+    `https://www.googleapis.com/drive/v3/files?q='${folderId}' in parents and trashed=false&fields=files(id,name,createdTime)`,
     { headers: { Authorization: `Bearer ${accessToken}` } }
   );
   const data = await response.json();
@@ -155,7 +129,7 @@ async function cleanupOldGoogleDriveBackups(accessToken: string, folderId: strin
     for (const file of data.files) {
       const fileDate = new Date(file.createdTime);
       if (fileDate < cutoffDate) {
-        await fetch(`https://www.googleapis.com/drive/v3/files/${file.id}?supportsAllDrives=true`, {
+        await fetch(`https://www.googleapis.com/drive/v3/files/${file.id}`, {
           method: 'DELETE',
           headers: { Authorization: `Bearer ${accessToken}` },
         });
@@ -174,7 +148,8 @@ Deno.serve(async (req) => {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
-    const googleServiceAccountJson = Deno.env.get('GOOGLE_SERVICE_ACCOUNT_JSON');
+    const googleClientId = Deno.env.get('GOOGLE_OAUTH_CLIENT_ID');
+    const googleClientSecret = Deno.env.get('GOOGLE_OAUTH_CLIENT_SECRET');
     
     // Helper function to extract folder ID from URL or return as-is if already an ID
     const extractFolderId = (folderIdOrUrl: string): string => {
@@ -188,6 +163,8 @@ Deno.serve(async (req) => {
     };
     const googleDriveFolderIdRaw = Deno.env.get('GOOGLE_DRIVE_FOLDER_ID');
     const googleDriveFolderId = googleDriveFolderIdRaw ? extractFolderId(googleDriveFolderIdRaw) : null;
+    
+    let userId: string | null = null;
     
     // Check for scheduled job (cron) - uses service role for authentication
     const authHeader = req.headers.get('authorization');
@@ -242,7 +219,7 @@ Deno.serve(async (req) => {
           { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
-      
+      userId = user.id;
       userEmail = user.email || 'unknown';
       console.log('Starting database backup by admin:', user.id);
     }
@@ -292,28 +269,36 @@ Deno.serve(async (req) => {
 
     console.log(`Backup created in Cloud Storage: ${fileName} by ${userEmail}`);
 
-    // Upload to Google Drive if configured
+    // Upload to Google Drive if OAuth is configured
     let googleDriveFileId = null;
     let googleDriveError = null;
-    if (googleServiceAccountJson && googleDriveFolderId) {
+    let googleDriveConnected = false;
+    
+    if (googleClientId && googleClientSecret && googleDriveFolderId && userId) {
       try {
-        console.log('Starting Google Drive upload...');
-        console.log('Extracted folder ID:', googleDriveFolderId);
+        console.log('Starting Google Drive upload with OAuth...');
+        console.log('Folder ID:', googleDriveFolderId);
         
-        // Validate JSON format
-        let parsedAccount;
-        try {
-          parsedAccount = JSON.parse(googleServiceAccountJson);
-          console.log('Service account email:', parsedAccount.client_email);
-        } catch (parseError: unknown) {
-          const msg = parseError instanceof Error ? parseError.message : String(parseError);
-          throw new Error(`Invalid JSON format: ${msg}`);
+        // Get OAuth access token
+        const { accessToken, error: tokenError } = await getOAuthAccessToken(
+          supabaseAdmin,
+          userId,
+          googleClientId,
+          googleClientSecret
+        );
+        
+        if (tokenError) {
+          throw new Error(tokenError);
         }
         
-        const accessToken = await getGoogleAccessToken(googleServiceAccountJson);
-        console.log('Got Google access token');
+        if (!accessToken) {
+          throw new Error('No access token available');
+        }
         
-        // Use folder ID directly from environment variable (shared folder)
+        console.log('Got OAuth access token');
+        googleDriveConnected = true;
+        
+        // Upload to Google Drive
         googleDriveFileId = await uploadToGoogleDrive(accessToken, googleDriveFolderId, fileName, fileContent);
         console.log('Upload complete, file ID:', googleDriveFileId);
         
@@ -325,8 +310,12 @@ Deno.serve(async (req) => {
         googleDriveError = googleError instanceof Error ? googleError.message : String(googleError);
         // Don't fail the whole backup if Google Drive fails
       }
-    } else {
-      console.log('Google Drive not configured - missing GOOGLE_SERVICE_ACCOUNT_JSON or GOOGLE_DRIVE_FOLDER_ID');
+    } else if (!googleDriveFolderId) {
+      console.log('Google Drive not configured - missing GOOGLE_DRIVE_FOLDER_ID');
+    } else if (!googleClientId || !googleClientSecret) {
+      console.log('Google Drive OAuth not configured - missing client credentials');
+    } else if (!userId) {
+      console.log('Google Drive upload skipped - no user ID (scheduled job)');
     }
 
     // Clean up old backups from Cloud Storage (keep last 30 days)
