@@ -431,15 +431,15 @@ const BarcodePrint = () => {
         </div>
       </main>
 
-      {/* Print Layout - Rendered offscreen for barcode generation, visible when printing */}
+      {/* Print Layout - Landscape orientation, no CSS rotation for crisp text */}
       <div ref={printRef} className="print-layout" style={{ position: "absolute", left: "-9999px", top: 0 }}>
         {labels.map((label, index) => (
           <div
             key={index}
             className="label-page"
             style={{
-              width: "28mm",
-              height: "110mm",
+              width: "110mm",
+              height: "28mm",
               position: "relative",
               boxSizing: "border-box",
               background: "#fff",
@@ -448,88 +448,107 @@ const BarcodePrint = () => {
               pageBreakAfter: "always",
               pageBreakInside: "avoid",
               overflow: "hidden",
+              WebkitFontSmoothing: "antialiased",
+              MozOsxFontSmoothing: "grayscale",
             }}
           >
-            {/* Rotated content container - 90 degrees clockwise */}
+            {/* O */}
+            <div
+              style={{ 
+                position: "absolute", 
+                left: "1.9mm", 
+                top: "8mm", 
+                fontSize: "11pt", 
+                fontWeight: 400,
+                color: "#000",
+              }}
+            >
+              O
+            </div>
+            {/* S.No */}
+            <div
+              style={{ 
+                position: "absolute", 
+                left: "7mm", 
+                top: "0.85mm", 
+                fontSize: "11pt", 
+                fontWeight: 400,
+                color: "#000",
+              }}
+            >
+              S.No: {label.itemCode}
+            </div>
+            {/* Particulars */}
             <div
               style={{
                 position: "absolute",
-                width: "110mm",
-                height: "28mm",
-                transformOrigin: "0 0",
-                transform: "rotate(90deg) translateY(-28mm)",
-                left: "2mm",
-                top: "5mm",
+                left: "6mm",
+                top: "6mm",
+                width: "44mm",
+                fontSize: "9pt",
+                fontWeight: 400,
+                overflow: "hidden",
+                whiteSpace: "nowrap",
+                textOverflow: "clip",
+                color: "#000",
               }}
             >
-              {/* O */}
-              <div
-                style={{ position: "absolute", left: "1.9048mm", top: "8.0423mm", fontSize: "11pt", fontWeight: 400 }}
-              >
-                O
-              </div>
-              {/* S.No */}
-              <div
-                style={{ position: "absolute", left: "6.9841mm", top: "0.8466mm", fontSize: "11pt", fontWeight: 400 }}
-              >
-                S.No: {label.itemCode}
-              </div>
-              {/* Particulars */}
-              <div
-                style={{
-                  position: "absolute",
-                  left: "5.9259mm",
-                  top: "5.9259mm",
-                  width: "44.0212mm",
-                  fontSize: "9pt",
-                  fontWeight: 400,
-                  overflow: "hidden",
-                  whiteSpace: "nowrap",
-                  textOverflow: "clip",
-                }}
-              >
-                {label.particulars}
-              </div>
-              {/* Price */}
-              <div
-                style={{ position: "absolute", left: "6.9841mm", top: "13.9683mm", fontSize: "11pt", fontWeight: 400 }}
-              >
-                {label.price}
-              </div>
-              {/* Size */}
-              <div
-                style={{ position: "absolute", left: "32.9277mm", top: "13.9683mm", fontSize: "11pt", fontWeight: 400 }}
-              >
-                {label.size}
-              </div>
-              {/* Barcode - SVG for crystal clear printing */}
-              <div
-                style={{
-                  position: "absolute",
-                  left: "56.9665mm",
-                  top: "0mm",
-                  width: "38.0423mm",
-                  height: "16.0847mm",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                }}
-                dangerouslySetInnerHTML={{ __html: label.barcodeSvg || "" }}
-              />
-              {/* Weight */}
-              <div
-                style={{
-                  position: "absolute",
-                  left: "56.9312mm",
-                  top: "15.0265mm",
-                  width: "38.0423mm",
-                  fontSize: "11pt",
-                  fontWeight: 400,
-                  textAlign: "center",
-                }}
-              >
-                {label.weight}
-              </div>
+              {label.particulars}
+            </div>
+            {/* Price */}
+            <div
+              style={{ 
+                position: "absolute", 
+                left: "7mm", 
+                top: "14mm", 
+                fontSize: "11pt", 
+                fontWeight: 400,
+                color: "#000",
+              }}
+            >
+              {label.price}
+            </div>
+            {/* Size */}
+            <div
+              style={{ 
+                position: "absolute", 
+                left: "33mm", 
+                top: "14mm", 
+                fontSize: "11pt", 
+                fontWeight: 400,
+                color: "#000",
+              }}
+            >
+              {label.size}
+            </div>
+            {/* Barcode - SVG for crystal clear printing */}
+            <div
+              style={{
+                position: "absolute",
+                left: "57mm",
+                top: "0mm",
+                width: "38mm",
+                height: "16mm",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+              dangerouslySetInnerHTML={{ __html: label.barcodeSvg || "" }}
+            />
+            {/* Weight */}
+            <div
+              style={{
+                position: "absolute",
+                left: "57mm",
+                top: "15mm",
+                width: "38mm",
+                fontSize: "11pt",
+                fontWeight: 400,
+                textAlign: "center",
+                color: "#000",
+              }}
+            >
+              {label.weight}
             </div>
           </div>
         ))}
@@ -547,16 +566,22 @@ const BarcodePrint = () => {
         
         @media print {
           @page {
-            size: 28mm 110mm;
+            size: 110mm 28mm;
             margin: 0;
+          }
+          
+          * {
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
           }
           
           html, body {
             margin: 0 !important;
             padding: 0 !important;
-            print-color-adjust: exact;
-            -webkit-print-color-adjust: exact;
             background: white !important;
+            font-family: Calibri, Arial, sans-serif !important;
+            -webkit-font-smoothing: antialiased !important;
+            text-rendering: optimizeLegibility !important;
           }
           
           header, main, nav, footer, .min-h-screen > header, .min-h-screen > main {
@@ -571,8 +596,8 @@ const BarcodePrint = () => {
           }
           
           .label-page {
-            width: 28mm !important;
-            height: 110mm !important;
+            width: 110mm !important;
+            height: 28mm !important;
             margin: 0 !important;
             padding: 0 !important;
             page-break-after: always !important;
@@ -581,6 +606,8 @@ const BarcodePrint = () => {
             background: white !important;
             border: none !important;
             overflow: hidden !important;
+            font-family: Calibri, Arial, sans-serif !important;
+            color: #000 !important;
           }
           
           .label-page:last-child {
@@ -590,6 +617,11 @@ const BarcodePrint = () => {
           .label-page svg {
             max-width: 100% !important;
             max-height: 100% !important;
+            shape-rendering: crispEdges !important;
+          }
+          
+          .label-page div {
+            color: #000 !important;
           }
         }
       `}</style>
