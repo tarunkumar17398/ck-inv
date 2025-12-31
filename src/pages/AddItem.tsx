@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -7,12 +7,19 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { ArrowLeft, Plus, Check, ChevronsUpDown } from "lucide-react";
+import { ArrowLeft, Plus, Check, ChevronsUpDown, Printer } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { formatPriceLabel, formatWeightLabel, formatSizeWithInches } from "@/lib/utils";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
+import bwipjs from "bwip-js";
+import type { RenderOptions } from "bwip-js";
+
+// Type for bwip-js SVG generation
+const bwipjsLib = bwipjs as typeof bwipjs & { 
+  toSVG: (opts: RenderOptions) => string 
+};
 
 interface Category {
   id: string;
@@ -50,6 +57,8 @@ const AddItem = () => {
   const [newCategoryName, setNewCategoryName] = useState("");
   const [newCategoryPrefix, setNewCategoryPrefix] = useState("");
   const [showAddCategory, setShowAddCategory] = useState(false);
+  const [printAfterAdd, setPrintAfterAdd] = useState(false);
+  const printContainerRef = useRef<HTMLDivElement>(null);
 
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -289,7 +298,153 @@ const AddItem = () => {
     loadCategories();
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const printBarcode = (itemCode: string, itemNameToPrint: string, priceToPrint: string, weightToPrint: string) => {
+    // Create a temporary print window
+    const printWindow = window.open('', '_blank', 'width=800,height=600');
+    if (!printWindow) {
+      toast({
+        title: "Print blocked",
+        description: "Please allow popups to print barcodes",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Generate barcode SVG
+    let barcodeSvg = '';
+    try {
+      barcodeSvg = bwipjsLib.toSVG({
+        bcid: 'code128',
+        text: itemCode,
+        scale: 3,
+        height: 10,
+        includetext: false,
+      });
+    } catch (e) {
+      console.error('Barcode generation error:', e);
+    }
+
+    const formattedWeight = weightToPrint ? `${parseFloat(weightToPrint).toFixed(1)}g` : '';
+    const formattedPrice = priceToPrint ? `₹${parseFloat(priceToPrint).toLocaleString('en-IN')}` : '';
+
+    printWindow.document.write(`
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>Print Barcode - ${itemCode}</title>
+        <style>
+          @page {
+            size: 100mm 20mm;
+            margin: 0;
+          }
+          * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+          }
+          body {
+            width: 100mm;
+            height: 20mm;
+            font-family: Arial, sans-serif;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+          }
+          .label {
+            width: 100mm;
+            height: 20mm;
+            position: relative;
+            page-break-after: always;
+          }
+          .logo {
+            position: absolute;
+            left: 6.9mm;
+            top: 6mm;
+            font-size: 11pt;
+            font-weight: 400;
+          }
+          .item-code-top {
+            position: absolute;
+            left: 12mm;
+            top: -1mm;
+            font-size: 11pt;
+            font-weight: 400;
+          }
+          .item-name {
+            position: absolute;
+            left: 11mm;
+            top: 4mm;
+            width: 44mm;
+            font-size: 9pt;
+            font-weight: 400;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+          }
+          .weight {
+            position: absolute;
+            left: 12mm;
+            top: 12mm;
+            font-size: 11pt;
+            font-weight: 400;
+          }
+          .price {
+            position: absolute;
+            left: 38mm;
+            top: 12mm;
+            font-size: 11pt;
+            font-weight: 400;
+          }
+          .barcode-container {
+            position: absolute;
+            left: 62mm;
+            top: -1mm;
+            width: 38mm;
+            height: 16mm;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+          }
+          .barcode-container svg {
+            width: 100%;
+            height: 100%;
+          }
+          .item-code-bottom {
+            position: absolute;
+            left: 62mm;
+            top: 13mm;
+            width: 38mm;
+            font-size: 11pt;
+            font-weight: 400;
+            text-align: center;
+            letter-spacing: 0.5px;
+          }
+        </style>
+      </head>
+      <body>
+        <div class="label">
+          <span class="logo">CK</span>
+          <span class="item-code-top">${itemCode}</span>
+          <span class="item-name">${itemNameToPrint}</span>
+          <span class="weight">${formattedWeight}</span>
+          <span class="price">${formattedPrice}</span>
+          <div class="barcode-container">${barcodeSvg}</div>
+          <span class="item-code-bottom">${itemCode}</span>
+        </div>
+      </body>
+      </html>
+    `);
+
+    printWindow.document.close();
+    
+    // Wait for content to load then print
+    printWindow.onload = () => {
+      printWindow.focus();
+      printWindow.print();
+      printWindow.close();
+    };
+  };
+
+  const handleSubmit = async (e: React.FormEvent, shouldPrint: boolean = false) => {
     e.preventDefault();
 
     if (!selectedCategory || !itemName) {
@@ -346,6 +501,12 @@ const AddItem = () => {
             ? `Piece code: ${pieceCodes[0]}`
             : `${quantity} pieces added: ${pieceCodes[0]} to ${pieceCodes[pieceCodes.length - 1]}`,
         });
+
+        // Print barcode if requested (only for single piece)
+        if (shouldPrint && quantity === 1) {
+          const subcategoryName = subcategories.find(s => s.id === selectedSubcategory)?.subcategory_name || '';
+          printBarcode(pieceCodes[0], subcategoryName, costPrice, weight);
+        }
 
         // Clear form and stay on page for adding next item
         setItemName("");
@@ -411,6 +572,11 @@ const AddItem = () => {
         title: "Item added successfully",
         description: `Item code: ${itemCode}`,
       });
+
+      // Print barcode if requested
+      if (shouldPrint) {
+        printBarcode(itemCode, itemName, price, weight);
+      }
 
       // Clear form and stay on page for adding next item
       setItemName("");
@@ -701,9 +867,26 @@ const AddItem = () => {
                 </div>
               )}
 
-              <Button type="submit" className="w-full" disabled={loading}>
-                {loading ? "Adding..." : selectedCategoryName === "Panchaloha Idols" ? "Add Piece" : "Add Item"}
-              </Button>
+              <div className="flex gap-2">
+                <Button type="submit" className="flex-1" disabled={loading}>
+                  {loading ? "Adding..." : selectedCategoryName === "Panchaloha Idols" ? "Add Piece" : "Add Item"}
+                </Button>
+                <Button 
+                  type="button" 
+                  variant="secondary"
+                  className="flex-1"
+                  disabled={loading || (selectedCategoryName === "Panchaloha Idols" && quantity > 1)}
+                  onClick={(e) => handleSubmit(e as any, true)}
+                >
+                  <Printer className="w-4 h-4 mr-2" />
+                  {loading ? "Adding..." : "Add & Print"}
+                </Button>
+              </div>
+              {selectedCategoryName === "Panchaloha Idols" && quantity > 1 && (
+                <p className="text-xs text-muted-foreground text-center">
+                  Add & Print is only available when adding a single piece
+                </p>
+              )}
             </form>
           </CardContent>
         </Card>
