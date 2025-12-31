@@ -474,7 +474,7 @@ const BarcodePrint = () => {
                 height: "28mm",
                 transformOrigin: "0 0",
                 transform: "rotate(90deg) translateY(-28mm)",
-                left: "2mm",
+                left: "-0.5mm",
                 top: "5mm",
               }}
             >
