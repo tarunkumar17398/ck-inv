@@ -459,7 +459,7 @@ const BarcodePrint = () => {
               position: "relative",
               boxSizing: "border-box",
               background: "#fff",
-              border: "1px solid #000",
+              border: "none",
               fontFamily: "Calibri, Arial, sans-serif",
               pageBreakAfter: "always",
               pageBreakInside: "avoid",
@@ -596,7 +596,7 @@ const BarcodePrint = () => {
             page-break-inside: avoid !important;
             position: relative !important;
             background: white !important;
-            border: 1px solid #000 !important;
+            border: none !important;
             overflow: hidden !important;
           }
           
