@@ -295,7 +295,9 @@ const AddItem = () => {
 
       // Extract numeric value from weight (handles "90", "90g", "90 grams", etc.)
       const weightNumeric = weightToPrint ? parseFloat(weightToPrint.replace(/[^\d.]/g, '')) : NaN;
-      const formattedWeight = !isNaN(weightNumeric) ? formatWeightLabel(weightNumeric) : '';
+      // Some legacy/imported data is stored in kilograms (e.g. 0.09 => 90g). Convert to grams for CKBR label.
+      const weightGrams = !isNaN(weightNumeric) && weightNumeric > 0 && weightNumeric < 1 ? weightNumeric * 1000 : weightNumeric;
+      const formattedWeight = !isNaN(weightGrams) ? formatWeightLabel(weightGrams) : '';
       const formattedPrice = priceToPrint ? formatPriceLabel(parseFloat(priceToPrint)) : '';
       const formattedSize = sizeToPrint ? formatSizeWithInches(sizeToPrint) : '';
 
