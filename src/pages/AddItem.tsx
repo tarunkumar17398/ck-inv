@@ -293,7 +293,9 @@ const AddItem = () => {
         console.error('Barcode generation error:', e);
       }
 
-      const formattedWeight = weightToPrint ? formatWeightLabel(parseFloat(weightToPrint)) : '';
+      // Extract numeric value from weight (handles "90", "90g", "90 grams", etc.)
+      const weightNumeric = weightToPrint ? parseFloat(weightToPrint.replace(/[^\d.]/g, '')) : NaN;
+      const formattedWeight = !isNaN(weightNumeric) ? formatWeightLabel(weightNumeric) : '';
       const formattedPrice = priceToPrint ? formatPriceLabel(parseFloat(priceToPrint)) : '';
       const formattedSize = sizeToPrint ? formatSizeWithInches(sizeToPrint) : '';
 
