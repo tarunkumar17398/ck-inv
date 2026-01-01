@@ -325,8 +325,8 @@ const AddItem = () => {
       console.error('Barcode generation error:', e);
     }
 
-    const formattedWeight = weightToPrint ? `${parseFloat(weightToPrint).toFixed(1)}g` : '';
-    const formattedPrice = priceToPrint ? `₹${parseFloat(priceToPrint).toLocaleString('en-IN')}` : '';
+    const formattedWeight = weightToPrint ? formatWeightLabel(parseFloat(weightToPrint)) : '';
+    const formattedPrice = priceToPrint ? formatPriceLabel(parseFloat(priceToPrint)) : '';
     const formattedSize = sizeToPrint ? formatSizeWithInches(sizeToPrint) : '';
 
     printWindow.document.write(`
