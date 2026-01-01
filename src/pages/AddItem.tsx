@@ -264,166 +264,189 @@ const AddItem = () => {
     loadCategories();
   };
 
-  const printBarcode = (itemCode: string, itemNameToPrint: string, priceToPrint: string, weightToPrint: string, sizeToPrint: string = "") => {
-    // Create a temporary print window
-    const printWindow = window.open('', '_blank', 'width=800,height=600');
-    if (!printWindow) {
-      toast({
-        title: "Print blocked",
-        description: "Please allow popups to print barcodes",
-        variant: "destructive",
-      });
-      return;
-    }
+  const printBarcode = (itemCode: string, itemNameToPrint: string, priceToPrint: string, weightToPrint: string, sizeToPrint: string = ""): Promise<void> => {
+    return new Promise((resolve) => {
+      // Create a temporary print window
+      const printWindow = window.open('', '_blank', 'width=800,height=600');
+      if (!printWindow) {
+        toast({
+          title: "Print blocked",
+          description: "Please allow popups to print barcodes",
+          variant: "destructive",
+        });
+        resolve();
+        return;
+      }
 
-    // Generate barcode SVG
-    let barcodeSvg = '';
-    try {
-      barcodeSvg = bwipjsLib.toSVG({
-        bcid: 'code128',
-        text: itemCode,
-        height: 12,
-        includetext: true,
-        textxalign: 'center',
-        textsize: 10,
-      });
-    } catch (e) {
-      console.error('Barcode generation error:', e);
-    }
+      // Generate barcode SVG
+      let barcodeSvg = '';
+      try {
+        barcodeSvg = bwipjsLib.toSVG({
+          bcid: 'code128',
+          text: itemCode,
+          height: 12,
+          includetext: true,
+          textxalign: 'center',
+          textsize: 10,
+        });
+      } catch (e) {
+        console.error('Barcode generation error:', e);
+      }
 
-    const formattedWeight = weightToPrint ? formatWeightLabel(parseFloat(weightToPrint)) : '';
-    const formattedPrice = priceToPrint ? formatPriceLabel(parseFloat(priceToPrint)) : '';
-    const formattedSize = sizeToPrint ? formatSizeWithInches(sizeToPrint) : '';
+      const formattedWeight = weightToPrint ? formatWeightLabel(parseFloat(weightToPrint)) : '';
+      const formattedPrice = priceToPrint ? formatPriceLabel(parseFloat(priceToPrint)) : '';
+      const formattedSize = sizeToPrint ? formatSizeWithInches(sizeToPrint) : '';
 
-    printWindow.document.write(`
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <title>Print Barcode - ${itemCode}</title>
-        <style>
-          @page {
-            size: 110mm 28mm;
-            margin: 0;
-          }
-          * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            -webkit-print-color-adjust: exact !important;
-            print-color-adjust: exact !important;
-          }
-          html, body {
-            margin: 0 !important;
-            padding: 0 !important;
-            background: white !important;
-            font-family: Calibri, Arial, sans-serif !important;
-            -webkit-font-smoothing: antialiased !important;
-            text-rendering: geometricPrecision !important;
-          }
-          .label-page {
-            width: 110mm;
-            height: 28mm;
-            position: relative;
-            background: white;
-            page-break-after: always;
-            page-break-inside: avoid;
-            overflow: hidden;
-            font-family: Calibri, Arial, sans-serif;
-            color: black;
-          }
-          .logo {
-            position: absolute;
-            left: 6.9mm;
-            top: 6mm;
-            font-size: 11pt;
-            font-weight: 400;
-            color: black;
-          }
-          .item-code-top {
-            position: absolute;
-            left: 12mm;
-            top: -1mm;
-            font-size: 11pt;
-            font-weight: 400;
-            color: black;
-          }
-          .particulars {
-            position: absolute;
-            left: 11mm;
-            top: 4mm;
-            width: 44mm;
-            font-size: 9pt;
-            font-weight: 400;
-            overflow: hidden;
-            white-space: nowrap;
-            text-overflow: clip;
-            color: black;
-          }
-          .price {
-            position: absolute;
-            left: 12mm;
-            top: 12mm;
-            font-size: 11pt;
-            font-weight: 400;
-            color: black;
-          }
-          .size {
-            position: absolute;
-            left: 38mm;
-            top: 12mm;
-            font-size: 11pt;
-            font-weight: 400;
-            color: black;
-          }
-          .barcode-container {
-            position: absolute;
-            left: 62mm;
-            top: -1mm;
-            width: 38mm;
-            height: 16mm;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-          }
-          .barcode-container svg {
-            max-width: 100%;
-            max-height: 100%;
-            shape-rendering: crispEdges;
-          }
-          .weight {
-            position: absolute;
-            left: 62mm;
-            top: 13mm;
-            width: 38mm;
-            font-size: 11pt;
-            font-weight: 400;
-            text-align: center;
-            color: black;
-          }
-        </style>
-      </head>
-      <body>
-        <div class="label-page">
-          <span class="logo">O</span>
-          <span class="item-code-top">S.No: ${itemCode}</span>
-          <span class="particulars">${itemNameToPrint}</span>
-          <span class="price">${formattedPrice}</span>
-          <span class="size">${formattedSize}</span>
-          <div class="barcode-container">${barcodeSvg}</div>
-          <span class="weight">${formattedWeight}</span>
-        </div>
-      </body>
-      </html>
-    `);
+      printWindow.document.write(`
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <title>Print Barcode - ${itemCode}</title>
+          <style>
+            @page {
+              size: 110mm 28mm;
+              margin: 0;
+            }
+            * {
+              margin: 0;
+              padding: 0;
+              box-sizing: border-box;
+              -webkit-print-color-adjust: exact !important;
+              print-color-adjust: exact !important;
+            }
+            html, body {
+              margin: 0 !important;
+              padding: 0 !important;
+              background: white !important;
+              font-family: Calibri, Arial, sans-serif !important;
+              -webkit-font-smoothing: antialiased !important;
+              text-rendering: geometricPrecision !important;
+            }
+            .label-page {
+              width: 110mm;
+              height: 28mm;
+              position: relative;
+              background: white;
+              page-break-after: always;
+              page-break-inside: avoid;
+              overflow: hidden;
+              font-family: Calibri, Arial, sans-serif;
+              color: black;
+            }
+            .logo {
+              position: absolute;
+              left: 6.9mm;
+              top: 6mm;
+              font-size: 11pt;
+              font-weight: 400;
+              color: black;
+            }
+            .item-code-top {
+              position: absolute;
+              left: 12mm;
+              top: -1mm;
+              font-size: 11pt;
+              font-weight: 400;
+              color: black;
+            }
+            .particulars {
+              position: absolute;
+              left: 11mm;
+              top: 4mm;
+              width: 44mm;
+              font-size: 9pt;
+              font-weight: 400;
+              overflow: hidden;
+              white-space: nowrap;
+              text-overflow: clip;
+              color: black;
+            }
+            .price {
+              position: absolute;
+              left: 12mm;
+              top: 12mm;
+              font-size: 11pt;
+              font-weight: 400;
+              color: black;
+            }
+            .size {
+              position: absolute;
+              left: 38mm;
+              top: 12mm;
+              font-size: 11pt;
+              font-weight: 400;
+              color: black;
+            }
+            .barcode-container {
+              position: absolute;
+              left: 62mm;
+              top: -1mm;
+              width: 38mm;
+              height: 16mm;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+            }
+            .barcode-container svg {
+              max-width: 100%;
+              max-height: 100%;
+              shape-rendering: crispEdges;
+            }
+            .weight {
+              position: absolute;
+              left: 62mm;
+              top: 13mm;
+              width: 38mm;
+              font-size: 11pt;
+              font-weight: 400;
+              text-align: center;
+              color: black;
+            }
+          </style>
+        </head>
+        <body>
+          <div class="label-page">
+            <span class="logo">O</span>
+            <span class="item-code-top">S.No: ${itemCode}</span>
+            <span class="particulars">${itemNameToPrint}</span>
+            <span class="price">${formattedPrice}</span>
+            <span class="size">${formattedSize}</span>
+            <div class="barcode-container">${barcodeSvg}</div>
+            <span class="weight">${formattedWeight}</span>
+          </div>
+        </body>
+        </html>
+      `);
 
-    printWindow.document.close();
-    
-    // Wait for content to load then print
-    printWindow.onload = () => {
-      printWindow.focus();
-      printWindow.print();
-      printWindow.close();
-    };
+      printWindow.document.close();
+      
+      // Track if we've already resolved
+      let resolved = false;
+      
+      // Wait for content to load then print
+      printWindow.onload = () => {
+        if (resolved) return;
+        resolved = true;
+        printWindow.focus();
+        printWindow.print();
+        printWindow.close();
+        resolve();
+      };
+      
+      // Fallback timeout in case onload doesn't fire
+      setTimeout(() => {
+        if (resolved) return;
+        resolved = true;
+        try {
+          printWindow.focus();
+          printWindow.print();
+          printWindow.close();
+        } catch (e) {
+          console.error('Print fallback error:', e);
+        }
+        resolve();
+      }, 2000);
+    });
   };
 
   const handleSubmit = async (e: React.FormEvent, shouldPrint: boolean = false) => {
@@ -484,10 +507,10 @@ const AddItem = () => {
             : `${quantity} pieces added: ${pieceCodes[0]} to ${pieceCodes[pieceCodes.length - 1]}`,
         });
 
-        // Print barcode if requested (only for single piece)
+        // Print barcode if requested (only for single piece) - await to ensure print completes before regenerating code
         if (shouldPrint && quantity === 1) {
           const subcategoryName = subcategories.find(s => s.id === selectedSubcategory)?.subcategory_name || '';
-          printBarcode(pieceCodes[0], subcategoryName, costPrice, weight, size);
+          await printBarcode(pieceCodes[0], subcategoryName, costPrice, weight, size);
         }
 
         // Clear form and stay on page for adding next item
@@ -555,9 +578,9 @@ const AddItem = () => {
         description: `Item code: ${itemCode}`,
       });
 
-      // Print barcode if requested
+      // Print barcode if requested - await to ensure print completes before regenerating code
       if (shouldPrint) {
-        printBarcode(itemCode, itemName, price, weight, size);
+        await printBarcode(itemCode, itemName, price, weight, size);
       }
 
       // Clear form and stay on page for adding next item
