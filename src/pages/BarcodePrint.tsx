@@ -382,9 +382,11 @@ const BarcodePrint = () => {
                           top: "6mm",
                           fontSize: "9pt",
                           width: "44mm",
+                          maxHeight: "9mm",
+                          lineHeight: 1.2,
                           overflow: "hidden",
-                          whiteSpace: "nowrap",
-                          textOverflow: "ellipsis",
+                          whiteSpace: "normal",
+                          overflowWrap: "anywhere",
                         }}
                       >
                         {label.particulars}
@@ -491,11 +493,13 @@ const BarcodePrint = () => {
                 left: "11mm",
                 top: "4mm",
                 width: "44mm",
+                maxHeight: "9mm",
                 fontSize: "9pt",
                 fontWeight: 400,
+                lineHeight: 1.2,
                 overflow: "hidden",
-                whiteSpace: "nowrap",
-                textOverflow: "clip",
+                whiteSpace: "normal",
+                overflowWrap: "anywhere",
                 color: "hsl(0 0% 0%)",
               }}
             >
