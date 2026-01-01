@@ -353,12 +353,14 @@ const AddItem = () => {
               position: absolute;
               left: 11mm;
               top: 4mm;
-              width: 44mm;
-              font-size: 9pt;
+              width: 48mm;
+              max-height: 9mm;
+              font-size: 8pt;
               font-weight: 400;
+              line-height: 1.2;
               overflow: hidden;
-              white-space: nowrap;
-              text-overflow: clip;
+              white-space: normal;
+              word-wrap: break-word;
               color: black;
             }
             .price {
