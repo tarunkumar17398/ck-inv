@@ -87,24 +87,29 @@ const AddItem = () => {
 
   // Function to regenerate just the item code without clearing the form
   const regenerateItemCode = async (categoryId: string) => {
+    console.log('regenerateItemCode called with categoryId:', categoryId);
     const category = categories.find(cat => cat.id === categoryId);
     if (!categoryId || !category) {
+      console.log('No category found, clearing item code');
       setGeneratedItemCode("");
       return;
     }
 
     try {
       const prefix = category.prefix;
-      let highestCode = null;
+      let highestCode: string | null = null;
       
       // For Panchaloha Idols, check item_pieces table
       if (category.name === "Panchaloha Idols") {
+        // Need to filter by prefix pattern since item_pieces doesn't have category_id
         const { data: pieces, error: fetchError } = await supabase
           .from('item_pieces')
           .select('piece_code')
+          .like('piece_code', `CK${prefix}%`)
           .order('piece_code', { ascending: false })
           .limit(1);
 
+        console.log('Panchaloha pieces query result:', pieces, fetchError);
         if (fetchError) throw fetchError;
         if (pieces && pieces.length > 0) {
           highestCode = pieces[0].piece_code;
@@ -118,17 +123,20 @@ const AddItem = () => {
           .order('item_code', { ascending: false })
           .limit(1);
 
+        console.log('Items query result:', items, fetchError);
         if (fetchError) throw fetchError;
         if (items && items.length > 0) {
           highestCode = items[0].item_code;
         }
       }
 
+      console.log('Highest code found:', highestCode);
       let nextCode = "";
 
       if (highestCode) {
         // Parse the code (e.g., CKBR0123 or CKBRA001)
         const codeSuffix = highestCode.substring(2 + prefix.length); // Remove 'CK' and prefix
+        console.log('Code suffix:', codeSuffix);
         
         // Check if there's a letter
         if (/^[A-Z]/.test(codeSuffix)) {
@@ -158,6 +166,7 @@ const AddItem = () => {
         nextCode = `CK${prefix}0001`;
       }
 
+      console.log('Generated next code:', nextCode);
       setGeneratedItemCode(nextCode);
     } catch (error) {
       console.error('Error generating item code:', error);
