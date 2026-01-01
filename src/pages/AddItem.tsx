@@ -85,12 +85,11 @@ const AddItem = () => {
     setCategories(data || []);
   };
 
-  // Function to regenerate just the item code without clearing the form
+  // Function to regenerate just the item code preview without clearing the form
+  // Uses a simulated call to get what the next code would be
   const regenerateItemCode = async (categoryId: string) => {
-    console.log('regenerateItemCode called with categoryId:', categoryId);
     const category = categories.find(cat => cat.id === categoryId);
     if (!categoryId || !category) {
-      console.log('No category found, clearing item code');
       setGeneratedItemCode("");
       return;
     }
@@ -99,82 +98,80 @@ const AddItem = () => {
       const prefix = category.prefix;
       let highestCode: string | null = null;
       
-      // For Panchaloha Idols, check item_pieces table
-      if (category.name === "Panchaloha Idols") {
-        // Need to filter by prefix pattern since item_pieces doesn't have category_id
-        const { data: pieces, error: fetchError } = await supabase
-          .from('item_pieces')
-          .select('piece_code')
-          .like('piece_code', `CK${prefix}%`)
-          .order('piece_code', { ascending: false })
-          .limit(1);
+      // Query both items and item_pieces to find the highest code
+      // This mirrors the logic in the database function
+      const { data: items } = await supabase
+        .from('items')
+        .select('item_code')
+        .eq('category_id', categoryId)
+        .order('item_code', { ascending: false })
+        .limit(1);
 
-        console.log('Panchaloha pieces query result:', pieces, fetchError);
-        if (fetchError) throw fetchError;
-        if (pieces && pieces.length > 0) {
-          highestCode = pieces[0].piece_code;
-        }
-      } else {
-        // For regular categories, check items table
-        const { data: items, error: fetchError } = await supabase
-          .from('items')
-          .select('item_code')
-          .eq('category_id', categoryId)
-          .order('item_code', { ascending: false })
-          .limit(1);
+      const { data: pieces } = await supabase
+        .from('item_pieces')
+        .select('piece_code, subcategory_id')
+        .order('piece_code', { ascending: false })
+        .limit(100); // Get more to filter by category
 
-        console.log('Items query result:', items, fetchError);
-        if (fetchError) throw fetchError;
-        if (items && items.length > 0) {
-          highestCode = items[0].item_code;
+      // Filter pieces by category (via subcategory)
+      let categoryPieces: string[] = [];
+      if (pieces && pieces.length > 0) {
+        // Get subcategory IDs for this category
+        const { data: subs } = await supabase
+          .from('subcategories')
+          .select('id')
+          .eq('category_id', categoryId);
+        
+        if (subs) {
+          const subIds = new Set(subs.map(s => s.id));
+          categoryPieces = pieces
+            .filter(p => subIds.has(p.subcategory_id))
+            .map(p => p.piece_code);
         }
       }
 
-      console.log('Highest code found:', highestCode);
+      // Find the highest code between items and pieces
+      const itemCode = items && items.length > 0 ? items[0].item_code : null;
+      const pieceCode = categoryPieces.length > 0 ? categoryPieces.sort().reverse()[0] : null;
+
+      if (itemCode && pieceCode) {
+        highestCode = itemCode > pieceCode ? itemCode : pieceCode;
+      } else {
+        highestCode = itemCode || pieceCode;
+      }
+
       let nextCode = "";
 
       if (highestCode) {
         // Parse the code (e.g., CKBR0123 or CKBRA001)
-        const codeSuffix = highestCode.substring(2 + prefix.length); // Remove 'CK' and prefix
-        console.log('Code suffix:', codeSuffix);
+        const codeSuffix = highestCode.substring(2 + prefix.length);
         
-        // Check if there's a letter
         if (/^[A-Z]/.test(codeSuffix)) {
           const letter = codeSuffix[0];
           const number = parseInt(codeSuffix.substring(1)) + 1;
           
           if (number > 999) {
-            // Rollover to next letter
             const nextLetter = String.fromCharCode(letter.charCodeAt(0) + 1);
             nextCode = `CK${prefix}${nextLetter}001`;
           } else {
             nextCode = `CK${prefix}${letter}${String(number).padStart(3, '0')}`;
           }
         } else {
-          // No letter series
           const number = parseInt(codeSuffix) + 1;
           
           if (number > 9999) {
-            // Rollover to letter series
             nextCode = `CK${prefix}A001`;
           } else {
             nextCode = `CK${prefix}${String(number).padStart(4, '0')}`;
           }
         }
       } else {
-        // No items/pieces found, start with 0001
         nextCode = `CK${prefix}0001`;
       }
 
-      console.log('Generated next code:', nextCode);
       setGeneratedItemCode(nextCode);
     } catch (error) {
-      console.error('Error generating item code:', error);
-      toast({
-        title: "Error",
-        description: "Failed to generate item code",
-        variant: "destructive",
-      });
+      console.error('Error generating item code preview:', error);
       setGeneratedItemCode("");
     }
   };
