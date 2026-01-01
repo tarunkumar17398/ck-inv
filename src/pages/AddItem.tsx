@@ -298,7 +298,7 @@ const AddItem = () => {
     loadCategories();
   };
 
-  const printBarcode = (itemCode: string, itemNameToPrint: string, priceToPrint: string, weightToPrint: string) => {
+  const printBarcode = (itemCode: string, itemNameToPrint: string, priceToPrint: string, weightToPrint: string, sizeToPrint: string = "") => {
     // Create a temporary print window
     const printWindow = window.open('', '_blank', 'width=800,height=600');
     if (!printWindow) {
@@ -316,9 +316,10 @@ const AddItem = () => {
       barcodeSvg = bwipjsLib.toSVG({
         bcid: 'code128',
         text: itemCode,
-        scale: 3,
-        height: 10,
-        includetext: false,
+        height: 12,
+        includetext: true,
+        textxalign: 'center',
+        textsize: 10,
       });
     } catch (e) {
       console.error('Barcode generation error:', e);
@@ -326,6 +327,7 @@ const AddItem = () => {
 
     const formattedWeight = weightToPrint ? `${parseFloat(weightToPrint).toFixed(1)}g` : '';
     const formattedPrice = priceToPrint ? `₹${parseFloat(priceToPrint).toLocaleString('en-IN')}` : '';
+    const formattedSize = sizeToPrint ? formatSizeWithInches(sizeToPrint) : '';
 
     printWindow.document.write(`
       <!DOCTYPE html>
@@ -334,26 +336,34 @@ const AddItem = () => {
         <title>Print Barcode - ${itemCode}</title>
         <style>
           @page {
-            size: 100mm 20mm;
+            size: 110mm 28mm;
             margin: 0;
           }
           * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
           }
-          body {
-            width: 100mm;
-            height: 20mm;
-            font-family: Arial, sans-serif;
-            -webkit-print-color-adjust: exact;
-            print-color-adjust: exact;
+          html, body {
+            margin: 0 !important;
+            padding: 0 !important;
+            background: white !important;
+            font-family: Calibri, Arial, sans-serif !important;
+            -webkit-font-smoothing: antialiased !important;
+            text-rendering: geometricPrecision !important;
           }
-          .label {
-            width: 100mm;
-            height: 20mm;
+          .label-page {
+            width: 110mm;
+            height: 28mm;
             position: relative;
+            background: white;
             page-break-after: always;
+            page-break-inside: avoid;
+            overflow: hidden;
+            font-family: Calibri, Arial, sans-serif;
+            color: black;
           }
           .logo {
             position: absolute;
@@ -361,6 +371,7 @@ const AddItem = () => {
             top: 6mm;
             font-size: 11pt;
             font-weight: 400;
+            color: black;
           }
           .item-code-top {
             position: absolute;
@@ -368,8 +379,9 @@ const AddItem = () => {
             top: -1mm;
             font-size: 11pt;
             font-weight: 400;
+            color: black;
           }
-          .item-name {
+          .particulars {
             position: absolute;
             left: 11mm;
             top: 4mm;
@@ -377,22 +389,25 @@ const AddItem = () => {
             font-size: 9pt;
             font-weight: 400;
             overflow: hidden;
-            text-overflow: ellipsis;
             white-space: nowrap;
+            text-overflow: clip;
+            color: black;
           }
-          .weight {
+          .price {
             position: absolute;
             left: 12mm;
             top: 12mm;
             font-size: 11pt;
             font-weight: 400;
+            color: black;
           }
-          .price {
+          .size {
             position: absolute;
             left: 38mm;
             top: 12mm;
             font-size: 11pt;
             font-weight: 400;
+            color: black;
           }
           .barcode-container {
             position: absolute;
@@ -401,14 +416,15 @@ const AddItem = () => {
             width: 38mm;
             height: 16mm;
             display: flex;
-            justify-content: center;
             align-items: center;
+            justify-content: center;
           }
           .barcode-container svg {
-            width: 100%;
-            height: 100%;
+            max-width: 100%;
+            max-height: 100%;
+            shape-rendering: crispEdges;
           }
-          .item-code-bottom {
+          .weight {
             position: absolute;
             left: 62mm;
             top: 13mm;
@@ -416,19 +432,19 @@ const AddItem = () => {
             font-size: 11pt;
             font-weight: 400;
             text-align: center;
-            letter-spacing: 0.5px;
+            color: black;
           }
         </style>
       </head>
       <body>
-        <div class="label">
-          <span class="logo">CK</span>
-          <span class="item-code-top">${itemCode}</span>
-          <span class="item-name">${itemNameToPrint}</span>
-          <span class="weight">${formattedWeight}</span>
+        <div class="label-page">
+          <span class="logo">O</span>
+          <span class="item-code-top">S.No: ${itemCode}</span>
+          <span class="particulars">${itemNameToPrint}</span>
           <span class="price">${formattedPrice}</span>
+          <span class="size">${formattedSize}</span>
           <div class="barcode-container">${barcodeSvg}</div>
-          <span class="item-code-bottom">${itemCode}</span>
+          <span class="weight">${formattedWeight}</span>
         </div>
       </body>
       </html>
@@ -505,7 +521,7 @@ const AddItem = () => {
         // Print barcode if requested (only for single piece)
         if (shouldPrint && quantity === 1) {
           const subcategoryName = subcategories.find(s => s.id === selectedSubcategory)?.subcategory_name || '';
-          printBarcode(pieceCodes[0], subcategoryName, costPrice, weight);
+          printBarcode(pieceCodes[0], subcategoryName, costPrice, weight, size);
         }
 
         // Clear form and stay on page for adding next item
@@ -575,7 +591,7 @@ const AddItem = () => {
 
       // Print barcode if requested
       if (shouldPrint) {
-        printBarcode(itemCode, itemName, price, weight);
+        printBarcode(itemCode, itemName, price, weight, size);
       }
 
       // Clear form and stay on page for adding next item
