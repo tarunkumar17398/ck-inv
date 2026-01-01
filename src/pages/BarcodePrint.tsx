@@ -160,14 +160,20 @@ const BarcodePrint = () => {
   const generateLabels = () => {
     const selectedItemsList = items.filter((item) => selectedItems.has(item.id));
 
-    const labelData: BarcodeLabel[] = selectedItemsList.map((item) => ({
-      itemCode: item.item_code,
-      particulars: item.particulars || item.item_name,
-      price: item.price ? formatPriceLabel(item.price) : "",
-      size: formatSizeWithInches(item.size) || "",
-      weight: item.weight ? formatWeightLabel(parseFloat(item.weight)) : "",
-      barcodeValue: item.item_code,
-    }));
+    const labelData: BarcodeLabel[] = selectedItemsList.map((item) => {
+      const weightNum = item.weight ? parseFloat(item.weight) : NaN;
+      // Some legacy/imported data is stored in kilograms (e.g. 0.09 => 90g). Convert to grams for CKBR label.
+      const weightGrams = !isNaN(weightNum) && weightNum > 0 && weightNum < 1 ? weightNum * 1000 : weightNum;
+
+      return {
+        itemCode: item.item_code,
+        particulars: item.particulars || item.item_name,
+        price: item.price ? formatPriceLabel(item.price) : "",
+        size: formatSizeWithInches(item.size) || "",
+        weight: item.weight ? formatWeightLabel(weightGrams) : "",
+        barcodeValue: item.item_code,
+      };
+    });
 
     setLabels(labelData);
   };
