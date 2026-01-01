@@ -85,6 +85,22 @@ const AddItem = () => {
     setCategories(data || []);
   };
 
+  const formatBackendError = (err: any) => {
+    if (!err) return "Unknown error";
+    if (typeof err === "string") return err;
+
+    const msg = err?.message || err?.error_description || err?.details || err?.hint;
+    const code = err?.code ? ` (${err.code})` : "";
+
+    if (msg) return `${msg}${code}`;
+
+    try {
+      return `${JSON.stringify(err)}${code}`;
+    } catch {
+      return `Unknown error${code}`;
+    }
+  };
+
   // Function to regenerate the item code preview without clearing the form
   // IMPORTANT: Use the backend generator so we don't need read access to items/item_pieces (RLS-safe).
   const regenerateItemCode = async (categoryId: string) => {
@@ -102,10 +118,11 @@ const AddItem = () => {
 
       setGeneratedItemCode(codeData || "");
     } catch (error: any) {
-      console.error("Error generating item code preview:", error);
+      const message = formatBackendError(error);
+      console.error("Error generating item code preview:", { message, error });
       toast({
         title: "Error",
-        description: "Failed to generate item code preview",
+        description: message,
         variant: "destructive",
       });
       setGeneratedItemCode("");
