@@ -3,12 +3,13 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { ArrowLeft, Calendar as CalendarIcon, Pencil, Search, Filter } from "lucide-react";
+import { ArrowLeft, Calendar as CalendarIcon, Pencil, Search, Filter, Undo2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -325,6 +326,46 @@ const SoldItems = () => {
     loadSoldItems();
   };
 
+  const handleUndoSale = async (item: SoldItem) => {
+    try {
+      if (item.source === 'items') {
+        const { error } = await supabase
+          .from("items")
+          .update({
+            status: "in_stock",
+            sold_price: null,
+            sold_date: null,
+          })
+          .eq("id", item.id);
+
+        if (error) throw error;
+      } else {
+        const { error } = await supabase
+          .from("item_pieces")
+          .update({
+            status: "available",
+            date_sold: null,
+          })
+          .eq("id", item.id);
+
+        if (error) throw error;
+      }
+
+      toast({
+        title: "Sale undone",
+        description: `${item.item_code} is now back in stock`,
+      });
+
+      loadSoldItems();
+    } catch (error: any) {
+      toast({
+        title: "Error undoing sale",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  };
+
   return (
     <div className="min-h-screen bg-background">
       <header className="border-b bg-card shadow-sm">
@@ -426,13 +467,45 @@ const SoldItems = () => {
                     </Popover>
                   </TableCell>
                   <TableCell>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => openEditDialog(item)}
-                    >
-                      <Pencil className="w-4 h-4" />
-                    </Button>
+                    <div className="flex gap-1">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => openEditDialog(item)}
+                      >
+                        <Pencil className="w-4 h-4" />
+                      </Button>
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="text-orange-600 hover:text-orange-700 hover:bg-orange-50"
+                          >
+                            <Undo2 className="w-4 h-4" />
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Undo Sale</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              Are you sure you want to undo the sale for <strong>{item.item_code}</strong>?
+                              <br /><br />
+                              This will move the item back to inventory with "In Stock" status and clear the sold price and date.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                            <AlertDialogAction
+                              onClick={() => handleUndoSale(item)}
+                              className="bg-orange-600 text-white hover:bg-orange-700"
+                            >
+                              Undo Sale
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    </div>
                   </TableCell>
                 </TableRow>
               ))}

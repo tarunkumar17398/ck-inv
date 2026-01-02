@@ -1,17 +1,20 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, Search, Filter, Pencil, Trash2 } from "lucide-react";
+import { ArrowLeft, Search, Filter, Pencil, Trash2, Printer, X, Check } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Label } from "@/components/ui/label";
 import { formatPriceLabel, formatWeightLabel, formatSizeWithInches, cn } from "@/lib/utils";
 import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import bwipjs from "bwip-js";
 
 interface Item {
   id: string;
@@ -61,6 +64,11 @@ const Inventory = () => {
   const [loadingMore, setLoadingMore] = useState(false);
   const [totalCount, setTotalCount] = useState(0);
   const [hasMore, setHasMore] = useState(true);
+  
+  // Print queue state
+  const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
+  const [printQueueOpen, setPrintQueueOpen] = useState(false);
+  const [printQueue, setPrintQueue] = useState<Item[]>([]);
   
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -247,6 +255,214 @@ const Inventory = () => {
     });
 
     loadItems(true); // Reload from beginning
+  };
+
+  // Print queue functions
+  const toggleItemSelection = (itemId: string) => {
+    setSelectedItems(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(itemId)) {
+        newSet.delete(itemId);
+      } else {
+        newSet.add(itemId);
+      }
+      return newSet;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedItems.size === filteredItems.length) {
+      setSelectedItems(new Set());
+    } else {
+      setSelectedItems(new Set(filteredItems.map(item => item.id)));
+    }
+  };
+
+  const addToPrintQueue = () => {
+    const itemsToAdd = filteredItems.filter(item => selectedItems.has(item.id));
+    setPrintQueue(prev => {
+      const existingIds = new Set(prev.map(item => item.id));
+      const newItems = itemsToAdd.filter(item => !existingIds.has(item.id));
+      return [...prev, ...newItems];
+    });
+    setSelectedItems(new Set());
+    setPrintQueueOpen(true);
+    toast({
+      title: "Added to print queue",
+      description: `${itemsToAdd.length} item(s) added to print queue`,
+    });
+  };
+
+  const removeFromPrintQueue = (itemId: string) => {
+    setPrintQueue(prev => prev.filter(item => item.id !== itemId));
+  };
+
+  const clearPrintQueue = () => {
+    setPrintQueue([]);
+  };
+
+  const printAllLabels = () => {
+    if (printQueue.length === 0) return;
+
+    const printWindow = window.open("", "_blank");
+    if (!printWindow) {
+      toast({
+        title: "Pop-up blocked",
+        description: "Please allow pop-ups to print labels",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    printWindow.document.write(`
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>Print Labels</title>
+        <style>
+          @page {
+            size: 55mm 30mm;
+            margin: 0;
+          }
+          * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+          }
+          body {
+            font-family: Arial, sans-serif;
+          }
+          .label {
+            width: 55mm;
+            height: 30mm;
+            position: relative;
+            page-break-after: always;
+            overflow: hidden;
+          }
+          .label:last-child {
+            page-break-after: avoid;
+          }
+          .barcode-container {
+            position: absolute;
+            left: 2mm;
+            top: 8mm;
+            width: 10mm;
+            height: 18mm;
+          }
+          .barcode-container img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+          }
+          .particulars {
+            position: absolute;
+            left: 11mm;
+            top: 4mm;
+            width: 44mm;
+            max-height: 9mm;
+            font-size: 9pt;
+            font-weight: 400;
+            line-height: 1.2;
+            overflow: hidden;
+            white-space: normal;
+            overflow-wrap: anywhere;
+            color: #000;
+          }
+          .weight-size {
+            position: absolute;
+            left: 11mm;
+            top: 13mm;
+            width: 44mm;
+            font-size: 8pt;
+            overflow: hidden;
+            white-space: nowrap;
+          }
+          .weight-size-line {
+            display: flex;
+            gap: 2mm;
+          }
+          .weight-label, .size-label {
+            font-weight: 700;
+            color: #000;
+          }
+          .weight-value, .size-value {
+            font-weight: 400;
+            color: #000;
+          }
+          .code-price {
+            position: absolute;
+            left: 11mm;
+            top: 21mm;
+            width: 44mm;
+            display: flex;
+            justify-content: space-between;
+          }
+          .item-code {
+            font-size: 9pt;
+            font-weight: 700;
+            color: #000;
+          }
+          .price {
+            font-size: 9pt;
+            font-weight: 700;
+            color: #000;
+          }
+          @media print {
+            body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+          }
+        </style>
+      </head>
+      <body>
+    `);
+
+    // Generate barcodes for each item
+    printQueue.forEach((item) => {
+      const canvas = document.createElement("canvas");
+      try {
+        bwipjs.toCanvas(canvas, {
+          bcid: "code128",
+          text: item.item_code,
+          scale: 3,
+          height: 20,
+          includetext: false,
+          rotate: "L",
+        });
+        const barcodeDataUrl = canvas.toDataURL("image/png");
+
+        printWindow.document.write(`
+          <div class="label">
+            <div class="barcode-container">
+              <img src="${barcodeDataUrl}" alt="Barcode" />
+            </div>
+            <div class="particulars">${item.item_name || ""}</div>
+            <div class="weight-size">
+              <div class="weight-size-line">
+                <span><span class="weight-label">Wt:</span> <span class="weight-value">${item.weight ? parseFloat(item.weight).toLocaleString() + "g" : "-"}</span></span>
+                <span><span class="size-label">Size:</span> <span class="size-value">${item.size || "-"}</span></span>
+              </div>
+            </div>
+            <div class="code-price">
+              <span class="item-code">${item.item_code}</span>
+              <span class="price">${item.price ? "₹" + item.price : ""}</span>
+            </div>
+          </div>
+        `);
+      } catch (e) {
+        console.error("Error generating barcode for", item.item_code, e);
+      }
+    });
+
+    printWindow.document.write(`</body></html>`);
+    printWindow.document.close();
+
+    setTimeout(() => {
+      printWindow.print();
+    }, 500);
+
+    toast({
+      title: "Print initiated",
+      description: `Printing ${printQueue.length} label(s)`,
+    });
   };
 
   return (
@@ -441,6 +657,13 @@ const Inventory = () => {
               <Table>
                 <TableHeader>
                   <TableRow>
+                    <TableHead className="w-12">
+                      <Checkbox
+                        checked={filteredItems.length > 0 && selectedItems.size === filteredItems.length}
+                        onCheckedChange={toggleSelectAll}
+                        aria-label="Select all"
+                      />
+                    </TableHead>
                     <TableHead>Item Code</TableHead>
                     <TableHead>Category</TableHead>
                     <TableHead>Item Name</TableHead>
@@ -454,7 +677,14 @@ const Inventory = () => {
                 </TableHeader>
                 <TableBody>
                   {filteredItems.map((item) => (
-                <TableRow key={item.id}>
+                <TableRow key={item.id} className={cn(selectedItems.has(item.id) && "bg-primary/5")}>
+                  <TableCell>
+                    <Checkbox
+                      checked={selectedItems.has(item.id)}
+                      onCheckedChange={() => toggleItemSelection(item.id)}
+                      aria-label={`Select ${item.item_code}`}
+                    />
+                  </TableCell>
                   <TableCell className="font-mono font-semibold">{item.item_code}</TableCell>
                   <TableCell>{item.categories.name}</TableCell>
                   <TableCell>{item.item_name}</TableCell>
@@ -554,6 +784,92 @@ const Inventory = () => {
             </>
           )}
         </div>
+
+        {/* Floating Selection Bar */}
+        {selectedItems.size > 0 && (
+          <div className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-primary text-primary-foreground px-6 py-3 rounded-full shadow-lg flex items-center gap-4 z-50">
+            <span className="font-medium">{selectedItems.size} item(s) selected</span>
+            <Button
+              size="sm"
+              variant="secondary"
+              onClick={addToPrintQueue}
+            >
+              <Printer className="w-4 h-4 mr-2" />
+              Add to Print Queue
+            </Button>
+            <Button
+              size="sm"
+              variant="ghost"
+              className="text-primary-foreground hover:bg-primary-foreground/10"
+              onClick={() => setSelectedItems(new Set())}
+            >
+              <X className="w-4 h-4" />
+            </Button>
+          </div>
+        )}
+
+        {/* Print Queue Dialog */}
+        <Dialog open={printQueueOpen} onOpenChange={setPrintQueueOpen}>
+          <DialogContent className="sm:max-w-[600px]">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <Printer className="w-5 h-5" />
+                Print Queue ({printQueue.length} labels)
+              </DialogTitle>
+            </DialogHeader>
+            {printQueue.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">
+                No items in print queue
+              </div>
+            ) : (
+              <ScrollArea className="max-h-[400px]">
+                <div className="space-y-2">
+                  {printQueue.map((item) => (
+                    <div
+                      key={item.id}
+                      className="flex items-center justify-between p-3 border rounded-lg bg-muted/30"
+                    >
+                      <div className="flex-1">
+                        <div className="font-mono font-semibold">{item.item_code}</div>
+                        <div className="text-sm text-muted-foreground truncate max-w-[300px]">
+                          {item.item_name}
+                        </div>
+                        <div className="text-xs text-muted-foreground">
+                          {item.weight ? `${parseFloat(item.weight).toLocaleString()}g` : ""} 
+                          {item.weight && item.price ? " • " : ""}
+                          {item.price ? `₹${item.price}` : ""}
+                        </div>
+                      </div>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => removeFromPrintQueue(item.id)}
+                      >
+                        <X className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              </ScrollArea>
+            )}
+            <DialogFooter className="flex gap-2 sm:gap-0">
+              <Button
+                variant="outline"
+                onClick={clearPrintQueue}
+                disabled={printQueue.length === 0}
+              >
+                Clear All
+              </Button>
+              <Button
+                onClick={printAllLabels}
+                disabled={printQueue.length === 0}
+              >
+                <Printer className="w-4 h-4 mr-2" />
+                Print All Labels
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
 
         {/* Edit Item Dialog */}
         <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
