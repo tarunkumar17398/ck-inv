@@ -336,15 +336,7 @@ const SubcategoryManagement = () => {
             <Card key={subcat.id} className="hover:shadow-lg transition-shadow">
               <CardHeader>
                 <CardTitle className="flex justify-between items-start gap-2">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span>{subcat.subcategory_name}</span>
-                    {(subcat.piece_count || 0) < 5 && (
-                      <Badge variant="destructive" className="text-xs flex items-center gap-1">
-                        <AlertTriangle className="w-3 h-3" />
-                        Low Stock
-                      </Badge>
-                    )}
-                  </div>
+                  <span>{subcat.subcategory_name}</span>
                   <div className="flex gap-1">
                     <Button
                       variant="ghost"
@@ -365,6 +357,14 @@ const SubcategoryManagement = () => {
               </CardHeader>
               <CardContent>
                 <div className="space-y-3">
+                  <div className="h-6">
+                    {(subcat.available_count || 0) < 5 && (
+                      <Badge variant="destructive" className="text-xs flex items-center gap-1 w-fit">
+                        <AlertTriangle className="w-3 h-3" />
+                        Low Stock
+                      </Badge>
+                    )}
+                  </div>
                   <p className="text-muted-foreground">
                     Available: <span className="font-bold text-lg text-green-600">{subcat.available_count}</span>
                   </p>
