@@ -364,19 +364,13 @@ const SubcategoryManagement = () => {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="space-y-2">
-                  <p className="text-sm text-muted-foreground">
-                    Total Pieces: <span className="font-semibold text-foreground">{subcat.piece_count}</span>
-                  </p>
-                  <p className="text-sm text-muted-foreground">
-                    Available: <span className="font-semibold text-green-600">{subcat.available_count}</span>
-                  </p>
-                  <p className="text-sm text-muted-foreground">
-                    Sold: <span className="font-semibold text-red-600">{(subcat.piece_count || 0) - (subcat.available_count || 0)}</span>
+                <div className="space-y-3">
+                  <p className="text-muted-foreground">
+                    Available: <span className="font-bold text-lg text-green-600">{subcat.available_count}</span>
                   </p>
                   <Button
                     variant="outline"
-                    className="w-full mt-4"
+                    className="w-full"
                     onClick={() => handleViewPieces(subcat.id, subcat.subcategory_name)}
                   >
                     View Pieces
