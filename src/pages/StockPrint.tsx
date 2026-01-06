@@ -303,7 +303,7 @@ const StockPrint = () => {
             size: A4;
             margin: 10mm 10mm 18mm 10mm;
             @bottom-center {
-              content: "Page " counter(page) " of " counter(pages);
+              content: "Page " counter(page);
               font-size: 9pt;
             }
           }
