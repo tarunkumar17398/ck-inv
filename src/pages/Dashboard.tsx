@@ -372,47 +372,18 @@ const Dashboard = () => {
           </Button>
         </div>
 
-        {/* Main content grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 sm:gap-8">
-          {/* Category Stock Overview - takes 2 columns on large screens */}
-          <div className="lg:col-span-2">
-            <h3 className="text-lg sm:text-xl font-semibold mb-4 text-foreground">Category Stock Overview</h3>
-            
-            {/* Mobile: Horizontal scroll, Desktop: Grid */}
-            {isMobile ? (
-              <ScrollArea className="w-full whitespace-nowrap">
-                <div className="flex gap-3 pb-4">
-                  {categories.map((cat) => (
-                    <Card
-                      key={cat.id}
-                      className="cursor-pointer hover:shadow-lg transition-shadow flex-shrink-0 w-40"
-                      onClick={() => {
-                        if (cat.name === "Panchaloha Idols") {
-                          navigate("/panchaloha-subcategories");
-                        } else {
-                          navigate(`/inventory?category=${cat.id}`);
-                        }
-                      }}
-                    >
-                      <CardHeader className="pb-2 p-4">
-                        <CardTitle className="text-sm line-clamp-1">{cat.name}</CardTitle>
-                        <p className="text-xs text-muted-foreground">CK{cat.prefix}</p>
-                      </CardHeader>
-                      <CardContent className="p-4 pt-0">
-                        <div className="text-2xl font-bold text-primary">{cat.stock_count}</div>
-                        <p className="text-xs text-muted-foreground mt-1">in stock</p>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
-                <ScrollBar orientation="horizontal" />
-              </ScrollArea>
-            ) : (
-              <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+        {/* Category Stock Overview */}
+        <div className="mb-6 sm:mb-8">
+          <h3 className="text-lg sm:text-xl font-semibold mb-4 text-foreground">Category Stock Overview</h3>
+          
+          {/* Mobile: Horizontal scroll, Desktop: Grid */}
+          {isMobile ? (
+            <ScrollArea className="w-full whitespace-nowrap">
+              <div className="flex gap-3 pb-4">
                 {categories.map((cat) => (
                   <Card
                     key={cat.id}
-                    className="cursor-pointer hover:shadow-lg transition-shadow"
+                    className="cursor-pointer hover:shadow-lg transition-shadow flex-shrink-0 w-40"
                     onClick={() => {
                       if (cat.name === "Panchaloha Idols") {
                         navigate("/panchaloha-subcategories");
@@ -421,24 +392,50 @@ const Dashboard = () => {
                       }
                     }}
                   >
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-lg">{cat.name}</CardTitle>
-                      <p className="text-sm text-muted-foreground">CK{cat.prefix}</p>
+                    <CardHeader className="pb-2 p-4">
+                      <CardTitle className="text-sm line-clamp-1">{cat.name}</CardTitle>
+                      <p className="text-xs text-muted-foreground">CK{cat.prefix}</p>
                     </CardHeader>
-                    <CardContent>
-                      <div className="text-3xl font-bold text-primary">{cat.stock_count}</div>
-                      <p className="text-sm text-muted-foreground mt-1">items in stock</p>
+                    <CardContent className="p-4 pt-0">
+                      <div className="text-2xl font-bold text-primary">{cat.stock_count}</div>
+                      <p className="text-xs text-muted-foreground mt-1">in stock</p>
                     </CardContent>
                   </Card>
                 ))}
               </div>
-            )}
-          </div>
+              <ScrollBar orientation="horizontal" />
+            </ScrollArea>
+          ) : (
+            <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+              {categories.map((cat) => (
+                <Card
+                  key={cat.id}
+                  className="cursor-pointer hover:shadow-lg transition-shadow"
+                  onClick={() => {
+                    if (cat.name === "Panchaloha Idols") {
+                      navigate("/panchaloha-subcategories");
+                    } else {
+                      navigate(`/inventory?category=${cat.id}`);
+                    }
+                  }}
+                >
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-lg">{cat.name}</CardTitle>
+                    <p className="text-sm text-muted-foreground">CK{cat.prefix}</p>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-3xl font-bold text-primary">{cat.stock_count}</div>
+                    <p className="text-sm text-muted-foreground mt-1">items in stock</p>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
+        </div>
 
-          {/* Recent Activity Widget */}
-          <div className="lg:col-span-1">
-            <RecentActivity />
-          </div>
+        {/* Recent Activity Widget - Full width below categories */}
+        <div className="mb-6 sm:mb-8">
+          <RecentActivity />
         </div>
 
         {/* Quick Links - Hidden on mobile (shown in sheet menu) */}
