@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, Search, Filter, Pencil, Trash2, Printer, X, Check } from "lucide-react";
+import { ArrowLeft, Search, Filter, Pencil, Trash2, Printer, X, Check, Copy } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
@@ -15,6 +15,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import bwipjs from "bwip-js";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { MobileInventoryCard } from "@/components/MobileInventoryCard";
 
 interface Item {
   id: string;
@@ -73,6 +75,7 @@ const Inventory = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [searchParams] = useSearchParams();
+  const isMobile = useIsMobile();
 
   useEffect(() => {
     const initialSearch = searchParams.get("search");
@@ -255,6 +258,19 @@ const Inventory = () => {
     });
 
     loadItems(true); // Reload from beginning
+  };
+
+  const handleDuplicateItem = (item: Item) => {
+    const params = new URLSearchParams({
+      category: item.category_id,
+      name: item.item_name || "",
+      size: item.size || "",
+      weight: item.weight || "",
+      price: item.price?.toString() || "",
+      costPrice: item.cost_price?.toString() || "",
+      duplicate: "true",
+    });
+    navigate(`/add-item?${params.toString()}`);
   };
 
   // Print queue functions
@@ -654,107 +670,135 @@ const Inventory = () => {
             </div>
           ) : (
             <>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="w-12">
-                      <Checkbox
-                        checked={filteredItems.length > 0 && selectedItems.size === filteredItems.length}
-                        onCheckedChange={toggleSelectAll}
-                        aria-label="Select all"
-                      />
-                    </TableHead>
-                    <TableHead>Item Code</TableHead>
-                    <TableHead>Category</TableHead>
-                    <TableHead>Item Name</TableHead>
-                    <TableHead>Size</TableHead>
-                    <TableHead>Weight (g)</TableHead>
-                    <TableHead>Cost Price</TableHead>
-                    <TableHead>Selling Price</TableHead>
-                    <TableHead>Price Ratio</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
+              {/* Mobile Card View */}
+              {isMobile ? (
+                <div className="p-4 space-y-3">
                   {filteredItems.map((item) => (
-                <TableRow key={item.id} className={cn(selectedItems.has(item.id) && "bg-primary/5")}>
-                  <TableCell>
-                    <Checkbox
-                      checked={selectedItems.has(item.id)}
-                      onCheckedChange={() => toggleItemSelection(item.id)}
-                      aria-label={`Select ${item.item_code}`}
+                    <MobileInventoryCard
+                      key={item.id}
+                      item={item}
+                      isSelected={selectedItems.has(item.id)}
+                      onSelect={() => toggleItemSelection(item.id)}
+                      onEdit={() => handleEditClick(item)}
+                      onDelete={() => handleDeleteItem(item.id, item.item_code)}
+                      onDuplicate={() => handleDuplicateItem(item)}
                     />
-                  </TableCell>
-                  <TableCell className="font-mono font-semibold">{item.item_code}</TableCell>
-                  <TableCell>{item.categories.name}</TableCell>
-                  <TableCell>{item.item_name}</TableCell>
-                  <TableCell className="text-muted-foreground">{item.size || "-"}</TableCell>
-                  <TableCell className="text-muted-foreground">{item.weight || "-"}</TableCell>
-                  <TableCell>{item.cost_price ? `₹${item.cost_price}` : "-"}</TableCell>
-                  <TableCell>{item.price ? `₹${item.price}` : "-"}</TableCell>
-                  <TableCell>
-                    {(() => {
-                      const weight = parseFloat(item.weight || "0");
-                      const price = parseFloat(item.price?.toString() || "0");
-                      if (weight > 0 && price > 0) {
-                        const ratio = (price / weight).toFixed(2);
-                        const isLow = parseFloat(ratio) < 3;
-                        return (
-                          <span className={cn(
-                            "px-2 py-1 rounded font-semibold",
-                            isLow && "bg-red-500 text-white"
-                          )}>
-                            {ratio}
-                          </span>
-                        );
-                      }
-                      return "-";
-                    })()}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <div className="flex gap-2 justify-end">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => handleEditClick(item)}
-                      >
-                        <Pencil className="w-4 h-4" />
-                      </Button>
-                      <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent>
-                          <AlertDialogHeader>
-                            <AlertDialogTitle>Delete Item</AlertDialogTitle>
-                            <AlertDialogDescription>
-                              Are you sure you want to delete <strong>{item.item_code}</strong> - {item.item_name}?
-                              <br />
-                              This action cannot be undone.
-                            </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter>
-                            <AlertDialogCancel>Cancel</AlertDialogCancel>
-                            <AlertDialogAction
-                              onClick={() => handleDeleteItem(item.id, item.item_code)}
-                              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                            >
-                              Delete
-                            </AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
-                    </div>
-                  </TableCell>
-                </TableRow>
                   ))}
-                </TableBody>
-              </Table>
+                </div>
+              ) : (
+                /* Desktop Table View */
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="w-12">
+                        <Checkbox
+                          checked={filteredItems.length > 0 && selectedItems.size === filteredItems.length}
+                          onCheckedChange={toggleSelectAll}
+                          aria-label="Select all"
+                        />
+                      </TableHead>
+                      <TableHead>Item Code</TableHead>
+                      <TableHead>Category</TableHead>
+                      <TableHead>Item Name</TableHead>
+                      <TableHead>Size</TableHead>
+                      <TableHead>Weight (g)</TableHead>
+                      <TableHead>Cost Price</TableHead>
+                      <TableHead>Selling Price</TableHead>
+                      <TableHead>Price Ratio</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredItems.map((item) => (
+                      <TableRow key={item.id} className={cn(selectedItems.has(item.id) && "bg-primary/5")}>
+                        <TableCell>
+                          <Checkbox
+                            checked={selectedItems.has(item.id)}
+                            onCheckedChange={() => toggleItemSelection(item.id)}
+                            aria-label={`Select ${item.item_code}`}
+                          />
+                        </TableCell>
+                        <TableCell className="font-mono font-semibold">{item.item_code}</TableCell>
+                        <TableCell>{item.categories.name}</TableCell>
+                        <TableCell>{item.item_name}</TableCell>
+                        <TableCell className="text-muted-foreground">{item.size || "-"}</TableCell>
+                        <TableCell className="text-muted-foreground">{item.weight || "-"}</TableCell>
+                        <TableCell>{item.cost_price ? `₹${item.cost_price}` : "-"}</TableCell>
+                        <TableCell>{item.price ? `₹${item.price}` : "-"}</TableCell>
+                        <TableCell>
+                          {(() => {
+                            const weight = parseFloat(item.weight || "0");
+                            const price = parseFloat(item.price?.toString() || "0");
+                            if (weight > 0 && price > 0) {
+                              const ratio = (price / weight).toFixed(2);
+                              const isLow = parseFloat(ratio) < 3;
+                              return (
+                                <span className={cn(
+                                  "px-2 py-1 rounded font-semibold",
+                                  isLow && "bg-destructive text-destructive-foreground"
+                                )}>
+                                  {ratio}
+                                </span>
+                              );
+                            }
+                            return "-";
+                          })()}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex gap-2 justify-end">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => handleEditClick(item)}
+                              title="Edit"
+                            >
+                              <Pencil className="w-4 h-4" />
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => handleDuplicateItem(item)}
+                              title="Duplicate"
+                            >
+                              <Copy className="w-4 h-4" />
+                            </Button>
+                            <AlertDialog>
+                              <AlertDialogTrigger asChild>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  title="Delete"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </Button>
+                              </AlertDialogTrigger>
+                              <AlertDialogContent>
+                                <AlertDialogHeader>
+                                  <AlertDialogTitle>Delete Item</AlertDialogTitle>
+                                  <AlertDialogDescription>
+                                    Are you sure you want to delete <strong>{item.item_code}</strong> - {item.item_name}?
+                                    <br />
+                                    This action cannot be undone.
+                                  </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                  <AlertDialogAction
+                                    onClick={() => handleDeleteItem(item.id, item.item_code)}
+                                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                  >
+                                    Delete
+                                  </AlertDialogAction>
+                                </AlertDialogFooter>
+                              </AlertDialogContent>
+                            </AlertDialog>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              )}
               {filteredItems.length === 0 && !loading && (
                 <div className="text-center py-12 text-muted-foreground">
                   No items found matching your criteria

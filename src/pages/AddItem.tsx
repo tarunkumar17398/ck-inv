@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -62,10 +62,32 @@ const AddItem = () => {
 
   const navigate = useNavigate();
   const { toast } = useToast();
+  const [searchParams] = useSearchParams();
 
   useEffect(() => {
     loadCategories();
   }, []);
+
+  // Handle duplicate item pre-fill from URL params
+  useEffect(() => {
+    const isDuplicate = searchParams.get("duplicate") === "true";
+    const categoryId = searchParams.get("category");
+    
+    if (isDuplicate && categoryId && categories.length > 0) {
+      // Pre-fill form from URL params
+      handleCategoryChange(categoryId);
+      setItemName(searchParams.get("name") || "");
+      setSize(searchParams.get("size") || "");
+      setWeight(searchParams.get("weight") || "");
+      setPrice(searchParams.get("price") || "");
+      setCostPrice(searchParams.get("costPrice") || "");
+      
+      toast({
+        title: "Duplicating item",
+        description: "Form pre-filled. A new item code will be generated.",
+      });
+    }
+  }, [categories, searchParams]);
 
   const loadCategories = async () => {
     const { data, error } = await supabase
