@@ -337,7 +337,7 @@ const Inventory = () => {
         <title>Print Labels</title>
         <style>
           @page {
-            size: 55mm 30mm;
+            size: 110mm 28mm;
             margin: 0;
           }
           * {
@@ -346,29 +346,37 @@ const Inventory = () => {
             box-sizing: border-box;
           }
           body {
-            font-family: Arial, sans-serif;
+            font-family: Calibri, Arial, sans-serif;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
           }
-          .label {
-            width: 55mm;
-            height: 30mm;
+          .label-page {
+            width: 110mm;
+            height: 28mm;
             position: relative;
             page-break-after: always;
+            page-break-inside: avoid;
             overflow: hidden;
+            background: #fff;
           }
-          .label:last-child {
+          .label-page:last-child {
             page-break-after: avoid;
           }
-          .barcode-container {
+          .o-logo {
             position: absolute;
-            left: 2mm;
-            top: 8mm;
-            width: 10mm;
-            height: 18mm;
+            left: 6.9mm;
+            top: 6mm;
+            font-size: 11pt;
+            font-weight: 400;
+            color: #000;
           }
-          .barcode-container img {
-            width: 100%;
-            height: 100%;
-            object-fit: contain;
+          .s-no {
+            position: absolute;
+            left: 12mm;
+            top: -1mm;
+            font-size: 11pt;
+            font-weight: 400;
+            color: #000;
           }
           .particulars {
             position: absolute;
@@ -384,43 +392,44 @@ const Inventory = () => {
             overflow-wrap: anywhere;
             color: #000;
           }
-          .weight-size {
+          .price {
             position: absolute;
-            left: 11mm;
-            top: 13mm;
-            width: 44mm;
-            font-size: 8pt;
-            overflow: hidden;
-            white-space: nowrap;
-          }
-          .weight-size-line {
-            display: flex;
-            gap: 2mm;
-          }
-          .weight-label, .size-label {
-            font-weight: 700;
-            color: #000;
-          }
-          .weight-value, .size-value {
+            left: 12mm;
+            top: 12mm;
+            font-size: 11pt;
             font-weight: 400;
             color: #000;
           }
-          .code-price {
+          .size {
             position: absolute;
-            left: 11mm;
-            top: 21mm;
-            width: 44mm;
-            display: flex;
-            justify-content: space-between;
-          }
-          .item-code {
-            font-size: 9pt;
-            font-weight: 700;
+            left: 38mm;
+            top: 12mm;
+            font-size: 11pt;
+            font-weight: 400;
             color: #000;
           }
-          .price {
-            font-size: 9pt;
-            font-weight: 700;
+          .barcode-container {
+            position: absolute;
+            left: 62mm;
+            top: -1mm;
+            width: 38mm;
+            height: 16mm;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+          }
+          .barcode-container img {
+            max-width: 100%;
+            max-height: 100%;
+          }
+          .weight {
+            position: absolute;
+            left: 62mm;
+            top: 13mm;
+            width: 38mm;
+            font-size: 11pt;
+            font-weight: 400;
+            text-align: center;
             color: #000;
           }
           @media print {
@@ -438,29 +447,29 @@ const Inventory = () => {
         bwipjs.toCanvas(canvas, {
           bcid: "code128",
           text: item.item_code,
-          scale: 3,
-          height: 20,
-          includetext: false,
-          rotate: "L",
+          scale: 2,
+          height: 12,
+          includetext: true,
+          textxalign: "center",
+          textsize: 8,
         });
         const barcodeDataUrl = canvas.toDataURL("image/png");
 
+        const priceDisplay = item.price ? formatPriceLabel(item.price) : "";
+        const sizeDisplay = formatSizeWithInches(item.size) || "";
+        const weightDisplay = item.weight ? formatWeightLabel(parseFloat(item.weight)) : "";
+
         printWindow.document.write(`
-          <div class="label">
+          <div class="label-page">
+            <div class="o-logo">O</div>
+            <div class="s-no">S.No: ${item.item_code}</div>
+            <div class="particulars">${item.item_name || ""}</div>
+            <div class="price">${priceDisplay}</div>
+            <div class="size">${sizeDisplay}</div>
             <div class="barcode-container">
               <img src="${barcodeDataUrl}" alt="Barcode" />
             </div>
-            <div class="particulars">${item.item_name || ""}</div>
-            <div class="weight-size">
-              <div class="weight-size-line">
-                <span><span class="weight-label">Wt:</span> <span class="weight-value">${item.weight ? parseFloat(item.weight).toLocaleString() + "g" : "-"}</span></span>
-                <span><span class="size-label">Size:</span> <span class="size-value">${item.size || "-"}</span></span>
-              </div>
-            </div>
-            <div class="code-price">
-              <span class="item-code">${item.item_code}</span>
-              <span class="price">${item.price ? "₹" + item.price : ""}</span>
-            </div>
+            <div class="weight">${weightDisplay}</div>
           </div>
         `);
       } catch (e) {
