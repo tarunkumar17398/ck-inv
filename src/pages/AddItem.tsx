@@ -833,9 +833,16 @@ const AddItem = () => {
                 <div>
                   <Label>Weight (in grams)</Label>
                   <Input
-                    type="number"
+                    type="text"
+                    inputMode="numeric"
+                    pattern="[0-9]*"
                     value={weight}
                     onChange={(e) => handleWeightChange(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === '.' || e.key === ',') {
+                        e.preventDefault();
+                      }
+                    }}
                     placeholder="e.g., 500"
                   />
                   {weight && (
