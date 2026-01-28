@@ -234,11 +234,13 @@ const AddItem = () => {
   };
 
   const handleWeightChange = (value: string) => {
-    setWeight(value);
+    // Remove any decimal points - weight should be whole grams only
+    const cleanedValue = value.replace(/\./g, '');
+    setWeight(cleanedValue);
     
     // Auto-calculate cost price for BR category
-    if (selectedCategoryPrefix === "BR" && value) {
-      const weightNum = parseFloat(value);
+    if (selectedCategoryPrefix === "BR" && cleanedValue) {
+      const weightNum = parseFloat(cleanedValue);
       if (!isNaN(weightNum)) {
         setCostPrice((weightNum * 1).toString());
       }
