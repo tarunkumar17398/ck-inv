@@ -478,21 +478,22 @@ const AddItem = () => {
   const handleSubmit = async (e: React.FormEvent, shouldPrint: boolean = false) => {
     e.preventDefault();
 
-    if (!selectedCategory || !itemName) {
-      toast({
-        title: "Missing required fields",
-        description: "Please select category and enter item name",
-        variant: "destructive",
-      });
-      return;
-    }
+    // Validate all required fields
+    const missingFields: string[] = [];
+
+    if (!selectedCategory) missingFields.push("Category");
+    if (!itemName.trim()) missingFields.push("Item Name");
+    if (!size.trim()) missingFields.push("Size");
+    if (!weight.trim()) missingFields.push("Weight");
 
     // Check if Panchaloha Idols - require subcategory
     if (selectedCategoryName === "Panchaloha Idols") {
-      if (!selectedSubcategory) {
+      if (!selectedSubcategory) missingFields.push("Subcategory");
+      
+      if (missingFields.length > 0) {
         toast({
-          title: "Missing subcategory",
-          description: "Please select a subcategory for Panchaloha Idols",
+          title: "All fields are required",
+          description: `Please fill in: ${missingFields.join(", ")}`,
           variant: "destructive",
         });
         return;
@@ -561,11 +562,14 @@ const AddItem = () => {
       return;
     }
 
-    // For regular items
-    if (!costPrice) {
+    // For regular items - also require cost price and selling price
+    if (!costPrice.trim()) missingFields.push("Cost Price");
+    if (!price.trim()) missingFields.push("Selling Price");
+
+    if (missingFields.length > 0) {
       toast({
-        title: "Missing cost price",
-        description: "Please enter the cost price",
+        title: "All fields are required",
+        description: `Please fill in: ${missingFields.join(", ")}`,
         variant: "destructive",
       });
       return;
@@ -823,7 +827,7 @@ const AddItem = () => {
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Label>Size</Label>
+                  <Label>Size *</Label>
                   <Input
                     value={size}
                     onChange={(e) => setSize(e.target.value)}
@@ -831,7 +835,7 @@ const AddItem = () => {
                   />
                 </div>
                 <div>
-                  <Label>Weight (in grams)</Label>
+                  <Label>Weight (in grams) *</Label>
                   <Input
                     type="text"
                     inputMode="numeric"
@@ -854,14 +858,13 @@ const AddItem = () => {
               </div>
 
               <div>
-                <Label>Cost Price {selectedCategoryName !== "Panchaloha Idols" && "*"}</Label>
+                <Label>Cost Price *</Label>
                 <Input
                   type="number"
                   step="0.01"
                   value={costPrice}
                   onChange={(e) => setCostPrice(e.target.value)}
                   placeholder={selectedCategoryPrefix === "BR" ? "Auto-calculated from weight" : "Enter cost price"}
-                  required={selectedCategoryName !== "Panchaloha Idols" && selectedCategoryPrefix !== "BR"}
                 />
                 {selectedCategoryPrefix === "BR" && weight && (
                   <p className="text-xs text-muted-foreground mt-1">
@@ -889,7 +892,7 @@ const AddItem = () => {
 
               {selectedCategoryName !== "Panchaloha Idols" && (
                 <div>
-                  <Label>Selling Price</Label>
+                  <Label>Selling Price *</Label>
                   <Input
                     type="number"
                     step="0.01"
