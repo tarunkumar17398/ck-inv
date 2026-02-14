@@ -1,44 +1,65 @@
 
 
-# Plan: Prevent Decimal Points in Weight Input
+# Plan: Persistent "Recycle Stock" for Stock Print
 
-## Overview
-The weight input field on the Add Item page currently allows users to enter decimal points (`.`), but since all weights are in whole grams, we need to block this character.
+## What You Want
+Right now, the "Recycle Stock" button only hides sold items temporarily -- when you reload the page, they come back. You want it to work like your old manual process:
 
-## What Will Change
+1. Print the stock list and use it for months
+2. As items sell, they show with a strikethrough but stay on the list
+3. Every 3-6 months, click **"Recycle Stock"** to permanently remove all sold items from the printed list
+4. Take a fresh printout and use it for the next period
+5. Sold items remain in the database for history -- they're just removed from the Stock Print view
 
-### File: `src/pages/AddItem.tsx`
+## How It Will Work
 
-**Modify the `handleWeightChange` function** (line 236) to filter out any `.` characters before updating the weight state:
+- A new column `stock_print_hidden` will be added to the items table
+- **Normal view**: All items show. Sold items appear with strikethrough styling
+- **When you click "Recycle Stock"**: All sold items get marked as `stock_print_hidden = true` in the database. They disappear from Stock Print permanently
+- **New items** added after recycling appear normally
+- **Items sold after recycling** show with strikethrough until the next recycle
 
-**Current code:**
+This means your page layout stays consistent between printouts -- no shifting around.
+
+## Technical Details
+
+### 1. Database Migration
+Add a boolean column to the `items` table:
+
+```sql
+ALTER TABLE public.items 
+ADD COLUMN stock_print_hidden boolean DEFAULT false;
+```
+
+### 2. File: `src/pages/StockPrint.tsx`
+
+**Query change**: Filter out `stock_print_hidden = true` items instead of using client-side toggle:
+
 ```typescript
-const handleWeightChange = (value: string) => {
-  setWeight(value);
-  // Auto-calculate cost price...
+let query = supabase
+  .from("items")
+  .select("*, categories(name, prefix)")
+  .eq("category_id", selectedCategory)
+  .eq("stock_print_hidden", false);  // Never show recycled items
+```
+
+**Recycle Stock button**: Instead of toggling a state variable, update the database:
+
+```typescript
+const handleRecycle = async () => {
+  await supabase
+    .from("items")
+    .update({ stock_print_hidden: true })
+    .eq("status", "sold")
+    .eq("category_id", selectedCategory)
+    .eq("stock_print_hidden", false);
+  
+  // Reload the data
+  loadStockData();
 };
 ```
 
-**New code:**
-```typescript
-const handleWeightChange = (value: string) => {
-  // Remove any decimal points - weight should be whole grams only
-  const cleanedValue = value.replace(/\./g, '');
-  setWeight(cleanedValue);
-  // Auto-calculate cost price using cleaned value...
-};
-```
+**Remove the `showSoldItems` state toggle** -- it's no longer needed. The "Show Sold Items" button will also be removed since recycled items should stay hidden until a fresh list is needed.
 
-This approach:
-- Strips out all `.` characters from the input
-- Works even if someone pastes a decimal number
-- Keeps the existing auto-calculation logic for BR category cost prices
-
----
-
-## Technical Notes
-
-- The input type remains `number` for mobile keyboard benefits (shows numeric keypad)
-- The `replace(/\./g, '')` regex removes all occurrences of the period character
-- The cost price calculation will still work correctly since `parseFloat("500")` works the same as before
+**Confirmation dialog** will be updated to clearly warn: "This will permanently remove all sold items from this category's stock print list. This cannot be undone (items remain in the database for records)."
 
