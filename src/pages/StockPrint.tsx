@@ -46,7 +46,7 @@ const StockPrint = () => {
   const [categories, setCategories] = useState<Category[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [loading, setLoading] = useState(true);
-  const [showSoldItems, setShowSoldItems] = useState(true);
+  const [recycling, setRecycling] = useState(false);
   const [totalItemCount, setTotalItemCount] = useState(0);
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -69,7 +69,7 @@ const StockPrint = () => {
     if (selectedCategory && selectedCategory !== "all") {
       loadStockData();
     }
-  }, [selectedCategory, showSoldItems]);
+  }, [selectedCategory]);
 
   const loadCategories = async () => {
     const { data, error } = await supabase
@@ -104,12 +104,8 @@ const StockPrint = () => {
       let query = supabase
         .from("items")
         .select("*, categories(name, prefix)")
-        .eq("category_id", selectedCategory);
-      
-      // Only show in-stock items if sold items are hidden
-      if (!showSoldItems) {
-        query = query.eq("status", "in_stock");
-      }
+        .eq("category_id", selectedCategory)
+        .eq("stock_print_hidden", false);
       
       const { data: items, error } = await query
         .order("item_code")
@@ -159,14 +155,29 @@ const StockPrint = () => {
     setLoading(false);
   };
 
-  const handleRecycle = () => {
-    // Hide sold items from view (they remain in database)
-    setShowSoldItems(false);
-    
-    toast({
-      title: "Sold items hidden",
-      description: "Sold items are now hidden from the Stock Print view",
-    });
+  const handleRecycle = async () => {
+    setRecycling(true);
+    const { error } = await supabase
+      .from("items")
+      .update({ stock_print_hidden: true } as any)
+      .eq("status", "sold")
+      .eq("category_id", selectedCategory)
+      .eq("stock_print_hidden", false);
+
+    if (error) {
+      toast({
+        title: "Error recycling stock",
+        description: error.message,
+        variant: "destructive",
+      });
+    } else {
+      toast({
+        title: "Stock recycled",
+        description: "All sold items have been permanently removed from this stock print list.",
+      });
+      await loadStockData();
+    }
+    setRecycling(false);
   };
 
   const handlePrint = () => {
@@ -192,35 +203,28 @@ const StockPrint = () => {
               Back to Dashboard
             </Button>
             <div className="flex gap-2">
-              {showSoldItems ? (
-                <AlertDialog>
-                  <AlertDialogTrigger asChild>
-                    <Button variant="destructive" size="sm">
-                      <RotateCcw className="w-4 h-4 mr-2" />
-                      Recycle Stock
-                    </Button>
-                  </AlertDialogTrigger>
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button variant="destructive" size="sm" disabled={recycling}>
+                    <RotateCcw className="w-4 h-4 mr-2" />
+                    Recycle Stock
+                  </Button>
+                </AlertDialogTrigger>
                 <AlertDialogContent>
                   <AlertDialogHeader>
-                    <AlertDialogTitle>Hide Sold Items?</AlertDialogTitle>
+                    <AlertDialogTitle>Recycle Stock?</AlertDialogTitle>
                     <AlertDialogDescription>
-                      This will hide all sold items from the Stock Print view. Sold items will remain in the database for history and business analysis.
+                      This will permanently remove all sold items from this category's stock print list. This cannot be undone. Items remain in the database for records and history.
                     </AlertDialogDescription>
                   </AlertDialogHeader>
                   <AlertDialogFooter>
                     <AlertDialogCancel>Cancel</AlertDialogCancel>
                     <AlertDialogAction onClick={handleRecycle}>
-                      Yes, Hide Sold Items
+                      Yes, Recycle Sold Items
                     </AlertDialogAction>
                   </AlertDialogFooter>
                 </AlertDialogContent>
               </AlertDialog>
-              ) : (
-                <Button variant="outline" size="sm" onClick={() => setShowSoldItems(true)}>
-                  <RotateCcw className="w-4 h-4 mr-2" />
-                  Show Sold Items
-                </Button>
-              )}
               <Button variant="default" size="sm" onClick={handlePrint}>
                 <Printer className="w-4 h-4 mr-2" />
                 Print
