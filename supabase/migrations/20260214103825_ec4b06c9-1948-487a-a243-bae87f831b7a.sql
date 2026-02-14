@@ -1,0 +1,1 @@
+ALTER TABLE public.items ADD COLUMN stock_print_hidden boolean DEFAULT false;

@@ -175,6 +175,7 @@ export type Database = {
           sold_date: string | null
           sold_price: number | null
           status: string
+          stock_print_hidden: boolean | null
           weight: string | null
         }
         Insert: {
@@ -192,6 +193,7 @@ export type Database = {
           sold_date?: string | null
           sold_price?: number | null
           status?: string
+          stock_print_hidden?: boolean | null
           weight?: string | null
         }
         Update: {
@@ -209,6 +211,7 @@ export type Database = {
           sold_date?: string | null
           sold_price?: number | null
           status?: string
+          stock_print_hidden?: boolean | null
           weight?: string | null
         }
         Relationships: [
