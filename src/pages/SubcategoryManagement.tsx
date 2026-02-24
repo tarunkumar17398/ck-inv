@@ -260,12 +260,17 @@ const SubcategoryManagement = () => {
           <h1 className="text-3xl font-bold text-foreground">
             Panchaloha Idols - Subcategories
           </h1>
-          <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
-            <DialogTrigger asChild>
-              <Button>
-                <Plus className="w-4 h-4 mr-2" />
-                Add Subcategory
-              </Button>
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={handleDownloadList}>
+              <Download className="w-4 h-4 mr-2" />
+              Download List
+            </Button>
+            <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
+              <DialogTrigger asChild>
+                <Button>
+                  <Plus className="w-4 h-4 mr-2" />
+                  Add Subcategory
+                </Button>
             </DialogTrigger>
             <DialogContent>
               <DialogHeader>
