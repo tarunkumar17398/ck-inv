@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { ArrowLeft, Plus, Edit, Trash2, AlertTriangle, Search } from "lucide-react";
+import { ArrowLeft, Plus, Edit, Trash2, AlertTriangle, Search, Download } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
 
@@ -244,6 +244,23 @@ const SubcategoryManagement = () => {
     navigate(`/panchaloha-pieces?subcategory=${subcategoryId}&name=${encodeURIComponent(subcategoryName)}`);
   };
 
+  const handleDownloadList = () => {
+    const filtered = subcategories.filter((s) =>
+      s.subcategory_name.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+    const csvRows = ["S.No,Subcategory Name,Available Qty"];
+    filtered.forEach((s, i) => {
+      csvRows.push(`${i + 1},"${s.subcategory_name}",${s.available_count || 0}`);
+    });
+    const blob = new Blob([csvRows.join("\n")], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "Panchaloha_Stock_List.csv";
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <div className="min-h-screen bg-background">
       <header className="border-b bg-card shadow-sm">
@@ -260,12 +277,17 @@ const SubcategoryManagement = () => {
           <h1 className="text-3xl font-bold text-foreground">
             Panchaloha Idols - Subcategories
           </h1>
-          <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
-            <DialogTrigger asChild>
-              <Button>
-                <Plus className="w-4 h-4 mr-2" />
-                Add Subcategory
-              </Button>
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={handleDownloadList}>
+              <Download className="w-4 h-4 mr-2" />
+              Download List
+            </Button>
+            <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
+              <DialogTrigger asChild>
+                <Button>
+                  <Plus className="w-4 h-4 mr-2" />
+                  Add Subcategory
+                </Button>
             </DialogTrigger>
             <DialogContent>
               <DialogHeader>
@@ -290,6 +312,7 @@ const SubcategoryManagement = () => {
               </div>
             </DialogContent>
           </Dialog>
+          </div>
         </div>
 
         <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
