@@ -244,6 +244,23 @@ const SubcategoryManagement = () => {
     navigate(`/panchaloha-pieces?subcategory=${subcategoryId}&name=${encodeURIComponent(subcategoryName)}`);
   };
 
+  const handleDownloadList = () => {
+    const filtered = subcategories.filter((s) =>
+      s.subcategory_name.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+    const csvRows = ["S.No,Subcategory Name,Available Qty"];
+    filtered.forEach((s, i) => {
+      csvRows.push(`${i + 1},"${s.subcategory_name}",${s.available_count || 0}`);
+    });
+    const blob = new Blob([csvRows.join("\n")], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "Panchaloha_Stock_List.csv";
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <div className="min-h-screen bg-background">
       <header className="border-b bg-card shadow-sm">
@@ -295,6 +312,7 @@ const SubcategoryManagement = () => {
               </div>
             </DialogContent>
           </Dialog>
+          </div>
         </div>
 
         <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
