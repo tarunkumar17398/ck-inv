@@ -1,65 +1,32 @@
 
 
-# Plan: Persistent "Recycle Stock" for Stock Print
+# Download Panchaloha Product List
 
-## What You Want
-Right now, the "Recycle Stock" button only hides sold items temporarily -- when you reload the page, they come back. You want it to work like your old manual process:
+## What It Does
+Adds a **"Download List"** button on the Panchaloha Idols Subcategories page that exports a CSV file containing all subcategory names with their available quantity.
 
-1. Print the stock list and use it for months
-2. As items sell, they show with a strikethrough but stay on the list
-3. Every 3-6 months, click **"Recycle Stock"** to permanently remove all sold items from the printed list
-4. Take a fresh printout and use it for the next period
-5. Sold items remain in the database for history -- they're just removed from the Stock Print view
+## CSV Format
+The downloaded file will contain:
 
-## How It Will Work
-
-- A new column `stock_print_hidden` will be added to the items table
-- **Normal view**: All items show. Sold items appear with strikethrough styling
-- **When you click "Recycle Stock"**: All sold items get marked as `stock_print_hidden = true` in the database. They disappear from Stock Print permanently
-- **New items** added after recycling appear normally
-- **Items sold after recycling** show with strikethrough until the next recycle
-
-This means your page layout stays consistent between printouts -- no shifting around.
-
-## Technical Details
-
-### 1. Database Migration
-Add a boolean column to the `items` table:
-
-```sql
-ALTER TABLE public.items 
-ADD COLUMN stock_print_hidden boolean DEFAULT false;
+```text
+S.No, Subcategory Name, Available Qty
+1, Nataraja, 12
+2, Lakshmi, 3
+3, Hanuman, 8
+...
 ```
 
-### 2. File: `src/pages/StockPrint.tsx`
+## Changes
 
-**Query change**: Filter out `stock_print_hidden = true` items instead of using client-side toggle:
+### File: `src/pages/SubcategoryManagement.tsx`
 
-```typescript
-let query = supabase
-  .from("items")
-  .select("*, categories(name, prefix)")
-  .eq("category_id", selectedCategory)
-  .eq("stock_print_hidden", false);  // Never show recycled items
-```
+1. **Add a `Download` icon** import from `lucide-react`
+2. **Add a `handleDownloadList` function** that:
+   - Takes the current `subcategories` array (already has `available_count`)
+   - Builds a CSV string with columns: S.No, Subcategory Name, Available Qty
+   - Creates a Blob and triggers a browser download as `Panchaloha_Stock_List.csv`
+   - Respects the current search filter (only downloads filtered results)
+3. **Add a "Download List" button** next to the "Add Subcategory" button in the header area
 
-**Recycle Stock button**: Instead of toggling a state variable, update the database:
-
-```typescript
-const handleRecycle = async () => {
-  await supabase
-    .from("items")
-    .update({ stock_print_hidden: true })
-    .eq("status", "sold")
-    .eq("category_id", selectedCategory)
-    .eq("stock_print_hidden", false);
-  
-  // Reload the data
-  loadStockData();
-};
-```
-
-**Remove the `showSoldItems` state toggle** -- it's no longer needed. The "Show Sold Items" button will also be removed since recycled items should stay hidden until a fresh list is needed.
-
-**Confirmation dialog** will be updated to clearly warn: "This will permanently remove all sold items from this category's stock print list. This cannot be undone (items remain in the database for records)."
+No database changes needed -- all data is already loaded on the page.
 
