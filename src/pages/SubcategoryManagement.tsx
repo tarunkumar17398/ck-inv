@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { ArrowLeft, Plus, Edit, Trash2, AlertTriangle, Search, Download } from "lucide-react";
+import { ArrowLeft, Plus, Edit, Trash2, AlertTriangle, Search, Download, Filter } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
 
@@ -27,6 +27,7 @@ const SubcategoryManagement = () => {
   const [editingSubcategory, setEditingSubcategory] = useState<Subcategory | null>(null);
   const [editSubcategoryName, setEditSubcategoryName] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
+  const [showLowStockOnly, setShowLowStockOnly] = useState(false);
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -278,6 +279,13 @@ const SubcategoryManagement = () => {
             Panchaloha Idols - Subcategories
           </h1>
           <div className="flex gap-2">
+            <Button
+              variant={showLowStockOnly ? "destructive" : "outline"}
+              onClick={() => setShowLowStockOnly(!showLowStockOnly)}
+            >
+              <Filter className="w-4 h-4 mr-2" />
+              {showLowStockOnly ? "Show All" : "Low Stock"}
+            </Button>
             <Button variant="outline" onClick={handleDownloadList}>
               <Download className="w-4 h-4 mr-2" />
               Download List
@@ -355,6 +363,7 @@ const SubcategoryManagement = () => {
             .filter((subcat) =>
               subcat.subcategory_name.toLowerCase().includes(searchQuery.toLowerCase())
             )
+            .filter((subcat) => !showLowStockOnly || (subcat.available_count || 0) < 5)
             .map((subcat) => (
             <Card key={subcat.id} className="hover:shadow-lg transition-shadow">
               <CardHeader>
@@ -406,7 +415,7 @@ const SubcategoryManagement = () => {
 
         {subcategories.filter((subcat) =>
           subcat.subcategory_name.toLowerCase().includes(searchQuery.toLowerCase())
-        ).length === 0 && (
+        ).filter((subcat) => !showLowStockOnly || (subcat.available_count || 0) < 5).length === 0 && (
           <Card className="p-8 text-center col-span-full">
             <p className="text-muted-foreground">
               {searchQuery ? `No subcategories found matching "${searchQuery}"` : "No subcategories found. Add your first subcategory to get started."}
