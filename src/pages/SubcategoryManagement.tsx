@@ -415,7 +415,7 @@ const SubcategoryManagement = () => {
 
         {subcategories.filter((subcat) =>
           subcat.subcategory_name.toLowerCase().includes(searchQuery.toLowerCase())
-        ).length === 0 && (
+        ).filter((subcat) => !showLowStockOnly || (subcat.available_count || 0) < 5).length === 0 && (
           <Card className="p-8 text-center col-span-full">
             <p className="text-muted-foreground">
               {searchQuery ? `No subcategories found matching "${searchQuery}"` : "No subcategories found. Add your first subcategory to get started."}
