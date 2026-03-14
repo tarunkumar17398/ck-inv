@@ -27,6 +27,7 @@ const SubcategoryManagement = () => {
   const [editingSubcategory, setEditingSubcategory] = useState<Subcategory | null>(null);
   const [editSubcategoryName, setEditSubcategoryName] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
+  const [showLowStockOnly, setShowLowStockOnly] = useState(false);
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
