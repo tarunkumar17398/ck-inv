@@ -87,25 +87,37 @@ const SubcategoryManagement = () => {
       return;
     }
 
-    // Fetch all pieces for all subcategories in a single query
+    // Fetch ALL pieces using pagination to avoid 1000-row limit
     const subcategoryIds = subcats.map(s => s.id);
-    const { data: allPieces, error: piecesError } = await supabase
-      .from("item_pieces")
-      .select("subcategory_id, status")
-      .in("subcategory_id", subcategoryIds);
+    let allPieces: { subcategory_id: string; status: string }[] = [];
+    let from = 0;
+    const pageSize = 1000;
+    let hasMore = true;
 
-    if (piecesError) {
-      toast({
-        title: "Error loading piece counts",
-        description: piecesError.message,
-        variant: "destructive",
-      });
-      setSubcategories(subcats.map(s => ({ ...s, piece_count: 0, available_count: 0 })));
-      return;
+    while (hasMore) {
+      const { data: batch, error: piecesError } = await supabase
+        .from("item_pieces")
+        .select("subcategory_id, status")
+        .in("subcategory_id", subcategoryIds)
+        .range(from, from + pageSize - 1);
+
+      if (piecesError) {
+        toast({
+          title: "Error loading piece counts",
+          description: piecesError.message,
+          variant: "destructive",
+        });
+        setSubcategories(subcats.map(s => ({ ...s, piece_count: 0, available_count: 0 })));
+        return;
+      }
+
+      allPieces = allPieces.concat(batch || []);
+      hasMore = (batch?.length || 0) === pageSize;
+      from += pageSize;
     }
 
     // Count pieces in memory
-    const pieceCounts = (allPieces || []).reduce((acc, piece) => {
+    const pieceCounts = allPieces.reduce((acc, piece) => {
       if (!acc[piece.subcategory_id]) {
         acc[piece.subcategory_id] = { total: 0, available: 0 };
       }
