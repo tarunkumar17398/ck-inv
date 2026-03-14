@@ -363,6 +363,7 @@ const SubcategoryManagement = () => {
             .filter((subcat) =>
               subcat.subcategory_name.toLowerCase().includes(searchQuery.toLowerCase())
             )
+            .filter((subcat) => !showLowStockOnly || (subcat.available_count || 0) < 5)
             .map((subcat) => (
             <Card key={subcat.id} className="hover:shadow-lg transition-shadow">
               <CardHeader>
