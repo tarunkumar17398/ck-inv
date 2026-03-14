@@ -279,6 +279,13 @@ const SubcategoryManagement = () => {
             Panchaloha Idols - Subcategories
           </h1>
           <div className="flex gap-2">
+            <Button
+              variant={showLowStockOnly ? "destructive" : "outline"}
+              onClick={() => setShowLowStockOnly(!showLowStockOnly)}
+            >
+              <Filter className="w-4 h-4 mr-2" />
+              {showLowStockOnly ? "Show All" : "Low Stock"}
+            </Button>
             <Button variant="outline" onClick={handleDownloadList}>
               <Download className="w-4 h-4 mr-2" />
               Download List
