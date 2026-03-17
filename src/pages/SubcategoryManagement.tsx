@@ -280,6 +280,63 @@ const SubcategoryManagement = () => {
     URL.revokeObjectURL(url);
   };
 
+  const openPriceDialog = () => {
+    const initial: Record<string, string> = {};
+    subcategories.forEach((s) => {
+      initial[s.id] = s.default_price != null ? String(s.default_price) : "";
+    });
+    setPriceUpdates(initial);
+    setShowPriceDialog(true);
+  };
+
+  const handleSavePrices = async () => {
+    setSavingPrices(true);
+    let updatedCount = 0;
+
+    for (const subcat of subcategories) {
+      const newPriceStr = priceUpdates[subcat.id];
+      const newPrice = newPriceStr ? parseFloat(newPriceStr) : null;
+      const oldPrice = subcat.default_price ?? null;
+
+      if (newPrice === oldPrice) continue;
+      if (newPriceStr === "" && oldPrice === null) continue;
+
+      // Update subcategory default_price
+      const { error: subError } = await supabase
+        .from("subcategories")
+        .update({ default_price: newPrice })
+        .eq("id", subcat.id);
+
+      if (subError) {
+        toast({ title: "Error updating price", description: `${subcat.subcategory_name}: ${subError.message}`, variant: "destructive" });
+        continue;
+      }
+
+      // Bulk update all pieces' cost_price
+      const { error: piecesError } = await supabase
+        .from("item_pieces")
+        .update({ cost_price: newPrice })
+        .eq("subcategory_id", subcat.id);
+
+      if (piecesError) {
+        toast({ title: "Error updating pieces", description: `${subcat.subcategory_name}: ${piecesError.message}`, variant: "destructive" });
+        continue;
+      }
+
+      updatedCount++;
+    }
+
+    setSavingPrices(false);
+    setShowPriceDialog(false);
+
+    if (updatedCount > 0) {
+      toast({ title: "Prices updated", description: `${updatedCount} subcategory price(s) updated successfully` });
+      if (panchalohaCategory) loadSubcategories(panchalohaCategory.id);
+    } else {
+      toast({ title: "No changes", description: "No prices were changed" });
+    }
+  };
+
   return (
     <div className="min-h-screen bg-background">
       <header className="border-b bg-card shadow-sm">
