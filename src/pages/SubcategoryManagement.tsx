@@ -6,9 +6,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { ArrowLeft, Plus, Edit, Trash2, AlertTriangle, Search, Download, Filter } from "lucide-react";
+import { ArrowLeft, Plus, Edit, Trash2, AlertTriangle, Search, Download, Filter, IndianRupee } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
 interface Subcategory {
   id: string;
@@ -16,6 +17,7 @@ interface Subcategory {
   created_at: string;
   piece_count?: number;
   available_count?: number;
+  default_price?: number | null;
 }
 
 const SubcategoryManagement = () => {
@@ -28,6 +30,9 @@ const SubcategoryManagement = () => {
   const [editSubcategoryName, setEditSubcategoryName] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   const [showLowStockOnly, setShowLowStockOnly] = useState(false);
+  const [showPriceDialog, setShowPriceDialog] = useState(false);
+  const [priceUpdates, setPriceUpdates] = useState<Record<string, string>>({});
+  const [savingPrices, setSavingPrices] = useState(false);
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -133,6 +138,7 @@ const SubcategoryManagement = () => {
       ...subcat,
       piece_count: pieceCounts[subcat.id]?.total || 0,
       available_count: pieceCounts[subcat.id]?.available || 0,
+      default_price: subcat.default_price ?? null,
     }));
 
     setSubcategories(subcatsWithCounts);
@@ -274,6 +280,63 @@ const SubcategoryManagement = () => {
     URL.revokeObjectURL(url);
   };
 
+  const openPriceDialog = () => {
+    const initial: Record<string, string> = {};
+    subcategories.forEach((s) => {
+      initial[s.id] = s.default_price != null ? String(s.default_price) : "";
+    });
+    setPriceUpdates(initial);
+    setShowPriceDialog(true);
+  };
+
+  const handleSavePrices = async () => {
+    setSavingPrices(true);
+    let updatedCount = 0;
+
+    for (const subcat of subcategories) {
+      const newPriceStr = priceUpdates[subcat.id];
+      const newPrice = newPriceStr ? parseFloat(newPriceStr) : null;
+      const oldPrice = subcat.default_price ?? null;
+
+      if (newPrice === oldPrice) continue;
+      if (newPriceStr === "" && oldPrice === null) continue;
+
+      // Update subcategory default_price
+      const { error: subError } = await supabase
+        .from("subcategories")
+        .update({ default_price: newPrice })
+        .eq("id", subcat.id);
+
+      if (subError) {
+        toast({ title: "Error updating price", description: `${subcat.subcategory_name}: ${subError.message}`, variant: "destructive" });
+        continue;
+      }
+
+      // Bulk update all pieces' cost_price
+      const { error: piecesError } = await supabase
+        .from("item_pieces")
+        .update({ cost_price: newPrice })
+        .eq("subcategory_id", subcat.id);
+
+      if (piecesError) {
+        toast({ title: "Error updating pieces", description: `${subcat.subcategory_name}: ${piecesError.message}`, variant: "destructive" });
+        continue;
+      }
+
+      updatedCount++;
+    }
+
+    setSavingPrices(false);
+    setShowPriceDialog(false);
+
+    if (updatedCount > 0) {
+      toast({ title: "Prices updated", description: `${updatedCount} subcategory price(s) updated successfully` });
+      if (panchalohaCategory) loadSubcategories(panchalohaCategory.id);
+    } else {
+      toast({ title: "No changes", description: "No prices were changed" });
+    }
+  };
+
   return (
     <div className="min-h-screen bg-background">
       <header className="border-b bg-card shadow-sm">
@@ -301,6 +364,10 @@ const SubcategoryManagement = () => {
             <Button variant="outline" onClick={handleDownloadList}>
               <Download className="w-4 h-4 mr-2" />
               Download List
+            </Button>
+            <Button variant="outline" onClick={openPriceDialog}>
+              <IndianRupee className="w-4 h-4 mr-2" />
+              Price Update
             </Button>
             <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
               <DialogTrigger asChild>
@@ -356,6 +423,53 @@ const SubcategoryManagement = () => {
               >
                 {loading ? "Updating..." : "Update Subcategory"}
               </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        <Dialog open={showPriceDialog} onOpenChange={setShowPriceDialog}>
+          <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Price Update - Panchaloha Idols</DialogTitle>
+            </DialogHeader>
+            <div className="pt-4">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-12">S.No</TableHead>
+                    <TableHead>Idol Name</TableHead>
+                    <TableHead className="w-32">Current Price</TableHead>
+                    <TableHead className="w-40">New Price (₹)</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {subcategories.map((s, i) => (
+                    <TableRow key={s.id}>
+                      <TableCell>{i + 1}</TableCell>
+                      <TableCell className="font-medium">{s.subcategory_name}</TableCell>
+                      <TableCell className="text-muted-foreground">
+                        {s.default_price != null ? `₹${s.default_price}` : "—"}
+                      </TableCell>
+                      <TableCell>
+                        <Input
+                          type="number"
+                          min="0"
+                          placeholder="Enter price"
+                          value={priceUpdates[s.id] || ""}
+                          onChange={(e) =>
+                            setPriceUpdates((prev) => ({ ...prev, [s.id]: e.target.value }))
+                          }
+                        />
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+              <div className="flex justify-end mt-4">
+                <Button onClick={handleSavePrices} disabled={savingPrices}>
+                  {savingPrices ? "Saving..." : "Save All"}
+                </Button>
+              </div>
             </div>
           </DialogContent>
         </Dialog>
