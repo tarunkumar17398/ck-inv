@@ -33,6 +33,7 @@ const SubcategoryManagement = () => {
   const [showPriceDialog, setShowPriceDialog] = useState(false);
   const [priceUpdates, setPriceUpdates] = useState<Record<string, string>>({});
   const [savingPrices, setSavingPrices] = useState(false);
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
 
