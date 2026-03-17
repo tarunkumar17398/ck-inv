@@ -6,9 +6,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { ArrowLeft, Plus, Edit, Trash2, AlertTriangle, Search, Download, Filter } from "lucide-react";
+import { ArrowLeft, Plus, Edit, Trash2, AlertTriangle, Search, Download, Filter, IndianRupee } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
 interface Subcategory {
   id: string;
@@ -16,6 +17,7 @@ interface Subcategory {
   created_at: string;
   piece_count?: number;
   available_count?: number;
+  default_price?: number | null;
 }
 
 const SubcategoryManagement = () => {
