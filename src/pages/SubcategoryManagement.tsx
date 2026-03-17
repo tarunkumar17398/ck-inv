@@ -365,6 +365,10 @@ const SubcategoryManagement = () => {
               <Download className="w-4 h-4 mr-2" />
               Download List
             </Button>
+            <Button variant="outline" onClick={openPriceDialog}>
+              <IndianRupee className="w-4 h-4 mr-2" />
+              Price Update
+            </Button>
             <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
               <DialogTrigger asChild>
                 <Button>
