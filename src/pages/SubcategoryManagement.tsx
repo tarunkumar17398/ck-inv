@@ -427,7 +427,53 @@ const SubcategoryManagement = () => {
           </DialogContent>
         </Dialog>
 
-        <div className="mb-6 relative">
+        <Dialog open={showPriceDialog} onOpenChange={setShowPriceDialog}>
+          <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Price Update - Panchaloha Idols</DialogTitle>
+            </DialogHeader>
+            <div className="pt-4">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-12">S.No</TableHead>
+                    <TableHead>Idol Name</TableHead>
+                    <TableHead className="w-32">Current Price</TableHead>
+                    <TableHead className="w-40">New Price (₹)</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {subcategories.map((s, i) => (
+                    <TableRow key={s.id}>
+                      <TableCell>{i + 1}</TableCell>
+                      <TableCell className="font-medium">{s.subcategory_name}</TableCell>
+                      <TableCell className="text-muted-foreground">
+                        {s.default_price != null ? `₹${s.default_price}` : "—"}
+                      </TableCell>
+                      <TableCell>
+                        <Input
+                          type="number"
+                          min="0"
+                          placeholder="Enter price"
+                          value={priceUpdates[s.id] || ""}
+                          onChange={(e) =>
+                            setPriceUpdates((prev) => ({ ...prev, [s.id]: e.target.value }))
+                          }
+                        />
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+              <div className="flex justify-end mt-4">
+                <Button onClick={handleSavePrices} disabled={savingPrices}>
+                  {savingPrices ? "Saving..." : "Save All"}
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
           <Input
             placeholder="Search subcategories..."
