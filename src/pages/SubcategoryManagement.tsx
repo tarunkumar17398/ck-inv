@@ -474,6 +474,7 @@ const SubcategoryManagement = () => {
           </DialogContent>
         </Dialog>
 
+        <div className="mb-6 relative">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
           <Input
             placeholder="Search subcategories..."
