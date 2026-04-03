@@ -31,9 +31,11 @@ interface SoldItem {
 const SoldItems = () => {
   const [items, setItems] = useState<SoldItem[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedCategory, setSelectedCategory] = useState<string>("all");
+  const [selectedCategory, setSelectedCategory] = useState<string>("pending");
   const [categories, setCategories] = useState<Array<{ id: string; name: string }>>([]);
   const [editingDateId, setEditingDateId] = useState<string | null>(null);
+  const [dateFrom, setDateFrom] = useState<Date | undefined>(undefined);
+  const [dateTo, setDateTo] = useState<Date | undefined>(undefined);
   const [editingItem, setEditingItem] = useState<SoldItem | null>(null);
   const [editForm, setEditForm] = useState({
     particulars: "",
