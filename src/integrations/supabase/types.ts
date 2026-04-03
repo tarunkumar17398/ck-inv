@@ -124,6 +124,7 @@ export type Database = {
           id: string
           notes: string | null
           piece_code: string
+          sold_price: number | null
           status: string
           subcategory_id: string
         }
@@ -135,6 +136,7 @@ export type Database = {
           id?: string
           notes?: string | null
           piece_code: string
+          sold_price?: number | null
           status?: string
           subcategory_id: string
         }
@@ -146,6 +148,7 @@ export type Database = {
           id?: string
           notes?: string | null
           piece_code?: string
+          sold_price?: number | null
           status?: string
           subcategory_id?: string
         }
