@@ -314,12 +314,12 @@ const SoldItems = () => {
         return;
       }
     } else {
-      // For pieces, we can only update notes (particulars) and cost_price
+      // For pieces, update notes and sold_price
       const { error } = await supabase
         .from("item_pieces")
         .update({
           notes: editForm.particulars.trim() || null,
-          cost_price: editForm.sold_price ? soldPrice : null,
+          sold_price: editForm.sold_price ? soldPrice : null,
         })
         .eq("id", editingItem.id);
 
