@@ -497,60 +497,58 @@ const SubcategoryManagement = () => {
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {filteredSubcategories.map((subcat) => (
-            <Card key={subcat.id} className="hover:shadow-lg transition-shadow">
-              {subcat.image_url && (
-                <div className="w-full h-48 overflow-hidden rounded-t-lg bg-muted/30 flex items-center justify-center">
-                  <img
-                    src={subcat.image_url}
-                    alt={subcat.subcategory_name}
-                    className="max-w-full max-h-full object-contain"
-                  />
+            <Card key={subcat.id} className="hover:shadow-lg transition-shadow overflow-hidden">
+              <div className="flex">
+                {/* Image on left */}
+                <div className="w-28 h-36 shrink-0 bg-muted/30 flex items-center justify-center overflow-hidden">
+                  {subcat.image_url ? (
+                    <img
+                      src={subcat.image_url}
+                      alt={subcat.subcategory_name}
+                      className="w-full h-full object-contain"
+                    />
+                  ) : (
+                    <Camera className="w-8 h-8 text-muted-foreground/40" />
+                  )}
                 </div>
-              )}
-              <CardHeader>
-                <CardTitle className="flex justify-between items-start gap-2">
-                  <div>
-                    <span>{subcat.subcategory_name}</span>
-                    {subcat.height && (
-                      <p className="text-sm font-normal text-muted-foreground mt-1">Height: {subcat.height}</p>
-                    )}
+                {/* Right side: info + actions */}
+                <div className="flex-1 p-3 flex flex-col justify-between min-w-0">
+                  <div className="flex justify-between items-start gap-1">
+                    <div className="min-w-0">
+                      <h3 className="font-semibold text-sm leading-tight truncate">{subcat.subcategory_name}</h3>
+                      {subcat.height && (
+                        <p className="text-xs text-muted-foreground mt-0.5">{subcat.height}</p>
+                      )}
+                    </div>
+                    <div className="flex gap-0.5 shrink-0">
+                      <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => triggerImageUpload(subcat.id)} disabled={uploadingId === subcat.id}>
+                        <Camera className="w-3.5 h-3.5 text-muted-foreground" />
+                      </Button>
+                      <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEditDialog(subcat)}>
+                        <Edit className="w-3.5 h-3.5 text-primary" />
+                      </Button>
+                      <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleDeleteSubcategory(subcat.id, subcat.subcategory_name)}>
+                        <Trash2 className="w-3.5 h-3.5 text-destructive" />
+                      </Button>
+                    </div>
                   </div>
-                  <div className="flex gap-1">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => triggerImageUpload(subcat.id)}
-                      disabled={uploadingId === subcat.id}
-                    >
-                      <Camera className="w-4 h-4 text-muted-foreground" />
-                    </Button>
-                    <Button variant="ghost" size="sm" onClick={() => openEditDialog(subcat)}>
-                      <Edit className="w-4 h-4 text-primary" />
-                    </Button>
-                    <Button variant="ghost" size="sm" onClick={() => handleDeleteSubcategory(subcat.id, subcat.subcategory_name)}>
-                      <Trash2 className="w-4 h-4 text-destructive" />
+                  <div className="flex items-center justify-between mt-2">
+                    <div className="flex items-center gap-2">
+                      <span className="text-muted-foreground text-xs">Available:</span>
+                      <span className="font-bold text-lg text-green-600">{subcat.available_count}</span>
+                      {(subcat.available_count || 0) < 5 && (
+                        <Badge variant="destructive" className="text-[10px] px-1.5 py-0 flex items-center gap-0.5">
+                          <AlertTriangle className="w-2.5 h-2.5" />
+                          Low
+                        </Badge>
+                      )}
+                    </div>
+                    <Button variant="outline" size="sm" className="text-xs h-7" onClick={() => handleViewPieces(subcat.id, subcat.subcategory_name)}>
+                      View Pieces
                     </Button>
                   </div>
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  <div className="h-6">
-                    {(subcat.available_count || 0) < 5 && (
-                      <Badge variant="destructive" className="text-xs flex items-center gap-1 w-fit">
-                        <AlertTriangle className="w-3 h-3" />
-                        Low Stock
-                      </Badge>
-                    )}
-                  </div>
-                  <p className="text-muted-foreground">
-                    Available: <span className="font-bold text-lg text-green-600">{subcat.available_count}</span>
-                  </p>
-                  <Button variant="outline" className="w-full" onClick={() => handleViewPieces(subcat.id, subcat.subcategory_name)}>
-                    View Pieces
-                  </Button>
                 </div>
-              </CardContent>
+              </div>
             </Card>
           ))}
         </div>
