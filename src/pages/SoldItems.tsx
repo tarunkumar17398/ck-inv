@@ -54,7 +54,7 @@ const SoldItems = () => {
   const loadCategories = async () => {
     const { data, error } = await supabase
       .from("categories")
-      .select("id, name")
+      .select("id, name, prefix")
       .order("name");
 
     if (error) {
@@ -63,6 +63,12 @@ const SoldItems = () => {
     }
 
     setCategories(data || []);
+    
+    // Default to Brass (BR) category
+    const brassCategory = data?.find(c => c.prefix === "BR");
+    if (brassCategory && selectedCategory === "pending") {
+      setSelectedCategory(brassCategory.id);
+    }
   };
 
   const loadSoldItems = async () => {
