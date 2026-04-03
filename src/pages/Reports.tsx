@@ -103,43 +103,7 @@ const fetchAllFromTable = async (
 };
 
 // Helper to fetch sold items with date range filters using pagination
-const fetchSoldItemsWithDateRange = async (
-  table: "items" | "item_pieces",
-  priceField: string,
-  dateField: string,
-  startDate: string,
-  endDate: string,
-  extraFilters: Record<string, any> = {}
-) => {
-  const PAGE_SIZE = 1000;
-  let allItems: any[] = [];
-  let from = 0;
-  let hasMore = true;
-
-  while (hasMore) {
-    let query = supabase
-      .from(table)
-      .select(`${priceField}, ${dateField}`)
-      .gte(dateField, startDate)
-      .lte(dateField, endDate)
-      .range(from, from + PAGE_SIZE - 1);
-
-    for (const [key, value] of Object.entries(extraFilters)) {
-      query = query.eq(key, value);
-    }
-
-    const { data } = await query;
-    if (data && data.length > 0) {
-      allItems = allItems.concat(data);
-      from += PAGE_SIZE;
-      hasMore = data.length === PAGE_SIZE;
-    } else {
-      hasMore = false;
-    }
-  }
-
-  return allItems;
-};
+// Remove the separate fetchSoldItemsWithDateRange - use fetchAllFromTable instead
 
 const Reports = () => {
   const [monthlyData, setMonthlyData] = useState<SalesData[]>([]);
