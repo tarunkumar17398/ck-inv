@@ -285,8 +285,8 @@ const Reports = () => {
     const stockCount = (itemsStockCount || 0) + (piecesStockCount || 0);
     
     // Total stock value (paginated fetch)
-    const stockItems = await fetchAllSoldItems({ table: "items", filters: { status: "in_stock" }, priceField: "cost_price" });
-    const stockPieces = await fetchAllSoldItems({ table: "item_pieces", filters: { status: "available" }, priceField: "cost_price" });
+    const stockItems = await fetchAllFromTable("items", "cost_price", { status: "in_stock" });
+    const stockPieces = await fetchAllFromTable("item_pieces", "cost_price", { status: "available" });
     
     const stockValue = stockItems.reduce((sum: number, item: any) => sum + (item.cost_price || 0), 0)
       + stockPieces.reduce((sum: number, piece: any) => sum + (piece.cost_price || 0), 0);
