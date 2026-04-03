@@ -5,7 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { ArrowLeft, Download, Eye, Loader2 } from "lucide-react";
+import { ArrowLeft, Download, Eye, Loader2, AlertTriangle } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -92,14 +93,15 @@ const PanchalohaCatalog = () => {
     const mult = parseFloat(multiplier) || 1;
     setItems(subcats.map(s => {
       const cost = s.default_price ?? 0;
+      const availCount = availCounts[s.id] || 0;
       return {
         id: s.id,
         subcategory_name: s.subcategory_name,
         image_url: s.image_url ?? null,
         height: s.height ?? null,
         default_price: s.default_price ?? null,
-        available_count: availCounts[s.id] || 0,
-        enabled: true,
+        available_count: availCount,
+        enabled: availCount > 0,
         costPrice: cost ? String(cost) : "",
         sellPrice: cost ? String(Math.round(cost * mult)) : "",
       };
@@ -109,6 +111,11 @@ const PanchalohaCatalog = () => {
   };
 
   const toggleItem = (id: string) => {
+    const item = items.find(i => i.id === id);
+    if (item && !item.enabled && item.available_count === 0) {
+      toast({ title: "Cannot include item with no stock", variant: "destructive" });
+      return;
+    }
     setItems(prev => prev.map(i => i.id === id ? { ...i, enabled: !i.enabled } : i));
   };
 
@@ -373,9 +380,9 @@ const PanchalohaCatalog = () => {
             </TableHeader>
             <TableBody>
               {items.map(item => (
-                <TableRow key={item.id} className={!item.enabled ? "opacity-50" : ""}>
+                <TableRow key={item.id} className={`${!item.enabled ? "opacity-50" : ""} ${item.available_count === 0 ? "bg-destructive/10" : ""}`}>
                   <TableCell>
-                    <Checkbox checked={item.enabled} onCheckedChange={() => toggleItem(item.id)} />
+                    <Checkbox checked={item.enabled} onCheckedChange={() => toggleItem(item.id)} disabled={item.available_count === 0} />
                   </TableCell>
                   <TableCell>
                     {item.image_url ? (
@@ -385,7 +392,15 @@ const PanchalohaCatalog = () => {
                     )}
                   </TableCell>
                   <TableCell className="font-medium">
-                    {item.subcategory_name} <span className="text-muted-foreground">({item.available_count})</span>
+                    <div className="flex flex-col gap-0.5">
+                      <span>{item.subcategory_name} <span className="text-muted-foreground">({item.available_count})</span></span>
+                      {item.available_count === 0 && (
+                        <Badge variant="destructive" className="text-[10px] px-1.5 py-0 flex items-center gap-0.5 w-fit">
+                          <AlertTriangle className="w-2.5 h-2.5" />
+                          No Stock
+                        </Badge>
+                      )}
+                    </div>
                   </TableCell>
                   <TableCell className="text-muted-foreground">{item.height || "—"}</TableCell>
                   <TableCell>
