@@ -405,7 +405,6 @@ const PanchalohaCatalog = () => {
                           Low Stock
                         </Badge>
                       ) : null}
-                      )}
                     </div>
                   </TableCell>
                   <TableCell className="text-muted-foreground">{item.height || "—"}</TableCell>
