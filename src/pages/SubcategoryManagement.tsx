@@ -148,7 +148,7 @@ const SubcategoryManagement = () => {
     const imageUrl = `${urlData.publicUrl}?t=${Date.now()}`;
     const { error: updateError } = await supabase
       .from("subcategories")
-      .update({ image_url: imageUrl } as any)
+      .update({ image_url: imageUrl })
       .eq("id", subcatId);
 
     setUploadingId(null);
