@@ -5,10 +5,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { ArrowLeft, Printer } from "lucide-react";
+import { ArrowLeft, Download, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Checkbox } from "@/components/ui/checkbox";
+import jsPDF from "jspdf";
 
 interface CatalogItem {
   id: string;
@@ -21,12 +22,14 @@ interface CatalogItem {
   costPrice: string;
 }
 
+const ITEMS_PER_PAGE = 6; // 3 cols x 2 rows per A4 page
+
 const PanchalohaCatalog = () => {
   const [items, setItems] = useState<CatalogItem[]>([]);
   const [multiplier, setMultiplier] = useState("2.0");
   const [showPrices, setShowPrices] = useState(true);
-  const [showPreview, setShowPreview] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [generating, setGenerating] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -61,7 +64,6 @@ const PanchalohaCatalog = () => {
       return;
     }
 
-    // Fetch piece counts
     const subcategoryIds = subcats.map(s => s.id);
     let allPieces: { subcategory_id: string; status: string }[] = [];
     let from = 0;
@@ -88,8 +90,8 @@ const PanchalohaCatalog = () => {
     setItems(subcats.map(s => ({
       id: s.id,
       subcategory_name: s.subcategory_name,
-      image_url: (s as any).image_url ?? null,
-      height: (s as any).height ?? null,
+      image_url: s.image_url ?? null,
+      height: s.height ?? null,
       default_price: s.default_price ?? null,
       available_count: availCounts[s.id] || 0,
       enabled: true,
@@ -110,12 +112,138 @@ const PanchalohaCatalog = () => {
   const mult = parseFloat(multiplier) || 1;
   const enabledItems = items.filter(i => i.enabled);
 
-  const handlePrint = () => {
-    setShowPreview(true);
+  const loadImageAsBase64 = async (url: string): Promise<string | null> => {
+    try {
+      const response = await fetch(url);
+      const blob = await response.blob();
+      return new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result as string);
+        reader.onerror = () => resolve(null);
+        reader.readAsDataURL(blob);
+      });
+    } catch {
+      return null;
+    }
   };
 
-  const handleDownload = () => {
-    window.print();
+  const handleDownloadPDF = async () => {
+    if (enabledItems.length === 0) return;
+    setGenerating(true);
+
+    try {
+      const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+      const pageW = 210;
+      const pageH = 297;
+      const margin = 10;
+      const usableW = pageW - margin * 2;
+      const gap = 5;
+      const cols = 3;
+      const cardW = (usableW - gap * (cols - 1)) / cols; // ~56.67mm
+      const imgH = cardW * 1.5; // 2:3 ratio
+      const detailH = 18;
+      const cardH = imgH + detailH;
+      const rows = 2;
+      const titleH = 14;
+
+      // Pre-load all images
+      const imageCache: Record<string, string | null> = {};
+      for (const item of enabledItems) {
+        if (item.image_url) {
+          imageCache[item.id] = await loadImageAsBase64(item.image_url);
+        }
+      }
+
+      const totalPages = Math.ceil(enabledItems.length / ITEMS_PER_PAGE);
+
+      for (let page = 0; page < totalPages; page++) {
+        if (page > 0) pdf.addPage();
+
+        const pageItems = enabledItems.slice(page * ITEMS_PER_PAGE, (page + 1) * ITEMS_PER_PAGE);
+
+        // Title
+        pdf.setFontSize(18);
+        pdf.setFont("helvetica", "bold");
+        pdf.setTextColor(26, 26, 26);
+        pdf.text("Panchaloha Idols - Product Catalog", pageW / 2, margin + 8, { align: "center" });
+
+        const startY = margin + titleH;
+
+        for (let idx = 0; idx < pageItems.length; idx++) {
+          const item = pageItems[idx];
+          const col = idx % cols;
+          const row = Math.floor(idx / cols);
+          const x = margin + col * (cardW + gap);
+          const y = startY + row * (cardH + gap);
+
+          // Card border
+          pdf.setDrawColor(51, 51, 51);
+          pdf.setLineWidth(0.7);
+          pdf.roundedRect(x, y, cardW, cardH, 2, 2);
+
+          // Image area
+          const imgData = imageCache[item.id];
+          if (imgData) {
+            // Clip image inside rounded rect top area
+            pdf.addImage(imgData, "JPEG", x + 0.5, y + 0.5, cardW - 1, imgH - 1);
+          } else {
+            pdf.setFillColor(229, 229, 229);
+            pdf.rect(x + 0.5, y + 0.5, cardW - 1, imgH - 1, "F");
+            pdf.setFontSize(9);
+            pdf.setTextColor(153, 153, 153);
+            pdf.setFont("helvetica", "normal");
+            pdf.text("No Image", x + cardW / 2, y + imgH / 2, { align: "center" });
+          }
+
+          // Detail area background
+          pdf.setFillColor(245, 240, 235);
+          pdf.rect(x + 0.35, y + imgH, cardW - 0.7, detailH - 0.35, "F");
+
+          // Bottom border line for detail area (part of card border)
+          // Already handled by roundedRect
+
+          // Name
+          pdf.setFontSize(9);
+          pdf.setFont("helvetica", "bold");
+          pdf.setTextColor(26, 26, 26);
+          const nameText = item.subcategory_name;
+          pdf.text(nameText, x + cardW / 2, y + imgH + 5, { align: "center", maxWidth: cardW - 4 });
+
+          // Height
+          if (item.height) {
+            pdf.setFontSize(7.5);
+            pdf.setFont("helvetica", "normal");
+            pdf.setTextColor(85, 85, 85);
+            pdf.text(`Height: ${item.height}`, x + cardW / 2, y + imgH + 9.5, { align: "center" });
+          }
+
+          // Price
+          const cost = parseFloat(item.costPrice) || 0;
+          if (showPrices && cost > 0) {
+            const sellPrice = Math.round(cost * mult);
+            pdf.setFontSize(10);
+            pdf.setFont("helvetica", "bold");
+            pdf.setTextColor(180, 83, 9);
+            const priceY = item.height ? y + imgH + 14.5 : y + imgH + 12;
+            pdf.text(`Rs.${sellPrice.toLocaleString("en-IN")}`, x + cardW / 2, priceY, { align: "center" });
+          }
+        }
+
+        // Page number
+        pdf.setFontSize(8);
+        pdf.setFont("helvetica", "normal");
+        pdf.setTextColor(150, 150, 150);
+        pdf.text(`Page ${page + 1} of ${totalPages}`, pageW / 2, pageH - 5, { align: "center" });
+      }
+
+      pdf.save("Panchaloha_Catalog.pdf");
+      toast({ title: "PDF downloaded successfully!" });
+    } catch (err) {
+      console.error(err);
+      toast({ title: "Failed to generate PDF", variant: "destructive" });
+    } finally {
+      setGenerating(false);
+    }
   };
 
   if (loading) {
@@ -123,65 +251,6 @@ const PanchalohaCatalog = () => {
       <div className="min-h-screen bg-background flex items-center justify-center">
         <p className="text-muted-foreground">Loading catalog data...</p>
       </div>
-    );
-  }
-
-  if (showPreview) {
-    return (
-      <>
-        <style>{`
-          @media print {
-            body * { visibility: hidden; }
-            #catalog-print, #catalog-print * { visibility: visible; }
-            #catalog-print {
-              position: absolute; left: 0; top: 0;
-              width: 210mm;
-              margin: 0;
-              padding: 10mm;
-              box-sizing: border-box;
-            }
-            .no-print { display: none !important; }
-            @page { size: A4 portrait; margin: 0; }
-          }
-        `}</style>
-        <div className="p-4 no-print flex gap-2">
-          <Button variant="outline" onClick={() => setShowPreview(false)}>
-            <ArrowLeft className="w-4 h-4 mr-2" /> Back to Config
-          </Button>
-          <Button onClick={handleDownload}>
-            <Printer className="w-4 h-4 mr-2" /> Print / Download PDF
-          </Button>
-        </div>
-        <div id="catalog-print" className="mx-auto bg-white" style={{ width: '210mm', padding: '10mm', boxSizing: 'border-box' }}>
-          <h1 className="text-2xl font-bold text-center mb-6" style={{ color: '#1a1a1a' }}>Panchaloha Idols - Product Catalog</h1>
-          <div className="grid grid-cols-3 gap-4">
-            {enabledItems.map(item => {
-              const cost = parseFloat(item.costPrice) || 0;
-              const sellPrice = Math.round(cost * mult);
-              return (
-                <div key={item.id} className="text-center overflow-hidden" style={{ border: '2.5px solid #333', borderRadius: '8px' }}>
-                  {item.image_url ? (
-                    <div style={{ aspectRatio: '2/3', overflow: 'hidden' }}>
-                      <img src={item.image_url} alt={item.subcategory_name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                    </div>
-                  ) : (
-                    <div style={{ aspectRatio: '2/3', background: '#e5e5e5', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#999', fontSize: '12px' }}>
-                      No Image
-                    </div>
-                  )}
-                  <div style={{ background: '#f5f0eb', padding: '8px 6px' }}>
-                    <h3 style={{ fontWeight: 600, fontSize: '13px', color: '#1a1a1a', marginBottom: '2px' }}>{item.subcategory_name}</h3>
-                    {item.height && <p style={{ fontSize: '11px', color: '#555', marginBottom: '2px' }}>Height: {item.height}</p>}
-                    {showPrices && cost > 0 && (
-                      <p style={{ fontSize: '14px', fontWeight: 700, color: '#b45309', marginTop: '4px' }}>₹{sellPrice.toLocaleString("en-IN")}</p>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      </>
     );
   }
 
@@ -216,9 +285,12 @@ const PanchalohaCatalog = () => {
             <Switch checked={showPrices} onCheckedChange={setShowPrices} />
             <Label>Show Prices in Catalog</Label>
           </div>
-          <Button onClick={handlePrint} disabled={enabledItems.length === 0}>
-            <Printer className="w-4 h-4 mr-2" />
-            Generate Catalog ({enabledItems.length} items)
+          <Button onClick={handleDownloadPDF} disabled={enabledItems.length === 0 || generating}>
+            {generating ? (
+              <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Generating...</>
+            ) : (
+              <><Download className="w-4 h-4 mr-2" /> Download PDF ({enabledItems.length} items)</>
+            )}
           </Button>
         </div>
 
