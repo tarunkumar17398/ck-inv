@@ -150,7 +150,7 @@ const SoldItems = () => {
               particulars: piece.notes,
               size: null, // Pieces don't have size field
               weight: null, // Pieces don't have weight field
-              sold_price: piece.cost_price, // Using cost_price as sold_price for pieces
+              sold_price: piece.sold_price ?? piece.cost_price, // Prefer actual sold_price, fallback to cost_price
               sold_date: piece.date_sold,
               categories: {
                 id: panchalohaCategory.id,
