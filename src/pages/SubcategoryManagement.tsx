@@ -121,8 +121,8 @@ const SubcategoryManagement = () => {
       piece_count: pieceCounts[subcat.id]?.total || 0,
       available_count: pieceCounts[subcat.id]?.available || 0,
       default_price: subcat.default_price ?? null,
-      image_url: (subcat as any).image_url ?? null,
-      height: (subcat as any).height ?? null,
+      image_url: subcat.image_url ?? null,
+      height: subcat.height ?? null,
     }));
 
     setSubcategories(subcatsWithCounts);
