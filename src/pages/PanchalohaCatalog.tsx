@@ -109,6 +109,11 @@ const PanchalohaCatalog = () => {
   };
 
   const toggleItem = (id: string) => {
+    const item = items.find(i => i.id === id);
+    if (item && !item.enabled && item.available_count === 0) {
+      toast({ title: "Cannot include item with no stock", variant: "destructive" });
+      return;
+    }
     setItems(prev => prev.map(i => i.id === id ? { ...i, enabled: !i.enabled } : i));
   };
 
