@@ -231,8 +231,9 @@ const Reports = () => {
 
     for (const cat of allCategories || []) {
       if (cat.name === "Panchaloha Idols") {
-        const pieces = await fetchSoldItemsWithDateRange(
-          "item_pieces", "cost_price", "date_sold", periodStartISO, periodEndISO, { status: "sold" }
+        const pieces = await fetchAllFromTable(
+          "item_pieces", "cost_price, date_sold", { status: "sold" },
+          [{ field: "date_sold", gte: periodStartISO, lte: periodEndISO }]
         );
         const revenue = pieces.reduce((sum: number, p: any) => sum + (p.cost_price || 0), 0);
         categorySales.push({ name: cat.name, total_sales: pieces.length, items_sold: pieces.length, revenue });
