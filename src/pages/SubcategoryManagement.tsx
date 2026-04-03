@@ -187,7 +187,7 @@ const SubcategoryManagement = () => {
       category_id: panchalohaCategory.id,
       subcategory_name: subcategoryName.trim(),
       height: subcategoryHeight.trim() || null,
-    } as any);
+    });
 
     setLoading(false);
     if (error) {
