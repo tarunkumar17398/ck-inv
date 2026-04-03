@@ -35,6 +35,14 @@ const PanchalohaCatalog = () => {
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
   const isMobile = useIsMobile();
+  const [isTablet, setIsTablet] = useState(false);
+
+  useEffect(() => {
+    const check = () => setIsTablet(window.innerWidth < 1024);
+    check();
+    window.addEventListener("resize", check);
+    return () => window.removeEventListener("resize", check);
+  }, []);
   const navigate = useNavigate();
   const { toast } = useToast();
 
