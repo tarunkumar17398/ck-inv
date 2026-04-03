@@ -44,11 +44,36 @@ const PiecesManagement = () => {
   const loadPieces = async () => {
     if (!subcategoryId) return;
 
-    const { data, error } = await supabase
-      .from("item_pieces")
-      .select("*")
-      .eq("subcategory_id", subcategoryId)
-      .order("piece_code");
+    let allPieces: any[] = [];
+    let from = 0;
+    const batchSize = 1000;
+    let hasMore = true;
+
+    while (hasMore) {
+      const { data, error } = await supabase
+        .from("item_pieces")
+        .select("*")
+        .eq("subcategory_id", subcategoryId)
+        .order("piece_code")
+        .range(from, from + batchSize - 1);
+
+      if (error) {
+        toast({
+          title: "Error loading pieces",
+          description: error.message,
+          variant: "destructive",
+        });
+        return;
+      }
+
+      if (data && data.length > 0) {
+        allPieces = [...allPieces, ...data];
+        from += batchSize;
+        hasMore = data.length === batchSize;
+      } else {
+        hasMore = false;
+      }
+    }
 
     if (error) {
       toast({
