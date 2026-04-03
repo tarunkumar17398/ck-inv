@@ -179,8 +179,9 @@ const Reports = () => {
     // Fetch Panchaloha pieces if needed
     let soldPieces: any[] = [];
     if (selectedCategory === "all" || selectedCategory === piCategoryId) {
-      soldPieces = await fetchSoldItemsWithDateRange(
-        "item_pieces", "cost_price", "date_sold", periodStartISO, periodEndISO, { status: "sold" }
+      soldPieces = await fetchAllFromTable(
+        "item_pieces", "cost_price, date_sold", { status: "sold" },
+        [{ field: "date_sold", gte: periodStartISO, lte: periodEndISO }]
       );
     }
 
