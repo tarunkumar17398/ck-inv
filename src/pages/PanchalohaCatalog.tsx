@@ -329,109 +329,146 @@ const PanchalohaCatalog = () => {
     );
   }
 
+  const isMobile = useIsMobile();
+
   // Config mode
   return (
     <div className="min-h-screen bg-background">
       <header className="border-b bg-card shadow-sm">
-        <div className="container mx-auto px-4 py-4">
+        <div className="container mx-auto px-4 py-3">
           <Button variant="ghost" size="sm" onClick={() => navigate("/panchaloha-subcategories")}>
             <ArrowLeft className="w-4 h-4 mr-2" />
-            Back to Subcategories
+            Back
           </Button>
         </div>
       </header>
 
-      <main className="container mx-auto px-4 py-8">
-        <h1 className="text-3xl font-bold text-foreground mb-6">Create Catalog</h1>
+      <main className="container mx-auto px-4 py-4 md:py-8">
+        <h1 className="text-2xl md:text-3xl font-bold text-foreground mb-4">Create Catalog</h1>
 
-        <div className="flex flex-wrap items-center gap-6 mb-6 p-4 border rounded-lg bg-card">
+        <div className="flex flex-col sm:flex-row flex-wrap items-start sm:items-center gap-3 sm:gap-6 mb-4 p-3 sm:p-4 border rounded-lg bg-card">
           <div className="flex items-center gap-2">
-            <Label>Multiplier</Label>
+            <Label className="text-sm">Multiplier</Label>
             <Input
               type="number"
               min="0.1"
               step="0.1"
               value={multiplier}
               onChange={(e) => setMultiplier(e.target.value)}
-              className="w-24"
+              className="w-20"
             />
             <Button variant="outline" size="sm" onClick={applyMultiplier}>Apply</Button>
           </div>
           <div className="flex items-center gap-2">
             <Switch checked={showPrices} onCheckedChange={setShowPrices} />
-            <Label>Show Prices</Label>
+            <Label className="text-sm">Show Prices</Label>
           </div>
-          <Button onClick={() => setShowPreview(true)} disabled={enabledItems.length === 0}>
+          <Button onClick={() => setShowPreview(true)} disabled={enabledItems.length === 0} className="w-full sm:w-auto">
             <Eye className="w-4 h-4 mr-2" />
-            Preview Catalog ({enabledItems.length} items)
+            Preview ({enabledItems.length} items)
           </Button>
         </div>
 
-        <div className="border rounded-lg overflow-auto">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="w-12">Include</TableHead>
-                <TableHead className="w-16">Image</TableHead>
-                <TableHead>Name (Available Qty)</TableHead>
-                <TableHead>Height</TableHead>
-                <TableHead className="w-32">Cost Price (₹)</TableHead>
-                <TableHead className="w-32">Selling Price (₹)</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {items.map(item => (
-                <TableRow key={item.id} className={`${!item.enabled ? "opacity-50" : ""} ${item.available_count === 0 ? "bg-destructive/10" : ""}`}>
-                  <TableCell>
+        {/* Mobile card layout */}
+        {isMobile ? (
+          <div className="space-y-3">
+            {items.map(item => (
+              <div
+                key={item.id}
+                className={`border rounded-lg p-3 bg-card ${!item.enabled ? "opacity-50" : ""} ${item.available_count === 0 ? "border-destructive bg-destructive/5" : ""}`}
+              >
+                <div className="flex gap-3">
+                  <div className="flex items-start pt-1">
                     <Checkbox checked={item.enabled} onCheckedChange={() => toggleItem(item.id)} disabled={item.available_count === 0} />
-                  </TableCell>
-                  <TableCell>
-                    {item.image_url ? (
-                      <img src={item.image_url} alt="" className="w-12 h-12 object-cover rounded" />
-                    ) : (
-                      <div className="w-12 h-12 bg-muted rounded flex items-center justify-center text-xs text-muted-foreground">—</div>
-                    )}
-                  </TableCell>
-                  <TableCell className="font-medium">
-                    <div className="flex flex-col gap-0.5">
-                      <span>{item.subcategory_name} <span className="text-muted-foreground">({item.available_count})</span></span>
-                      {item.available_count === 0 ? (
-                        <Badge variant="destructive" className="text-[10px] px-1.5 py-0 flex items-center gap-0.5 w-fit">
-                          <AlertTriangle className="w-2.5 h-2.5" />
-                          No Stock
-                        </Badge>
-                      ) : item.available_count < 5 ? (
-                        <Badge className="text-[10px] px-1.5 py-0 flex items-center gap-0.5 w-fit bg-orange-500 text-white border-orange-500">
-                          <AlertTriangle className="w-2.5 h-2.5" />
-                          Low Stock
-                        </Badge>
-                      ) : null}
-                    </div>
-                  </TableCell>
-                  <TableCell className="text-muted-foreground">{item.height || "—"}</TableCell>
-                  <TableCell>
-                    <Input
-                      type="number"
-                      min="0"
-                      value={item.costPrice}
-                      onChange={(e) => updateCostPrice(item.id, e.target.value)}
-                      className="w-28"
-                    />
-                  </TableCell>
-                  <TableCell>
-                    <Input
-                      type="number"
-                      min="0"
-                      value={item.sellPrice}
-                      onChange={(e) => updateSellPrice(item.id, e.target.value)}
-                      className="w-28"
-                    />
-                  </TableCell>
+                  </div>
+                  {item.image_url ? (
+                    <img src={item.image_url} alt="" className="w-14 h-14 object-cover rounded shrink-0" />
+                  ) : (
+                    <div className="w-14 h-14 bg-muted rounded flex items-center justify-center text-xs text-muted-foreground shrink-0">—</div>
+                  )}
+                  <div className="flex-1 min-w-0">
+                    <p className="font-semibold text-sm break-words">{item.subcategory_name}</p>
+                    <p className="text-xs text-muted-foreground">Qty: {item.available_count} {item.height ? `• ${item.height}` : ""}</p>
+                    {item.available_count === 0 ? (
+                      <Badge variant="destructive" className="text-[10px] px-1.5 py-0 mt-1 flex items-center gap-0.5 w-fit">
+                        <AlertTriangle className="w-2.5 h-2.5" /> No Stock
+                      </Badge>
+                    ) : item.available_count < 5 ? (
+                      <Badge className="text-[10px] px-1.5 py-0 mt-1 flex items-center gap-0.5 w-fit bg-orange-500 text-white border-orange-500">
+                        <AlertTriangle className="w-2.5 h-2.5" /> Low Stock
+                      </Badge>
+                    ) : null}
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-2 mt-2 pl-7">
+                  <div>
+                    <Label className="text-[11px] text-muted-foreground">Cost ₹</Label>
+                    <Input type="number" min="0" value={item.costPrice} onChange={(e) => updateCostPrice(item.id, e.target.value)} className="h-8 text-sm" />
+                  </div>
+                  <div>
+                    <Label className="text-[11px] text-muted-foreground">Sell ₹</Label>
+                    <Input type="number" min="0" value={item.sellPrice} onChange={(e) => updateSellPrice(item.id, e.target.value)} className="h-8 text-sm" />
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          /* Desktop table layout */
+          <div className="border rounded-lg overflow-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-12">Include</TableHead>
+                  <TableHead className="w-16">Image</TableHead>
+                  <TableHead>Name (Available Qty)</TableHead>
+                  <TableHead>Height</TableHead>
+                  <TableHead className="w-32">Cost Price (₹)</TableHead>
+                  <TableHead className="w-32">Selling Price (₹)</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
+              </TableHeader>
+              <TableBody>
+                {items.map(item => (
+                  <TableRow key={item.id} className={`${!item.enabled ? "opacity-50" : ""} ${item.available_count === 0 ? "bg-destructive/10" : ""}`}>
+                    <TableCell>
+                      <Checkbox checked={item.enabled} onCheckedChange={() => toggleItem(item.id)} disabled={item.available_count === 0} />
+                    </TableCell>
+                    <TableCell>
+                      {item.image_url ? (
+                        <img src={item.image_url} alt="" className="w-12 h-12 object-cover rounded" />
+                      ) : (
+                        <div className="w-12 h-12 bg-muted rounded flex items-center justify-center text-xs text-muted-foreground">—</div>
+                      )}
+                    </TableCell>
+                    <TableCell className="font-medium">
+                      <div className="flex flex-col gap-0.5">
+                        <span>{item.subcategory_name} <span className="text-muted-foreground">({item.available_count})</span></span>
+                        {item.available_count === 0 ? (
+                          <Badge variant="destructive" className="text-[10px] px-1.5 py-0 flex items-center gap-0.5 w-fit">
+                            <AlertTriangle className="w-2.5 h-2.5" />
+                            No Stock
+                          </Badge>
+                        ) : item.available_count < 5 ? (
+                          <Badge className="text-[10px] px-1.5 py-0 flex items-center gap-0.5 w-fit bg-orange-500 text-white border-orange-500">
+                            <AlertTriangle className="w-2.5 h-2.5" />
+                            Low Stock
+                          </Badge>
+                        ) : null}
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-muted-foreground">{item.height || "—"}</TableCell>
+                    <TableCell>
+                      <Input type="number" min="0" value={item.costPrice} onChange={(e) => updateCostPrice(item.id, e.target.value)} className="w-28" />
+                    </TableCell>
+                    <TableCell>
+                      <Input type="number" min="0" value={item.sellPrice} onChange={(e) => updateSellPrice(item.id, e.target.value)} className="w-28" />
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        )}
       </main>
     </div>
   );
