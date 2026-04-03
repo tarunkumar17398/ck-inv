@@ -330,7 +330,6 @@ const PanchalohaCatalog = () => {
     );
   }
 
-  const isMobile = useIsMobile();
 
   // Config mode
   return (
