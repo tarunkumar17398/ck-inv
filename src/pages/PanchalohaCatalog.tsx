@@ -394,12 +394,17 @@ const PanchalohaCatalog = () => {
                   <TableCell className="font-medium">
                     <div className="flex flex-col gap-0.5">
                       <span>{item.subcategory_name} <span className="text-muted-foreground">({item.available_count})</span></span>
-                      {item.available_count === 0 && (
+                      {item.available_count === 0 ? (
                         <Badge variant="destructive" className="text-[10px] px-1.5 py-0 flex items-center gap-0.5 w-fit">
                           <AlertTriangle className="w-2.5 h-2.5" />
                           No Stock
                         </Badge>
-                      )}
+                      ) : item.available_count < 5 ? (
+                        <Badge className="text-[10px] px-1.5 py-0 flex items-center gap-0.5 w-fit bg-orange-500 text-white border-orange-500">
+                          <AlertTriangle className="w-2.5 h-2.5" />
+                          Low Stock
+                        </Badge>
+                      ) : null}
                     </div>
                   </TableCell>
                   <TableCell className="text-muted-foreground">{item.height || "—"}</TableCell>
