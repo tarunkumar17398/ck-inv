@@ -500,7 +500,7 @@ const SubcategoryManagement = () => {
             <Card key={subcat.id} className="hover:shadow-lg transition-shadow overflow-hidden">
               <div className="flex">
                 {/* Image on left */}
-                <div className="w-28 h-36 shrink-0 bg-muted/30 flex items-center justify-center overflow-hidden">
+                <div className="w-36 h-44 shrink-0 bg-muted/30 flex items-center justify-center overflow-hidden">
                   {subcat.image_url ? (
                     <img
                       src={subcat.image_url}
