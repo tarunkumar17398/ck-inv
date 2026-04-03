@@ -171,8 +171,9 @@ const Reports = () => {
     const itemFilters: Record<string, any> = { status: "sold" };
     if (selectedCategory !== "all") itemFilters.category_id = selectedCategory;
 
-    const soldItems = await fetchSoldItemsWithDateRange(
-      "items", "sold_price", "sold_date", periodStartISO, periodEndISO, itemFilters
+    const soldItems = await fetchAllFromTable(
+      "items", "sold_price, sold_date", itemFilters,
+      [{ field: "sold_date", gte: periodStartISO, lte: periodEndISO }]
     );
 
     // Fetch Panchaloha pieces if needed
