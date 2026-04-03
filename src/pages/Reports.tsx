@@ -103,7 +103,7 @@ const fetchAllFromTable = async (
 };
 
 // Helper to fetch sold items with date range filters using pagination
-// Remove the separate fetchSoldItemsWithDateRange - use fetchAllFromTable instead
+
 
 const Reports = () => {
   const [monthlyData, setMonthlyData] = useState<SalesData[]>([]);
