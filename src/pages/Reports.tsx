@@ -208,7 +208,7 @@ const Reports = () => {
       const month = format(new Date(piece.date_sold), "MMM yyyy");
       const existing = monthsMap.get(month) || { revenue: 0, count: 0 };
       monthsMap.set(month, {
-        revenue: existing.revenue + (piece.cost_price || 0),
+        revenue: existing.revenue + (piece.sold_price ?? piece.cost_price ?? 0),
         count: existing.count + 1,
       });
     });
