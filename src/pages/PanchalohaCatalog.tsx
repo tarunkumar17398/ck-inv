@@ -377,8 +377,8 @@ const PanchalohaCatalog = () => {
           </Button>
         </div>
 
-        {/* Mobile card layout */}
-        {isMobile ? (
+        {/* Mobile/Tablet card layout */}
+        {(isMobile || isTablet) ? (
           <div className="space-y-3">
             {items.map(item => (
               <div
