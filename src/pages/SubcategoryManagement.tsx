@@ -499,11 +499,11 @@ const SubcategoryManagement = () => {
           {filteredSubcategories.map((subcat) => (
             <Card key={subcat.id} className="hover:shadow-lg transition-shadow">
               {subcat.image_url && (
-                <div className="w-full h-40 overflow-hidden rounded-t-lg">
+                <div className="w-full h-48 overflow-hidden rounded-t-lg bg-muted/30 flex items-center justify-center">
                   <img
                     src={subcat.image_url}
                     alt={subcat.subcategory_name}
-                    className="w-full h-full object-cover"
+                    className="max-w-full max-h-full object-contain"
                   />
                 </div>
               )}
