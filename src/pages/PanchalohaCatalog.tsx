@@ -112,7 +112,10 @@ const PanchalohaCatalog = () => {
 
   const handlePrint = () => {
     setShowPreview(true);
-    setTimeout(() => window.print(), 300);
+  };
+
+  const handleDownload = () => {
+    window.print();
   };
 
   if (loading) {
