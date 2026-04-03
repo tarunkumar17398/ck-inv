@@ -37,6 +37,100 @@ interface MetricCard {
 
 const COLORS = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#FFA07A', '#98D8C8', '#F7DC6F'];
 
+// Custom pie chart label that avoids overlapping
+const renderCustomLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, name, revenue, percent }: any) => {
+  const RADIAN = Math.PI / 180;
+  const radius = outerRadius + 30;
+  const x = cx + radius * Math.cos(-midAngle * RADIAN);
+  const y = cy + radius * Math.sin(-midAngle * RADIAN);
+
+  if (percent < 0.03) return null; // Skip tiny slices
+
+  return (
+    <text
+      x={x}
+      y={y}
+      fill="hsl(var(--foreground))"
+      textAnchor={x > cx ? "start" : "end"}
+      dominantBaseline="central"
+      fontSize={11}
+    >
+      {`${name}: ₹${Number(revenue).toLocaleString("en-IN")}`}
+    </text>
+  );
+};
+
+// Helper to fetch all sold items revenue+count using pagination to bypass 1000-row limit
+const fetchAllSoldItems = async (
+  baseQuery: { table: "items" | "item_pieces"; filters: Record<string, any>; priceField: string }
+) => {
+  const PAGE_SIZE = 1000;
+  let allItems: any[] = [];
+  let from = 0;
+  let hasMore = true;
+
+  while (hasMore) {
+    let query = supabase
+      .from(baseQuery.table)
+      .select(baseQuery.priceField)
+      .range(from, from + PAGE_SIZE - 1);
+
+    for (const [key, value] of Object.entries(baseQuery.filters)) {
+      query = query.eq(key, value);
+    }
+
+    const { data } = await query;
+    if (data && data.length > 0) {
+      allItems = allItems.concat(data);
+      from += PAGE_SIZE;
+      hasMore = data.length === PAGE_SIZE;
+    } else {
+      hasMore = false;
+    }
+  }
+
+  return allItems;
+};
+
+// Helper to fetch sold items with date range filters using pagination
+const fetchSoldItemsWithDateRange = async (
+  table: "items" | "item_pieces",
+  priceField: string,
+  dateField: string,
+  startDate: string,
+  endDate: string,
+  extraFilters: Record<string, any> = {}
+) => {
+  const PAGE_SIZE = 1000;
+  let allItems: any[] = [];
+  let from = 0;
+  let hasMore = true;
+
+  while (hasMore) {
+    let query = supabase
+      .from(table)
+      .select(`${priceField}, ${dateField}`)
+      .gte(dateField, startDate)
+      .lte(dateField, endDate)
+      .range(from, from + PAGE_SIZE - 1);
+
+    for (const [key, value] of Object.entries(extraFilters)) {
+      query = query.eq(key, value);
+    }
+
+    const { data } = await query;
+    if (data && data.length > 0) {
+      allItems = allItems.concat(data);
+      from += PAGE_SIZE;
+      hasMore = data.length === PAGE_SIZE;
+    } else {
+      hasMore = false;
+    }
+  }
+
+  return allItems;
+};
+
 const Reports = () => {
   const [monthlyData, setMonthlyData] = useState<SalesData[]>([]);
   const [categoryData, setCategoryData] = useState<CategorySales[]>([]);
@@ -61,24 +155,31 @@ const Reports = () => {
     setCategories(data || []);
   };
 
+  const getDateRange = (): { startDate: Date; endDate: Date } | null => {
+    if (dateRange === "custom") {
+      if (customStartDate && customEndDate) {
+        return { startDate: customStartDate, endDate: customEndDate };
+      }
+      return null;
+    }
+    const monthsToLoad = dateRange === "3months" ? 3 : dateRange === "6months" ? 6 : 12;
+    return {
+      startDate: subMonths(new Date(), monthsToLoad - 1),
+      endDate: new Date(),
+    };
+  };
+
   const loadReportData = async () => {
     setLoading(true);
     
-    let startDate: Date;
-    let endDate: Date;
-    
-    // Handle custom date range
-    if (dateRange === "custom" && customStartDate && customEndDate) {
-      startDate = customStartDate;
-      endDate = customEndDate;
-    } else {
-      const monthsToLoad = dateRange === "3months" ? 3 : dateRange === "6months" ? 6 : 12;
-      startDate = subMonths(new Date(), monthsToLoad - 1);
-      endDate = new Date();
+    const range = getDateRange();
+    if (!range) {
+      setLoading(false);
+      return;
     }
-    
-    const monthsData: SalesData[] = [];
-    
+
+    const { startDate, endDate } = range;
+
     // Get Panchaloha Idols category ID
     const { data: piCategory } = await supabase
       .from("categories")
@@ -86,159 +187,93 @@ const Reports = () => {
       .eq("name", "Panchaloha Idols")
       .single();
     const piCategoryId = piCategory?.id;
-    
-    // Generate monthly sales data
-    if (dateRange === "custom" && customStartDate && customEndDate) {
-      // For custom range, query once and group by month
-      let itemsQuery = supabase
-        .from("items")
-        .select("sold_price, sold_date, category_id")
-        .eq("status", "sold")
-        .gte("sold_date", customStartDate.toISOString())
-        .lte("sold_date", customEndDate.toISOString());
-      
-      if (selectedCategory !== "all") {
-        itemsQuery = itemsQuery.eq("category_id", selectedCategory);
-      }
-      
-      const { data: soldItems } = await itemsQuery;
-      
-      // Also fetch from item_pieces if Panchaloha is selected or all categories
-      let soldPieces: any[] = [];
-      if (selectedCategory === "all" || selectedCategory === piCategoryId) {
-        const { data: pieces } = await supabase
-          .from("item_pieces")
-          .select("cost_price, date_sold")
-          .eq("status", "sold")
-          .gte("date_sold", customStartDate.toISOString())
-          .lte("date_sold", customEndDate.toISOString());
-        soldPieces = pieces || [];
-      }
-      
-      // Group by month
-      const monthsMap = new Map<string, { revenue: number; count: number }>();
-      
-      soldItems?.forEach((item) => {
-        const month = format(new Date(item.sold_date!), "MMM yyyy");
-        const existing = monthsMap.get(month) || { revenue: 0, count: 0 };
-        monthsMap.set(month, {
-          revenue: existing.revenue + (item.sold_price || 0),
-          count: existing.count + 1,
-        });
+
+    // --- Monthly data ---
+    const monthsData: SalesData[] = [];
+    const periodStartISO = startOfMonth(startDate).toISOString();
+    const periodEndISO = endOfMonth(endDate).toISOString();
+
+    // Fetch all sold items in the period at once (paginated)
+    const itemFilters: Record<string, any> = { status: "sold" };
+    if (selectedCategory !== "all") itemFilters.category_id = selectedCategory;
+
+    const soldItems = await fetchSoldItemsWithDateRange(
+      "items", "sold_price", "sold_date", periodStartISO, periodEndISO, itemFilters
+    );
+
+    // Fetch Panchaloha pieces if needed
+    let soldPieces: any[] = [];
+    if (selectedCategory === "all" || selectedCategory === piCategoryId) {
+      soldPieces = await fetchSoldItemsWithDateRange(
+        "item_pieces", "cost_price", "date_sold", periodStartISO, periodEndISO, { status: "sold" }
+      );
+    }
+
+    // Group by month
+    const monthsMap = new Map<string, { revenue: number; count: number }>();
+
+    soldItems.forEach((item: any) => {
+      if (!item.sold_date) return;
+      const month = format(new Date(item.sold_date), "MMM yyyy");
+      const existing = monthsMap.get(month) || { revenue: 0, count: 0 };
+      monthsMap.set(month, {
+        revenue: existing.revenue + (item.sold_price || 0),
+        count: existing.count + 1,
       });
-      
-      // Add Panchaloha pieces to the same map
-      soldPieces.forEach((piece) => {
-        const month = format(new Date(piece.date_sold!), "MMM yyyy");
-        const existing = monthsMap.get(month) || { revenue: 0, count: 0 };
-        monthsMap.set(month, {
-          revenue: existing.revenue + (piece.cost_price || 0), // Using cost_price as sold_price for pieces
-          count: existing.count + 1,
-        });
+    });
+
+    soldPieces.forEach((piece: any) => {
+      if (!piece.date_sold) return;
+      const month = format(new Date(piece.date_sold), "MMM yyyy");
+      const existing = monthsMap.get(month) || { revenue: 0, count: 0 };
+      monthsMap.set(month, {
+        revenue: existing.revenue + (piece.cost_price || 0),
+        count: existing.count + 1,
       });
-      
+    });
+
+    // Build ordered monthly data
+    if (dateRange === "custom") {
       monthsMap.forEach((value, month) => {
-        monthsData.push({
-          month,
-          sales: value.count,
-          items_sold: value.count,
-          revenue: value.revenue,
-        });
+        monthsData.push({ month, sales: value.count, items_sold: value.count, revenue: value.revenue });
       });
     } else {
-      // Original monthly logic for predefined ranges
       const monthsToLoad = dateRange === "3months" ? 3 : dateRange === "6months" ? 6 : 12;
-      
       for (let i = monthsToLoad - 1; i >= 0; i--) {
         const date = subMonths(new Date(), i);
-        const monthStart = startOfMonth(date);
-        const monthEnd = endOfMonth(date);
-        
-        let itemsQuery = supabase
-          .from("items")
-          .select("sold_price, category_id")
-          .eq("status", "sold")
-          .gte("sold_date", monthStart.toISOString())
-          .lte("sold_date", monthEnd.toISOString());
-        
-        if (selectedCategory !== "all") {
-          itemsQuery = itemsQuery.eq("category_id", selectedCategory);
-        }
-        
-        const { data: soldItems } = await itemsQuery;
-        
-        // Also fetch from item_pieces if Panchaloha is selected or all categories
-        let soldPieces: any[] = [];
-        if (selectedCategory === "all" || selectedCategory === piCategoryId) {
-          const { data: pieces } = await supabase
-            .from("item_pieces")
-            .select("cost_price")
-            .eq("status", "sold")
-            .gte("date_sold", monthStart.toISOString())
-            .lte("date_sold", monthEnd.toISOString());
-          soldPieces = pieces || [];
-        }
-        
-        const itemsRevenue = soldItems?.reduce((sum, item) => sum + (item.sold_price || 0), 0) || 0;
-        const piecesRevenue = soldPieces.reduce((sum, piece) => sum + (piece.cost_price || 0), 0);
-        const revenue = itemsRevenue + piecesRevenue;
-        const totalCount = (soldItems?.length || 0) + soldPieces.length;
-        
-        monthsData.push({
-          month: format(date, "MMM yyyy"),
-          sales: totalCount,
-          items_sold: totalCount,
-          revenue: revenue,
-        });
+        const monthKey = format(date, "MMM yyyy");
+        const value = monthsMap.get(monthKey) || { revenue: 0, count: 0 };
+        monthsData.push({ month: monthKey, sales: value.count, items_sold: value.count, revenue: value.revenue });
       }
     }
-    
+
     setMonthlyData(monthsData);
-    
-    // Load category-wise sales
+
+    // --- Category-wise sales (filtered by date range) ---
     const { data: allCategories } = await supabase.from("categories").select("*");
     const categorySales: CategorySales[] = [];
-    
+
     for (const cat of allCategories || []) {
       if (cat.name === "Panchaloha Idols") {
-        // Fetch from item_pieces for Panchaloha Idols
-        const { data: soldPieces } = await supabase
-          .from("item_pieces")
-          .select("cost_price")
-          .eq("status", "sold");
-        
-        const revenue = soldPieces?.reduce((sum, piece) => sum + (piece.cost_price || 0), 0) || 0;
-        
-        categorySales.push({
-          name: cat.name,
-          total_sales: soldPieces?.length || 0,
-          items_sold: soldPieces?.length || 0,
-          revenue: revenue,
-        });
+        const pieces = await fetchSoldItemsWithDateRange(
+          "item_pieces", "cost_price", "date_sold", periodStartISO, periodEndISO, { status: "sold" }
+        );
+        const revenue = pieces.reduce((sum: number, p: any) => sum + (p.cost_price || 0), 0);
+        categorySales.push({ name: cat.name, total_sales: pieces.length, items_sold: pieces.length, revenue });
       } else {
-        // Fetch from items for other categories
-        const { data: soldItems } = await supabase
-          .from("items")
-          .select("sold_price")
-          .eq("status", "sold")
-          .eq("category_id", cat.id);
-        
-        const revenue = soldItems?.reduce((sum, item) => sum + (item.sold_price || 0), 0) || 0;
-        
-        categorySales.push({
-          name: cat.name,
-          total_sales: soldItems?.length || 0,
-          items_sold: soldItems?.length || 0,
-          revenue: revenue,
-        });
+        const items = await fetchSoldItemsWithDateRange(
+          "items", "sold_price", "sold_date", periodStartISO, periodEndISO, { status: "sold", category_id: cat.id }
+        );
+        const revenue = items.reduce((sum: number, item: any) => sum + (item.sold_price || 0), 0);
+        categorySales.push({ name: cat.name, total_sales: items.length, items_sold: items.length, revenue });
       }
     }
-    
+
     setCategoryData(categorySales.filter(c => c.total_sales > 0));
-    
-    // Calculate key metrics
+
+    // --- Key metrics ---
     await calculateMetrics(monthsData, piCategoryId);
-    
+
     setLoading(false);
   };
 
@@ -246,22 +281,19 @@ const Reports = () => {
     const currentMonth = monthsData[monthsData.length - 1];
     const previousMonth = monthsData[monthsData.length - 2];
     
-    // Total revenue
     const totalRevenue = monthsData.reduce((sum, m) => sum + m.revenue, 0);
     const revenueChange = previousMonth && previousMonth.revenue > 0
       ? ((currentMonth.revenue - previousMonth.revenue) / previousMonth.revenue * 100).toFixed(1)
       : "0";
     
-    // Total items sold
     const totalItemsSold = monthsData.reduce((sum, m) => sum + m.items_sold, 0);
     const itemsChange = previousMonth && previousMonth.items_sold > 0
       ? ((currentMonth.items_sold - previousMonth.items_sold) / previousMonth.items_sold * 100).toFixed(1)
       : "0";
     
-    // Average sale price
     const avgSalePrice = totalItemsSold > 0 ? (totalRevenue / totalItemsSold).toFixed(0) : "0";
     
-    // Current stock count (items + pieces)
+    // Current stock count
     const { count: itemsStockCount } = await supabase
       .from("items")
       .select("*", { count: "exact", head: true })
@@ -274,22 +306,14 @@ const Reports = () => {
     
     const stockCount = (itemsStockCount || 0) + (piecesStockCount || 0);
     
-    // Total stock value (based on cost prices from items + pieces)
-    const { data: stockItems } = await supabase
-      .from("items")
-      .select("cost_price")
-      .eq("status", "in_stock");
+    // Total stock value (paginated fetch)
+    const stockItems = await fetchAllSoldItems({ table: "items", filters: { status: "in_stock" }, priceField: "cost_price" });
+    const stockPieces = await fetchAllSoldItems({ table: "item_pieces", filters: { status: "available" }, priceField: "cost_price" });
     
-    const { data: stockPieces } = await supabase
-      .from("item_pieces")
-      .select("cost_price")
-      .eq("status", "available");
-    
-    const itemsStockValue = stockItems?.reduce((sum, item) => sum + (item.cost_price || 0), 0) || 0;
-    const piecesStockValue = stockPieces?.reduce((sum, piece) => sum + (piece.cost_price || 0), 0) || 0;
-    const stockValue = itemsStockValue + piecesStockValue;
+    const stockValue = stockItems.reduce((sum: number, item: any) => sum + (item.cost_price || 0), 0)
+      + stockPieces.reduce((sum: number, piece: any) => sum + (piece.cost_price || 0), 0);
 
-    // Items sold this month (items + pieces)
+    // Items sold this month
     const startOfThisMonth = new Date();
     startOfThisMonth.setDate(1);
     startOfThisMonth.setHours(0, 0, 0, 0);
@@ -542,7 +566,7 @@ const Reports = () => {
                   <CardDescription>Revenue distribution across categories</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <ResponsiveContainer width="100%" height={300}>
+                  <ResponsiveContainer width="100%" height={350}>
                     <PieChart>
                       <Pie
                         data={categoryData}
@@ -550,14 +574,15 @@ const Reports = () => {
                         nameKey="name"
                         cx="50%"
                         cy="50%"
-                        outerRadius={100}
-                        label={(entry) => `${entry.name}: ₹${entry.revenue}`}
+                        outerRadius={90}
+                        label={renderCustomLabel}
+                        labelLine={true}
                       >
                         {categoryData.map((entry, index) => (
                           <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                         ))}
                       </Pie>
-                      <Tooltip />
+                      <Tooltip formatter={(value: number) => `₹${value.toLocaleString("en-IN")}`} />
                     </PieChart>
                   </ResponsiveContainer>
                 </CardContent>
