@@ -92,14 +92,15 @@ const PanchalohaCatalog = () => {
     const mult = parseFloat(multiplier) || 1;
     setItems(subcats.map(s => {
       const cost = s.default_price ?? 0;
+      const availCount = availCounts[s.id] || 0;
       return {
         id: s.id,
         subcategory_name: s.subcategory_name,
         image_url: s.image_url ?? null,
         height: s.height ?? null,
         default_price: s.default_price ?? null,
-        available_count: availCounts[s.id] || 0,
-        enabled: true,
+        available_count: availCount,
+        enabled: availCount > 0,
         costPrice: cost ? String(cost) : "",
         sellPrice: cost ? String(Math.round(cost * mult)) : "",
       };
