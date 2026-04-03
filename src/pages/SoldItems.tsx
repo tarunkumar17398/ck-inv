@@ -194,12 +194,17 @@ const SoldItems = () => {
         item.item_name.toLowerCase().includes(searchQuery.toLowerCase());
 
       const matchesCategory = 
-        selectedCategory === "all" || 
+        selectedCategory === "all" || selectedCategory === "pending" ||
         item.categories.id === selectedCategory;
 
-      return matchesSearch && matchesCategory;
+      const itemDate = item.sold_date ? new Date(item.sold_date) : null;
+      
+      const matchesDateFrom = !dateFrom || (itemDate && itemDate >= new Date(dateFrom.setHours(0, 0, 0, 0)));
+      const matchesDateTo = !dateTo || (itemDate && itemDate <= new Date(dateTo.setHours(23, 59, 59, 999)));
+
+      return matchesSearch && matchesCategory && matchesDateFrom && matchesDateTo;
     });
-  }, [items, searchQuery, selectedCategory]);
+  }, [items, searchQuery, selectedCategory, dateFrom, dateTo]);
 
   const updateSoldDate = async (itemId: string, newDate: Date, source: 'items' | 'pieces') => {
     if (source === 'items') {
