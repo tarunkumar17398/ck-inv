@@ -185,7 +185,7 @@ const Reports = () => {
     let soldPieces: any[] = [];
     if (selectedCategory === "all" || selectedCategory === piCategoryId) {
       soldPieces = await fetchAllFromTable(
-        "item_pieces", "cost_price, date_sold", { status: "sold" },
+        "item_pieces", "sold_price, cost_price, date_sold", { status: "sold" },
         [{ field: "date_sold", gte: periodStartISO, lte: periodEndISO }]
       );
     }
@@ -208,7 +208,7 @@ const Reports = () => {
       const month = format(new Date(piece.date_sold), "MMM yyyy");
       const existing = monthsMap.get(month) || { revenue: 0, count: 0 };
       monthsMap.set(month, {
-        revenue: existing.revenue + (piece.cost_price || 0),
+        revenue: existing.revenue + (piece.sold_price ?? piece.cost_price ?? 0),
         count: existing.count + 1,
       });
     });
@@ -234,13 +234,18 @@ const Reports = () => {
     const { data: allCategories } = await supabase.from("categories").select("*");
     const categorySales: CategorySales[] = [];
 
-    for (const cat of allCategories || []) {
+    // If a specific category is selected, only show that category in the pie chart
+    const catsToProcess = selectedCategory !== "all" 
+      ? (allCategories || []).filter((c: any) => c.id === selectedCategory)
+      : (allCategories || []);
+
+    for (const cat of catsToProcess) {
       if (cat.name === "Panchaloha Idols") {
         const pieces = await fetchAllFromTable(
-          "item_pieces", "cost_price, date_sold", { status: "sold" },
+          "item_pieces", "sold_price, cost_price, date_sold", { status: "sold" },
           [{ field: "date_sold", gte: periodStartISO, lte: periodEndISO }]
         );
-        const revenue = pieces.reduce((sum: number, p: any) => sum + (p.cost_price || 0), 0);
+        const revenue = pieces.reduce((sum: number, p: any) => sum + (p.sold_price ?? p.cost_price ?? 0), 0);
         categorySales.push({ name: cat.name, total_sales: pieces.length, items_sold: pieces.length, revenue });
       } else {
         const items = await fetchAllFromTable(

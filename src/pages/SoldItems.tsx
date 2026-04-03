@@ -150,7 +150,7 @@ const SoldItems = () => {
               particulars: piece.notes,
               size: null, // Pieces don't have size field
               weight: null, // Pieces don't have weight field
-              sold_price: piece.cost_price, // Using cost_price as sold_price for pieces
+              sold_price: piece.sold_price ?? piece.cost_price, // Prefer actual sold_price, fallback to cost_price
               sold_date: piece.date_sold,
               categories: {
                 id: panchalohaCategory.id,
@@ -314,12 +314,12 @@ const SoldItems = () => {
         return;
       }
     } else {
-      // For pieces, we can only update notes (particulars) and cost_price
+      // For pieces, update notes and sold_price
       const { error } = await supabase
         .from("item_pieces")
         .update({
           notes: editForm.particulars.trim() || null,
-          cost_price: editForm.sold_price ? soldPrice : null,
+          sold_price: editForm.sold_price ? soldPrice : null,
         })
         .eq("id", editingItem.id);
 
@@ -360,6 +360,7 @@ const SoldItems = () => {
           .from("item_pieces")
           .update({
             status: "available",
+            sold_price: null,
             date_sold: null,
           })
           .eq("id", item.id);
