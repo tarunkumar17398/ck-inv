@@ -198,9 +198,12 @@ const SoldItems = () => {
         item.categories.id === selectedCategory;
 
       const itemDate = item.sold_date ? new Date(item.sold_date) : null;
+
+      const fromStart = dateFrom ? new Date(dateFrom.getFullYear(), dateFrom.getMonth(), dateFrom.getDate(), 0, 0, 0) : null;
+      const toEnd = dateTo ? new Date(dateTo.getFullYear(), dateTo.getMonth(), dateTo.getDate(), 23, 59, 59, 999) : null;
       
-      const matchesDateFrom = !dateFrom || (itemDate && itemDate >= new Date(dateFrom.setHours(0, 0, 0, 0)));
-      const matchesDateTo = !dateTo || (itemDate && itemDate <= new Date(dateTo.setHours(23, 59, 59, 999)));
+      const matchesDateFrom = !fromStart || (itemDate && itemDate >= fromStart);
+      const matchesDateTo = !toEnd || (itemDate && itemDate <= toEnd);
 
       return matchesSearch && matchesCategory && matchesDateFrom && matchesDateTo;
     });
