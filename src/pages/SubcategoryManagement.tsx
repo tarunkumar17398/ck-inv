@@ -497,7 +497,7 @@ const SubcategoryManagement = () => {
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {filteredSubcategories.map((subcat) => (
-            <Card key={subcat.id} className="hover:shadow-lg transition-shadow overflow-hidden">
+            <Card key={subcat.id} className={`hover:shadow-lg transition-shadow overflow-hidden ${(subcat.available_count || 0) === 0 ? 'border-destructive bg-destructive/5' : ''}`}>
               <div className="flex">
                 {/* Image on left */}
                 <div className="w-36 h-44 shrink-0 bg-muted/30 flex items-center justify-center overflow-hidden">
@@ -532,16 +532,21 @@ const SubcategoryManagement = () => {
                       </Button>
                     </div>
                   </div>
-                  {(subcat.available_count || 0) < 5 && (
+                  {(subcat.available_count || 0) === 0 ? (
                     <Badge variant="destructive" className="text-[10px] px-1.5 py-0 flex items-center gap-0.5 w-fit mt-1">
+                      <AlertTriangle className="w-2.5 h-2.5" />
+                      No Stock
+                    </Badge>
+                  ) : (subcat.available_count || 0) < 5 ? (
+                    <Badge variant="destructive" className="text-[10px] px-1.5 py-0 flex items-center gap-0.5 w-fit mt-1 bg-orange-500">
                       <AlertTriangle className="w-2.5 h-2.5" />
                       Low Stock
                     </Badge>
-                  )}
+                  ) : null}
                   <div className="flex items-center justify-between mt-1">
                     <div className="flex items-center gap-1.5">
                       <span className="text-muted-foreground text-xs">Available:</span>
-                      <span className="font-bold text-lg text-green-600">{subcat.available_count}</span>
+                      <span className={`font-bold text-lg ${(subcat.available_count || 0) === 0 ? 'text-destructive' : 'text-green-600'}`}>{subcat.available_count}</span>
                     </div>
                     <Button variant="outline" size="sm" className="text-xs h-7 shrink-0" onClick={() => handleViewPieces(subcat.id, subcat.subcategory_name)}>
                       View Pieces
