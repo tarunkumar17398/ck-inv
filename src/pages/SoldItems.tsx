@@ -360,6 +360,7 @@ const SoldItems = () => {
           .from("item_pieces")
           .update({
             status: "available",
+            sold_price: null,
             date_sold: null,
           })
           .eq("id", item.id);

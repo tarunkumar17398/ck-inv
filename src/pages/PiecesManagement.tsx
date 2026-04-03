@@ -75,16 +75,7 @@ const PiecesManagement = () => {
       }
     }
 
-    if (error) {
-      toast({
-        title: "Error loading pieces",
-        description: error.message,
-        variant: "destructive",
-      });
-      return;
-    }
-
-    setPieces(data || []);
+    setPieces(allPieces);
   };
 
   const generateNextPieceCode = async () => {

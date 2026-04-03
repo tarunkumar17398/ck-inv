@@ -257,6 +257,7 @@ const Dashboard = () => {
         .from("item_pieces")
         .update({
           status: "sold",
+          sold_price: parseFloat(soldPrice),
           date_sold: salesDate.toISOString(),
         })
         .eq("id", itemDetails.id);
