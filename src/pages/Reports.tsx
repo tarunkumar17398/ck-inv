@@ -127,6 +127,11 @@ const Reports = () => {
   const loadCategories = async () => {
     const { data } = await supabase.from("categories").select("*").order("name");
     setCategories(data || []);
+    // Auto-select Brass category on first load
+    if (selectedCategory === "all" && data) {
+      const brass = data.find((c: any) => c.prefix === "BR");
+      if (brass) setSelectedCategory(brass.id);
+    }
   };
 
   const getDateRange = (): { startDate: Date; endDate: Date } | null => {
