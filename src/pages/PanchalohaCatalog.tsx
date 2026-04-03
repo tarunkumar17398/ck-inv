@@ -35,6 +35,14 @@ const PanchalohaCatalog = () => {
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
   const isMobile = useIsMobile();
+  const [isTablet, setIsTablet] = useState(false);
+
+  useEffect(() => {
+    const check = () => setIsTablet(window.innerWidth < 1024);
+    check();
+    window.addEventListener("resize", check);
+    return () => window.removeEventListener("resize", check);
+  }, []);
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -369,9 +377,9 @@ const PanchalohaCatalog = () => {
           </Button>
         </div>
 
-        {/* Mobile card layout */}
-        {isMobile ? (
-          <div className="space-y-3">
+        {/* Mobile/Tablet card layout */}
+        {(isMobile || isTablet) ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {items.map(item => (
               <div
                 key={item.id}
