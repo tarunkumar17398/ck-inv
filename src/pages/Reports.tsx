@@ -61,8 +61,11 @@ const renderCustomLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, name, r
 };
 
 // Helper to fetch all sold items revenue+count using pagination to bypass 1000-row limit
-const fetchAllSoldItems = async (
-  baseQuery: { table: "items" | "item_pieces"; filters: Record<string, any>; priceField: string }
+const fetchAllFromTable = async (
+  table: string,
+  selectFields: string,
+  filters: Record<string, any>,
+  rangeFilters?: { field: string; gte?: string; lte?: string }[]
 ) => {
   const PAGE_SIZE = 1000;
   let allItems: any[] = [];
@@ -71,12 +74,19 @@ const fetchAllSoldItems = async (
 
   while (hasMore) {
     let query = supabase
-      .from(baseQuery.table)
-      .select(baseQuery.priceField)
+      .from(table as any)
+      .select(selectFields)
       .range(from, from + PAGE_SIZE - 1);
 
-    for (const [key, value] of Object.entries(baseQuery.filters)) {
+    for (const [key, value] of Object.entries(filters)) {
       query = query.eq(key, value);
+    }
+
+    if (rangeFilters) {
+      for (const rf of rangeFilters) {
+        if (rf.gte) query = query.gte(rf.field, rf.gte);
+        if (rf.lte) query = query.lte(rf.field, rf.lte);
+      }
     }
 
     const { data } = await query;
