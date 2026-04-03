@@ -34,6 +34,7 @@ const PanchalohaCatalog = () => {
   const [showPreview, setShowPreview] = useState(false);
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
+  const isMobile = useIsMobile();
   const navigate = useNavigate();
   const { toast } = useToast();
 
