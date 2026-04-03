@@ -238,8 +238,9 @@ const Reports = () => {
         const revenue = pieces.reduce((sum: number, p: any) => sum + (p.cost_price || 0), 0);
         categorySales.push({ name: cat.name, total_sales: pieces.length, items_sold: pieces.length, revenue });
       } else {
-        const items = await fetchSoldItemsWithDateRange(
-          "items", "sold_price", "sold_date", periodStartISO, periodEndISO, { status: "sold", category_id: cat.id }
+        const items = await fetchAllFromTable(
+          "items", "sold_price, sold_date", { status: "sold", category_id: cat.id },
+          [{ field: "sold_date", gte: periodStartISO, lte: periodEndISO }]
         );
         const revenue = items.reduce((sum: number, item: any) => sum + (item.sold_price || 0), 0);
         categorySales.push({ name: cat.name, total_sales: items.length, items_sold: items.length, revenue });
