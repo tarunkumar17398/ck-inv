@@ -515,7 +515,7 @@ const SubcategoryManagement = () => {
                 <div className="flex-1 p-3 flex flex-col justify-between min-w-0">
                   <div className="flex justify-between items-start gap-1">
                     <div className="min-w-0">
-                      <h3 className="font-semibold text-sm leading-tight truncate">{subcat.subcategory_name}</h3>
+                      <h3 className="font-semibold text-sm leading-tight break-words">{subcat.subcategory_name}</h3>
                       {subcat.height && (
                         <p className="text-xs text-muted-foreground mt-0.5">{subcat.height}</p>
                       )}
