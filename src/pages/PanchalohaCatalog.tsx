@@ -380,9 +380,9 @@ const PanchalohaCatalog = () => {
             </TableHeader>
             <TableBody>
               {items.map(item => (
-                <TableRow key={item.id} className={!item.enabled ? "opacity-50" : ""}>
+                <TableRow key={item.id} className={`${!item.enabled ? "opacity-50" : ""} ${item.available_count === 0 ? "bg-destructive/10" : ""}`}>
                   <TableCell>
-                    <Checkbox checked={item.enabled} onCheckedChange={() => toggleItem(item.id)} />
+                    <Checkbox checked={item.enabled} onCheckedChange={() => toggleItem(item.id)} disabled={item.available_count === 0} />
                   </TableCell>
                   <TableCell>
                     {item.image_url ? (
@@ -392,7 +392,15 @@ const PanchalohaCatalog = () => {
                     )}
                   </TableCell>
                   <TableCell className="font-medium">
-                    {item.subcategory_name} <span className="text-muted-foreground">({item.available_count})</span>
+                    <div className="flex flex-col gap-0.5">
+                      <span>{item.subcategory_name} <span className="text-muted-foreground">({item.available_count})</span></span>
+                      {item.available_count === 0 && (
+                        <Badge variant="destructive" className="text-[10px] px-1.5 py-0 flex items-center gap-0.5 w-fit">
+                          <AlertTriangle className="w-2.5 h-2.5" />
+                          No Stock
+                        </Badge>
+                      )}
+                    </div>
                   </TableCell>
                   <TableCell className="text-muted-foreground">{item.height || "—"}</TableCell>
                   <TableCell>
