@@ -121,8 +121,8 @@ const SubcategoryManagement = () => {
       piece_count: pieceCounts[subcat.id]?.total || 0,
       available_count: pieceCounts[subcat.id]?.available || 0,
       default_price: subcat.default_price ?? null,
-      image_url: (subcat as any).image_url ?? null,
-      height: (subcat as any).height ?? null,
+      image_url: subcat.image_url ?? null,
+      height: subcat.height ?? null,
     }));
 
     setSubcategories(subcatsWithCounts);
@@ -148,7 +148,7 @@ const SubcategoryManagement = () => {
     const imageUrl = `${urlData.publicUrl}?t=${Date.now()}`;
     const { error: updateError } = await supabase
       .from("subcategories")
-      .update({ image_url: imageUrl } as any)
+      .update({ image_url: imageUrl })
       .eq("id", subcatId);
 
     setUploadingId(null);
@@ -187,7 +187,7 @@ const SubcategoryManagement = () => {
       category_id: panchalohaCategory.id,
       subcategory_name: subcategoryName.trim(),
       height: subcategoryHeight.trim() || null,
-    } as any);
+    });
 
     setLoading(false);
     if (error) {
@@ -215,7 +215,7 @@ const SubcategoryManagement = () => {
       .update({
         subcategory_name: editSubcategoryName.trim(),
         height: editSubcategoryHeight.trim() || null,
-      } as any)
+      })
       .eq("id", editingSubcategory.id);
 
     setLoading(false);
