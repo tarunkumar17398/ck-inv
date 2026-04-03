@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { ArrowLeft, Download, Loader2 } from "lucide-react";
+import { ArrowLeft, Download, Eye, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -20,14 +20,16 @@ interface CatalogItem {
   available_count: number;
   enabled: boolean;
   costPrice: string;
+  sellPrice: string;
 }
 
-const ITEMS_PER_PAGE = 6; // 3 cols x 2 rows per A4 page
+const ITEMS_PER_PAGE = 6;
 
 const PanchalohaCatalog = () => {
   const [items, setItems] = useState<CatalogItem[]>([]);
   const [multiplier, setMultiplier] = useState("2.0");
   const [showPrices, setShowPrices] = useState(true);
+  const [showPreview, setShowPreview] = useState(false);
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
   const navigate = useNavigate();
@@ -87,16 +89,21 @@ const PanchalohaCatalog = () => {
       return acc;
     }, {} as Record<string, number>);
 
-    setItems(subcats.map(s => ({
-      id: s.id,
-      subcategory_name: s.subcategory_name,
-      image_url: s.image_url ?? null,
-      height: s.height ?? null,
-      default_price: s.default_price ?? null,
-      available_count: availCounts[s.id] || 0,
-      enabled: true,
-      costPrice: s.default_price != null ? String(s.default_price) : "",
-    })));
+    const mult = parseFloat(multiplier) || 1;
+    setItems(subcats.map(s => {
+      const cost = s.default_price ?? 0;
+      return {
+        id: s.id,
+        subcategory_name: s.subcategory_name,
+        image_url: s.image_url ?? null,
+        height: s.height ?? null,
+        default_price: s.default_price ?? null,
+        available_count: availCounts[s.id] || 0,
+        enabled: true,
+        costPrice: cost ? String(cost) : "",
+        sellPrice: cost ? String(Math.round(cost * mult)) : "",
+      };
+    }));
 
     setLoading(false);
   };
@@ -106,10 +113,23 @@ const PanchalohaCatalog = () => {
   };
 
   const updateCostPrice = (id: string, value: string) => {
-    setItems(prev => prev.map(i => i.id === id ? { ...i, costPrice: value } : i));
+    const mult = parseFloat(multiplier) || 1;
+    const cost = parseFloat(value) || 0;
+    setItems(prev => prev.map(i => i.id === id ? { ...i, costPrice: value, sellPrice: cost ? String(Math.round(cost * mult)) : "" } : i));
   };
 
-  const mult = parseFloat(multiplier) || 1;
+  const updateSellPrice = (id: string, value: string) => {
+    setItems(prev => prev.map(i => i.id === id ? { ...i, sellPrice: value } : i));
+  };
+
+  const applyMultiplier = () => {
+    const mult = parseFloat(multiplier) || 1;
+    setItems(prev => prev.map(i => {
+      const cost = parseFloat(i.costPrice) || 0;
+      return { ...i, sellPrice: cost ? String(Math.round(cost * mult)) : "" };
+    }));
+  };
+
   const enabledItems = items.filter(i => i.enabled);
 
   const loadImageAsBase64 = async (url: string): Promise<string | null> => {
@@ -139,14 +159,12 @@ const PanchalohaCatalog = () => {
       const usableW = pageW - margin * 2;
       const gap = 5;
       const cols = 3;
-      const cardW = (usableW - gap * (cols - 1)) / cols; // ~56.67mm
-      const imgH = cardW * 1.5; // 2:3 ratio
+      const cardW = (usableW - gap * (cols - 1)) / cols;
+      const imgH = cardW * 1.5;
       const detailH = 18;
       const cardH = imgH + detailH;
-      const rows = 2;
       const titleH = 14;
 
-      // Pre-load all images
       const imageCache: Record<string, string | null> = {};
       for (const item of enabledItems) {
         if (item.image_url) {
@@ -158,10 +176,8 @@ const PanchalohaCatalog = () => {
 
       for (let page = 0; page < totalPages; page++) {
         if (page > 0) pdf.addPage();
-
         const pageItems = enabledItems.slice(page * ITEMS_PER_PAGE, (page + 1) * ITEMS_PER_PAGE);
 
-        // Title
         pdf.setFontSize(18);
         pdf.setFont("helvetica", "bold");
         pdf.setTextColor(26, 26, 26);
@@ -176,15 +192,12 @@ const PanchalohaCatalog = () => {
           const x = margin + col * (cardW + gap);
           const y = startY + row * (cardH + gap);
 
-          // Card border
           pdf.setDrawColor(51, 51, 51);
           pdf.setLineWidth(0.7);
           pdf.roundedRect(x, y, cardW, cardH, 2, 2);
 
-          // Image area
           const imgData = imageCache[item.id];
           if (imgData) {
-            // Clip image inside rounded rect top area
             pdf.addImage(imgData, "JPEG", x + 0.5, y + 0.5, cardW - 1, imgH - 1);
           } else {
             pdf.setFillColor(229, 229, 229);
@@ -195,21 +208,14 @@ const PanchalohaCatalog = () => {
             pdf.text("No Image", x + cardW / 2, y + imgH / 2, { align: "center" });
           }
 
-          // Detail area background
           pdf.setFillColor(245, 240, 235);
           pdf.rect(x + 0.35, y + imgH, cardW - 0.7, detailH - 0.35, "F");
 
-          // Bottom border line for detail area (part of card border)
-          // Already handled by roundedRect
-
-          // Name
           pdf.setFontSize(9);
           pdf.setFont("helvetica", "bold");
           pdf.setTextColor(26, 26, 26);
-          const nameText = item.subcategory_name;
-          pdf.text(nameText, x + cardW / 2, y + imgH + 5, { align: "center", maxWidth: cardW - 4 });
+          pdf.text(item.subcategory_name, x + cardW / 2, y + imgH + 5, { align: "center", maxWidth: cardW - 4 });
 
-          // Height
           if (item.height) {
             pdf.setFontSize(7.5);
             pdf.setFont("helvetica", "normal");
@@ -217,19 +223,16 @@ const PanchalohaCatalog = () => {
             pdf.text(`Height: ${item.height}`, x + cardW / 2, y + imgH + 9.5, { align: "center" });
           }
 
-          // Price
-          const cost = parseFloat(item.costPrice) || 0;
-          if (showPrices && cost > 0) {
-            const sellPrice = Math.round(cost * mult);
+          const sell = parseFloat(item.sellPrice) || 0;
+          if (showPrices && sell > 0) {
             pdf.setFontSize(10);
             pdf.setFont("helvetica", "bold");
             pdf.setTextColor(180, 83, 9);
             const priceY = item.height ? y + imgH + 14.5 : y + imgH + 12;
-            pdf.text(`Rs.${sellPrice.toLocaleString("en-IN")}`, x + cardW / 2, priceY, { align: "center" });
+            pdf.text(`Rs.${sell.toLocaleString("en-IN")}`, x + cardW / 2, priceY, { align: "center" });
           }
         }
 
-        // Page number
         pdf.setFontSize(8);
         pdf.setFont("helvetica", "normal");
         pdf.setTextColor(150, 150, 150);
@@ -254,6 +257,71 @@ const PanchalohaCatalog = () => {
     );
   }
 
+  // Preview mode
+  if (showPreview) {
+    return (
+      <div className="min-h-screen bg-muted">
+        <div className="sticky top-0 z-10 bg-card border-b p-4 flex gap-2 items-center shadow-sm">
+          <Button variant="outline" onClick={() => setShowPreview(false)}>
+            <ArrowLeft className="w-4 h-4 mr-2" /> Back to Config
+          </Button>
+          <Button onClick={handleDownloadPDF} disabled={generating}>
+            {generating ? (
+              <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Generating...</>
+            ) : (
+              <><Download className="w-4 h-4 mr-2" /> Download PDF</>
+            )}
+          </Button>
+        </div>
+        <div className="py-8 flex flex-col items-center gap-8">
+          {Array.from({ length: Math.ceil(enabledItems.length / ITEMS_PER_PAGE) }).map((_, pageIdx) => {
+            const pageItems = enabledItems.slice(pageIdx * ITEMS_PER_PAGE, (pageIdx + 1) * ITEMS_PER_PAGE);
+            return (
+              <div
+                key={pageIdx}
+                className="bg-white shadow-lg"
+                style={{ width: '210mm', minHeight: '297mm', padding: '10mm', boxSizing: 'border-box', position: 'relative' }}
+              >
+                <h1 style={{ fontSize: '18px', fontWeight: 700, textAlign: 'center', marginBottom: '12px', color: '#1a1a1a' }}>
+                  Panchaloha Idols - Product Catalog
+                </h1>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '5mm' }}>
+                  {pageItems.map(item => {
+                    const sell = parseFloat(item.sellPrice) || 0;
+                    return (
+                      <div key={item.id} style={{ border: '2.5px solid #333', borderRadius: '8px', overflow: 'hidden' }}>
+                        {item.image_url ? (
+                          <div style={{ aspectRatio: '2/3', overflow: 'hidden' }}>
+                            <img src={item.image_url} alt={item.subcategory_name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                          </div>
+                        ) : (
+                          <div style={{ aspectRatio: '2/3', background: '#e5e5e5', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#999', fontSize: '12px' }}>
+                            No Image
+                          </div>
+                        )}
+                        <div style={{ background: '#f5f0eb', padding: '8px 6px', textAlign: 'center' }}>
+                          <h3 style={{ fontWeight: 600, fontSize: '13px', color: '#1a1a1a', marginBottom: '2px' }}>{item.subcategory_name}</h3>
+                          {item.height && <p style={{ fontSize: '11px', color: '#555', marginBottom: '2px' }}>Height: {item.height}</p>}
+                          {showPrices && sell > 0 && (
+                            <p style={{ fontSize: '14px', fontWeight: 700, color: '#b45309', marginTop: '4px' }}>₹{sell.toLocaleString("en-IN")}</p>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+                <div style={{ position: 'absolute', bottom: '5mm', left: 0, right: 0, textAlign: 'center', fontSize: '10px', color: '#999' }}>
+                  Page {pageIdx + 1} of {Math.ceil(enabledItems.length / ITEMS_PER_PAGE)}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    );
+  }
+
+  // Config mode
   return (
     <div className="min-h-screen bg-background">
       <header className="border-b bg-card shadow-sm">
@@ -279,18 +347,15 @@ const PanchalohaCatalog = () => {
               onChange={(e) => setMultiplier(e.target.value)}
               className="w-24"
             />
-            <span className="text-sm text-muted-foreground">x</span>
+            <Button variant="outline" size="sm" onClick={applyMultiplier}>Apply</Button>
           </div>
           <div className="flex items-center gap-2">
             <Switch checked={showPrices} onCheckedChange={setShowPrices} />
-            <Label>Show Prices in Catalog</Label>
+            <Label>Show Prices</Label>
           </div>
-          <Button onClick={handleDownloadPDF} disabled={enabledItems.length === 0 || generating}>
-            {generating ? (
-              <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Generating...</>
-            ) : (
-              <><Download className="w-4 h-4 mr-2" /> Download PDF ({enabledItems.length} items)</>
-            )}
+          <Button onClick={() => setShowPreview(true)} disabled={enabledItems.length === 0}>
+            <Eye className="w-4 h-4 mr-2" />
+            Preview Catalog ({enabledItems.length} items)
           </Button>
         </div>
 
@@ -307,40 +372,42 @@ const PanchalohaCatalog = () => {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {items.map(item => {
-                const cost = parseFloat(item.costPrice) || 0;
-                const sellPrice = Math.round(cost * mult);
-                return (
-                  <TableRow key={item.id} className={!item.enabled ? "opacity-50" : ""}>
-                    <TableCell>
-                      <Checkbox checked={item.enabled} onCheckedChange={() => toggleItem(item.id)} />
-                    </TableCell>
-                    <TableCell>
-                      {item.image_url ? (
-                        <img src={item.image_url} alt="" className="w-12 h-12 object-cover rounded" />
-                      ) : (
-                        <div className="w-12 h-12 bg-muted rounded flex items-center justify-center text-xs text-muted-foreground">—</div>
-                      )}
-                    </TableCell>
-                    <TableCell className="font-medium">
-                      {item.subcategory_name} <span className="text-muted-foreground">({item.available_count})</span>
-                    </TableCell>
-                    <TableCell className="text-muted-foreground">{item.height || "—"}</TableCell>
-                    <TableCell>
-                      <Input
-                        type="number"
-                        min="0"
-                        value={item.costPrice}
-                        onChange={(e) => updateCostPrice(item.id, e.target.value)}
-                        className="w-28"
-                      />
-                    </TableCell>
-                    <TableCell className="font-semibold">
-                      {cost > 0 ? `₹${sellPrice.toLocaleString("en-IN")}` : "—"}
-                    </TableCell>
-                  </TableRow>
-                );
-              })}
+              {items.map(item => (
+                <TableRow key={item.id} className={!item.enabled ? "opacity-50" : ""}>
+                  <TableCell>
+                    <Checkbox checked={item.enabled} onCheckedChange={() => toggleItem(item.id)} />
+                  </TableCell>
+                  <TableCell>
+                    {item.image_url ? (
+                      <img src={item.image_url} alt="" className="w-12 h-12 object-cover rounded" />
+                    ) : (
+                      <div className="w-12 h-12 bg-muted rounded flex items-center justify-center text-xs text-muted-foreground">—</div>
+                    )}
+                  </TableCell>
+                  <TableCell className="font-medium">
+                    {item.subcategory_name} <span className="text-muted-foreground">({item.available_count})</span>
+                  </TableCell>
+                  <TableCell className="text-muted-foreground">{item.height || "—"}</TableCell>
+                  <TableCell>
+                    <Input
+                      type="number"
+                      min="0"
+                      value={item.costPrice}
+                      onChange={(e) => updateCostPrice(item.id, e.target.value)}
+                      className="w-28"
+                    />
+                  </TableCell>
+                  <TableCell>
+                    <Input
+                      type="number"
+                      min="0"
+                      value={item.sellPrice}
+                      onChange={(e) => updateSellPrice(item.id, e.target.value)}
+                      className="w-28"
+                    />
+                  </TableCell>
+                </TableRow>
+              ))}
             </TableBody>
           </Table>
         </div>
