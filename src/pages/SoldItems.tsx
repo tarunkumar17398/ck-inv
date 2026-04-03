@@ -31,9 +31,11 @@ interface SoldItem {
 const SoldItems = () => {
   const [items, setItems] = useState<SoldItem[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedCategory, setSelectedCategory] = useState<string>("all");
+  const [selectedCategory, setSelectedCategory] = useState<string>("pending");
   const [categories, setCategories] = useState<Array<{ id: string; name: string }>>([]);
   const [editingDateId, setEditingDateId] = useState<string | null>(null);
+  const [dateFrom, setDateFrom] = useState<Date | undefined>(undefined);
+  const [dateTo, setDateTo] = useState<Date | undefined>(undefined);
   const [editingItem, setEditingItem] = useState<SoldItem | null>(null);
   const [editForm, setEditForm] = useState({
     particulars: "",
@@ -52,7 +54,7 @@ const SoldItems = () => {
   const loadCategories = async () => {
     const { data, error } = await supabase
       .from("categories")
-      .select("id, name")
+      .select("id, name, prefix")
       .order("name");
 
     if (error) {
@@ -61,6 +63,12 @@ const SoldItems = () => {
     }
 
     setCategories(data || []);
+    
+    // Default to Brass (BR) category
+    const brassCategory = data?.find(c => c.prefix === "BR");
+    if (brassCategory && selectedCategory === "pending") {
+      setSelectedCategory(brassCategory.id);
+    }
   };
 
   const loadSoldItems = async () => {
@@ -186,12 +194,20 @@ const SoldItems = () => {
         item.item_name.toLowerCase().includes(searchQuery.toLowerCase());
 
       const matchesCategory = 
-        selectedCategory === "all" || 
+        selectedCategory === "all" || selectedCategory === "pending" ||
         item.categories.id === selectedCategory;
 
-      return matchesSearch && matchesCategory;
+      const itemDate = item.sold_date ? new Date(item.sold_date) : null;
+
+      const fromStart = dateFrom ? new Date(dateFrom.getFullYear(), dateFrom.getMonth(), dateFrom.getDate(), 0, 0, 0) : null;
+      const toEnd = dateTo ? new Date(dateTo.getFullYear(), dateTo.getMonth(), dateTo.getDate(), 23, 59, 59, 999) : null;
+      
+      const matchesDateFrom = !fromStart || (itemDate && itemDate >= fromStart);
+      const matchesDateTo = !toEnd || (itemDate && itemDate <= toEnd);
+
+      return matchesSearch && matchesCategory && matchesDateFrom && matchesDateTo;
     });
-  }, [items, searchQuery, selectedCategory]);
+  }, [items, searchQuery, selectedCategory, dateFrom, dateTo]);
 
   const updateSoldDate = async (itemId: string, newDate: Date, source: 'items' | 'pieces') => {
     if (source === 'items') {
@@ -382,7 +398,7 @@ const SoldItems = () => {
 
         {/* Search and Filter Section */}
         <div className="bg-card rounded-lg border shadow-sm p-4 mb-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
@@ -393,7 +409,7 @@ const SoldItems = () => {
               />
             </div>
             <div className="flex items-center gap-2">
-              <Filter className="h-4 w-4 text-muted-foreground" />
+              <Filter className="h-4 w-4 text-muted-foreground flex-shrink-0" />
               <Select value={selectedCategory} onValueChange={setSelectedCategory}>
                 <SelectTrigger>
                   <SelectValue placeholder="Filter by category" />
@@ -408,9 +424,67 @@ const SoldItems = () => {
                 </SelectContent>
               </Select>
             </div>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  className={cn(
+                    "justify-start text-left font-normal",
+                    !dateFrom && "text-muted-foreground"
+                  )}
+                >
+                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  {dateFrom ? format(dateFrom, "MMM dd, yyyy") : "From date"}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <Calendar
+                  mode="single"
+                  selected={dateFrom}
+                  onSelect={setDateFrom}
+                  initialFocus
+                  className={cn("p-3 pointer-events-auto")}
+                />
+              </PopoverContent>
+            </Popover>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  className={cn(
+                    "justify-start text-left font-normal",
+                    !dateTo && "text-muted-foreground"
+                  )}
+                >
+                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  {dateTo ? format(dateTo, "MMM dd, yyyy") : "To date"}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <Calendar
+                  mode="single"
+                  selected={dateTo}
+                  onSelect={setDateTo}
+                  initialFocus
+                  className={cn("p-3 pointer-events-auto")}
+                />
+              </PopoverContent>
+            </Popover>
           </div>
-          <div className="mt-2 text-sm text-muted-foreground">
-            Showing {filteredItems.length} of {items.length} sold items
+          <div className="mt-2 flex items-center justify-between">
+            <span className="text-sm text-muted-foreground">
+              Showing {filteredItems.length} of {items.length} sold items
+            </span>
+            {(dateFrom || dateTo) && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => { setDateFrom(undefined); setDateTo(undefined); }}
+                className="text-muted-foreground"
+              >
+                Clear dates
+              </Button>
+            )}
           </div>
         </div>
 
