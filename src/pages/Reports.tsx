@@ -185,7 +185,7 @@ const Reports = () => {
     let soldPieces: any[] = [];
     if (selectedCategory === "all" || selectedCategory === piCategoryId) {
       soldPieces = await fetchAllFromTable(
-        "item_pieces", "cost_price, date_sold", { status: "sold" },
+        "item_pieces", "sold_price, cost_price, date_sold", { status: "sold" },
         [{ field: "date_sold", gte: periodStartISO, lte: periodEndISO }]
       );
     }
