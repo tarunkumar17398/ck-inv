@@ -532,8 +532,8 @@ const SubcategoryManagement = () => {
                       </Button>
                     </div>
                   </div>
-                  <div className="flex items-center justify-between mt-2">
-                    <div className="flex items-center gap-2">
+                  <div className="flex flex-wrap items-center justify-between mt-2 gap-1">
+                    <div className="flex items-center gap-1.5">
                       <span className="text-muted-foreground text-xs">Available:</span>
                       <span className="font-bold text-lg text-green-600">{subcat.available_count}</span>
                       {(subcat.available_count || 0) < 5 && (
@@ -543,7 +543,7 @@ const SubcategoryManagement = () => {
                         </Badge>
                       )}
                     </div>
-                    <Button variant="outline" size="sm" className="text-xs h-7" onClick={() => handleViewPieces(subcat.id, subcat.subcategory_name)}>
+                    <Button variant="outline" size="sm" className="text-xs h-7 shrink-0" onClick={() => handleViewPieces(subcat.id, subcat.subcategory_name)}>
                       View Pieces
                     </Button>
                   </div>
