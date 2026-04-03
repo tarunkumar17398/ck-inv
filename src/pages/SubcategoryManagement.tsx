@@ -215,7 +215,7 @@ const SubcategoryManagement = () => {
       .update({
         subcategory_name: editSubcategoryName.trim(),
         height: editSubcategoryHeight.trim() || null,
-      } as any)
+      })
       .eq("id", editingSubcategory.id);
 
     setLoading(false);
