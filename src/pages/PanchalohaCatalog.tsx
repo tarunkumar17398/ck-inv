@@ -133,37 +133,49 @@ const PanchalohaCatalog = () => {
           @media print {
             body * { visibility: hidden; }
             #catalog-print, #catalog-print * { visibility: visible; }
-            #catalog-print { position: absolute; left: 0; top: 0; width: 100%; }
+            #catalog-print {
+              position: absolute; left: 0; top: 0;
+              width: 210mm;
+              margin: 0;
+              padding: 10mm;
+              box-sizing: border-box;
+            }
+            .no-print { display: none !important; }
+            @page { size: A4 portrait; margin: 0; }
           }
         `}</style>
-        <div className="p-4 print:hidden">
+        <div className="p-4 no-print flex gap-2">
           <Button variant="outline" onClick={() => setShowPreview(false)}>
             <ArrowLeft className="w-4 h-4 mr-2" /> Back to Config
           </Button>
-          <Button className="ml-2" onClick={() => window.print()}>
-            <Printer className="w-4 h-4 mr-2" /> Print
+          <Button onClick={handleDownload}>
+            <Printer className="w-4 h-4 mr-2" /> Print / Download PDF
           </Button>
         </div>
-        <div id="catalog-print" className="p-8">
-          <h1 className="text-2xl font-bold text-center mb-8">Panchaloha Idols - Product Catalog</h1>
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-6">
+        <div id="catalog-print" className="mx-auto bg-white" style={{ width: '210mm', padding: '10mm', boxSizing: 'border-box' }}>
+          <h1 className="text-2xl font-bold text-center mb-6" style={{ color: '#1a1a1a' }}>Panchaloha Idols - Product Catalog</h1>
+          <div className="grid grid-cols-3 gap-4">
             {enabledItems.map(item => {
               const cost = parseFloat(item.costPrice) || 0;
               const sellPrice = Math.round(cost * mult);
               return (
-                <div key={item.id} className="border rounded-lg p-4 text-center">
+                <div key={item.id} className="text-center overflow-hidden" style={{ border: '2.5px solid #333', borderRadius: '8px' }}>
                   {item.image_url ? (
-                    <img src={item.image_url} alt={item.subcategory_name} className="w-full h-48 object-cover rounded mb-3" />
+                    <div style={{ aspectRatio: '2/3', overflow: 'hidden' }}>
+                      <img src={item.image_url} alt={item.subcategory_name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    </div>
                   ) : (
-                    <div className="w-full h-48 bg-muted rounded mb-3 flex items-center justify-center text-muted-foreground text-sm">
+                    <div style={{ aspectRatio: '2/3', background: '#e5e5e5', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#999', fontSize: '12px' }}>
                       No Image
                     </div>
                   )}
-                  <h3 className="font-semibold text-lg">{item.subcategory_name}</h3>
-                  {item.height && <p className="text-sm text-muted-foreground">Height: {item.height}</p>}
-                  {showPrices && cost > 0 && (
-                    <p className="text-lg font-bold mt-2 text-primary">₹{sellPrice.toLocaleString("en-IN")}</p>
-                  )}
+                  <div style={{ background: '#f5f0eb', padding: '8px 6px' }}>
+                    <h3 style={{ fontWeight: 600, fontSize: '13px', color: '#1a1a1a', marginBottom: '2px' }}>{item.subcategory_name}</h3>
+                    {item.height && <p style={{ fontSize: '11px', color: '#555', marginBottom: '2px' }}>Height: {item.height}</p>}
+                    {showPrices && cost > 0 && (
+                      <p style={{ fontSize: '14px', fontWeight: 700, color: '#b45309', marginTop: '4px' }}>₹{sellPrice.toLocaleString("en-IN")}</p>
+                    )}
+                  </div>
                 </div>
               );
             })}
