@@ -232,21 +232,27 @@ export type Database = {
           category_id: string
           created_at: string
           default_price: number | null
+          height: string | null
           id: string
+          image_url: string | null
           subcategory_name: string
         }
         Insert: {
           category_id: string
           created_at?: string
           default_price?: number | null
+          height?: string | null
           id?: string
+          image_url?: string | null
           subcategory_name: string
         }
         Update: {
           category_id?: string
           created_at?: string
           default_price?: number | null
+          height?: string | null
           id?: string
+          image_url?: string | null
           subcategory_name?: string
         }
         Relationships: [

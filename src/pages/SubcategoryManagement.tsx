@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { ArrowLeft, Plus, Edit, Trash2, AlertTriangle, Search, Download, Filter, IndianRupee } from "lucide-react";
+import { ArrowLeft, Plus, Edit, Trash2, AlertTriangle, Search, Download, Filter, IndianRupee, Camera, BookOpen } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -18,6 +18,8 @@ interface Subcategory {
   piece_count?: number;
   available_count?: number;
   default_price?: number | null;
+  image_url?: string | null;
+  height?: string | null;
 }
 
 const SubcategoryManagement = () => {
@@ -26,14 +28,19 @@ const SubcategoryManagement = () => {
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [subcategoryName, setSubcategoryName] = useState("");
+  const [subcategoryHeight, setSubcategoryHeight] = useState("");
   const [editingSubcategory, setEditingSubcategory] = useState<Subcategory | null>(null);
   const [editSubcategoryName, setEditSubcategoryName] = useState("");
+  const [editSubcategoryHeight, setEditSubcategoryHeight] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   const [showLowStockOnly, setShowLowStockOnly] = useState(false);
   const [showPriceDialog, setShowPriceDialog] = useState(false);
   const [priceUpdates, setPriceUpdates] = useState<Record<string, string>>({});
   const [savingPrices, setSavingPrices] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [uploadingId, setUploadingId] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const uploadTargetId = useRef<string | null>(null);
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -42,7 +49,6 @@ const SubcategoryManagement = () => {
   }, []);
 
   const loadPanchalohaCategory = async () => {
-    // Find Panchaloha Idols category
     const { data: category, error } = await supabase
       .from("categories")
       .select("*")
@@ -50,20 +56,11 @@ const SubcategoryManagement = () => {
       .maybeSingle();
 
     if (error) {
-      toast({
-        title: "Error loading category",
-        description: error.message,
-        variant: "destructive",
-      });
+      toast({ title: "Error loading category", description: error.message, variant: "destructive" });
       return;
     }
-
     if (!category) {
-      toast({
-        title: "Category not found",
-        description: "Panchaloha Idols category not found",
-        variant: "destructive",
-      });
+      toast({ title: "Category not found", description: "Panchaloha Idols category not found", variant: "destructive" });
       return;
     }
 
@@ -79,11 +76,7 @@ const SubcategoryManagement = () => {
       .order("subcategory_name");
 
     if (error) {
-      toast({
-        title: "Error loading subcategories",
-        description: error.message,
-        variant: "destructive",
-      });
+      toast({ title: "Error loading subcategories", description: error.message, variant: "destructive" });
       return;
     }
 
@@ -92,7 +85,6 @@ const SubcategoryManagement = () => {
       return;
     }
 
-    // Fetch ALL pieces using pagination to avoid 1000-row limit
     const subcategoryIds = subcats.map(s => s.id);
     let allPieces: { subcategory_id: string; status: string }[] = [];
     let from = 0;
@@ -107,11 +99,7 @@ const SubcategoryManagement = () => {
         .range(from, from + pageSize - 1);
 
       if (piecesError) {
-        toast({
-          title: "Error loading piece counts",
-          description: piecesError.message,
-          variant: "destructive",
-        });
+        toast({ title: "Error loading piece counts", description: piecesError.message, variant: "destructive" });
         setSubcategories(subcats.map(s => ({ ...s, piece_count: 0, available_count: 0 })));
         return;
       }
@@ -121,141 +109,144 @@ const SubcategoryManagement = () => {
       from += pageSize;
     }
 
-    // Count pieces in memory
     const pieceCounts = allPieces.reduce((acc, piece) => {
-      if (!acc[piece.subcategory_id]) {
-        acc[piece.subcategory_id] = { total: 0, available: 0 };
-      }
+      if (!acc[piece.subcategory_id]) acc[piece.subcategory_id] = { total: 0, available: 0 };
       acc[piece.subcategory_id].total++;
-      if (piece.status === "available") {
-        acc[piece.subcategory_id].available++;
-      }
+      if (piece.status === "available") acc[piece.subcategory_id].available++;
       return acc;
     }, {} as Record<string, { total: number; available: number }>);
 
-    // Attach counts to subcategories
     const subcatsWithCounts = subcats.map(subcat => ({
       ...subcat,
       piece_count: pieceCounts[subcat.id]?.total || 0,
       available_count: pieceCounts[subcat.id]?.available || 0,
       default_price: subcat.default_price ?? null,
+      image_url: (subcat as any).image_url ?? null,
+      height: (subcat as any).height ?? null,
     }));
 
     setSubcategories(subcatsWithCounts);
   };
 
-  const handleAddSubcategory = async () => {
-    if (!subcategoryName.trim()) {
-      toast({
-        title: "Missing field",
-        description: "Please enter a subcategory name",
-        variant: "destructive",
-      });
+  const handleImageUpload = async (file: File, subcatId: string) => {
+    setUploadingId(subcatId);
+    const ext = file.name.split('.').pop();
+    const filePath = `${subcatId}.${ext}`;
+
+    const { error: uploadError } = await supabase.storage
+      .from("subcategory-images")
+      .upload(filePath, file, { upsert: true });
+
+    if (uploadError) {
+      toast({ title: "Upload failed", description: uploadError.message, variant: "destructive" });
+      setUploadingId(null);
       return;
     }
 
-    if (!panchalohaCategory) return;
+    const { data: urlData } = supabase.storage.from("subcategory-images").getPublicUrl(filePath);
 
+    const imageUrl = `${urlData.publicUrl}?t=${Date.now()}`;
+    const { error: updateError } = await supabase
+      .from("subcategories")
+      .update({ image_url: imageUrl } as any)
+      .eq("id", subcatId);
+
+    setUploadingId(null);
+
+    if (updateError) {
+      toast({ title: "Error saving image URL", description: updateError.message, variant: "destructive" });
+      return;
+    }
+
+    toast({ title: "Image uploaded", description: "Photo updated successfully" });
+    if (panchalohaCategory) loadSubcategories(panchalohaCategory.id);
+  };
+
+  const triggerImageUpload = (subcatId: string) => {
+    uploadTargetId.current = subcatId;
+    fileInputRef.current?.click();
+  };
+
+  const onFileSelected = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file && uploadTargetId.current) {
+      handleImageUpload(file, uploadTargetId.current);
+    }
+    e.target.value = "";
+  };
+
+  const handleAddSubcategory = async () => {
+    if (!subcategoryName.trim()) {
+      toast({ title: "Missing field", description: "Please enter a subcategory name", variant: "destructive" });
+      return;
+    }
+    if (!panchalohaCategory) return;
     setLoading(true);
 
     const { error } = await supabase.from("subcategories").insert({
       category_id: panchalohaCategory.id,
       subcategory_name: subcategoryName.trim(),
-    });
+      height: subcategoryHeight.trim() || null,
+    } as any);
 
     setLoading(false);
-
     if (error) {
-      toast({
-        title: "Error adding subcategory",
-        description: error.message,
-        variant: "destructive",
-      });
+      toast({ title: "Error adding subcategory", description: error.message, variant: "destructive" });
       return;
     }
 
-    toast({
-      title: "Subcategory added",
-      description: `${subcategoryName} added successfully`,
-    });
-
+    toast({ title: "Subcategory added", description: `${subcategoryName} added successfully` });
     setSubcategoryName("");
+    setSubcategoryHeight("");
     setShowAddDialog(false);
     loadSubcategories(panchalohaCategory.id);
   };
 
   const handleEditSubcategory = async () => {
     if (!editSubcategoryName.trim()) {
-      toast({
-        title: "Missing field",
-        description: "Please enter a subcategory name",
-        variant: "destructive",
-      });
+      toast({ title: "Missing field", description: "Please enter a subcategory name", variant: "destructive" });
       return;
     }
-
     if (!editingSubcategory) return;
-
     setLoading(true);
 
     const { error } = await supabase
       .from("subcategories")
-      .update({ subcategory_name: editSubcategoryName.trim() })
+      .update({
+        subcategory_name: editSubcategoryName.trim(),
+        height: editSubcategoryHeight.trim() || null,
+      } as any)
       .eq("id", editingSubcategory.id);
 
     setLoading(false);
-
     if (error) {
-      toast({
-        title: "Error updating subcategory",
-        description: error.message,
-        variant: "destructive",
-      });
+      toast({ title: "Error updating subcategory", description: error.message, variant: "destructive" });
       return;
     }
 
-    toast({
-      title: "Subcategory updated",
-      description: `Updated to ${editSubcategoryName}`,
-    });
-
+    toast({ title: "Subcategory updated", description: `Updated to ${editSubcategoryName}` });
     setShowEditDialog(false);
     setEditingSubcategory(null);
     setEditSubcategoryName("");
-    if (panchalohaCategory) {
-      loadSubcategories(panchalohaCategory.id);
-    }
+    setEditSubcategoryHeight("");
+    if (panchalohaCategory) loadSubcategories(panchalohaCategory.id);
   };
 
   const handleDeleteSubcategory = async (subcatId: string, name: string) => {
-    if (!confirm(`Are you sure you want to delete "${name}"? This will also delete all associated pieces.`)) {
-      return;
-    }
-
+    if (!confirm(`Are you sure you want to delete "${name}"? This will also delete all associated pieces.`)) return;
     const { error } = await supabase.from("subcategories").delete().eq("id", subcatId);
-
     if (error) {
-      toast({
-        title: "Error deleting subcategory",
-        description: error.message,
-        variant: "destructive",
-      });
+      toast({ title: "Error deleting subcategory", description: error.message, variant: "destructive" });
       return;
     }
-
-    toast({
-      title: "Subcategory deleted",
-      description: `${name} deleted successfully`,
-    });
-
-    if (panchalohaCategory) {
-      loadSubcategories(panchalohaCategory.id);
-    }
+    toast({ title: "Subcategory deleted", description: `${name} deleted successfully` });
+    if (panchalohaCategory) loadSubcategories(panchalohaCategory.id);
   };
 
   const openEditDialog = (subcat: Subcategory) => {
     setEditingSubcategory(subcat);
     setEditSubcategoryName(subcat.subcategory_name);
+    setEditSubcategoryHeight(subcat.height || "");
     setShowEditDialog(true);
   };
 
@@ -297,11 +288,9 @@ const SubcategoryManagement = () => {
       const newPriceStr = priceUpdates[subcat.id];
       const newPrice = newPriceStr ? parseFloat(newPriceStr) : null;
       const oldPrice = subcat.default_price ?? null;
-
       if (newPrice === oldPrice) continue;
       if (newPriceStr === "" && oldPrice === null) continue;
 
-      // Update subcategory default_price
       const { error: subError } = await supabase
         .from("subcategories")
         .update({ default_price: newPrice })
@@ -312,7 +301,6 @@ const SubcategoryManagement = () => {
         continue;
       }
 
-      // Bulk update all pieces' cost_price
       const { error: piecesError } = await supabase
         .from("item_pieces")
         .update({ cost_price: newPrice })
@@ -337,8 +325,19 @@ const SubcategoryManagement = () => {
     }
   };
 
+  const filteredSubcategories = subcategories
+    .filter((subcat) => subcat.subcategory_name.toLowerCase().includes(searchQuery.toLowerCase()))
+    .filter((subcat) => !showLowStockOnly || (subcat.available_count || 0) < 5);
+
   return (
     <div className="min-h-screen bg-background">
+      <input
+        type="file"
+        ref={fileInputRef}
+        className="hidden"
+        accept="image/*"
+        onChange={onFileSelected}
+      />
       <header className="border-b bg-card shadow-sm">
         <div className="container mx-auto px-4 py-4">
           <Button variant="ghost" size="sm" onClick={() => navigate("/dashboard")}>
@@ -349,11 +348,11 @@ const SubcategoryManagement = () => {
       </header>
 
       <main className="container mx-auto px-4 py-8">
-        <div className="flex justify-between items-center mb-6">
+        <div className="flex justify-between items-center mb-6 flex-wrap gap-2">
           <h1 className="text-3xl font-bold text-foreground">
             Panchaloha Idols - Subcategories
           </h1>
-          <div className="flex gap-2">
+          <div className="flex gap-2 flex-wrap">
             <Button
               variant={showLowStockOnly ? "destructive" : "outline"}
               onClick={() => setShowLowStockOnly(!showLowStockOnly)}
@@ -369,36 +368,44 @@ const SubcategoryManagement = () => {
               <IndianRupee className="w-4 h-4 mr-2" />
               Price Update
             </Button>
+            <Button variant="outline" onClick={() => navigate("/panchaloha-catalog")}>
+              <BookOpen className="w-4 h-4 mr-2" />
+              Create Catalog
+            </Button>
             <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
               <DialogTrigger asChild>
                 <Button>
                   <Plus className="w-4 h-4 mr-2" />
                   Add Subcategory
                 </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Add New Subcategory</DialogTitle>
-              </DialogHeader>
-              <div className="space-y-4 pt-4">
-                <div>
-                  <Label>Subcategory Name *</Label>
-                  <Input
-                    placeholder="e.g., Nataraja, Lakshmi, Hanuman"
-                    value={subcategoryName}
-                    onChange={(e) => setSubcategoryName(e.target.value)}
-                  />
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Add New Subcategory</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-4 pt-4">
+                  <div>
+                    <Label>Subcategory Name *</Label>
+                    <Input
+                      placeholder="e.g., Nataraja, Lakshmi, Hanuman"
+                      value={subcategoryName}
+                      onChange={(e) => setSubcategoryName(e.target.value)}
+                    />
+                  </div>
+                  <div>
+                    <Label>Height</Label>
+                    <Input
+                      placeholder="e.g., 6 inch, 12 inch"
+                      value={subcategoryHeight}
+                      onChange={(e) => setSubcategoryHeight(e.target.value)}
+                    />
+                  </div>
+                  <Button onClick={handleAddSubcategory} disabled={loading} className="w-full">
+                    {loading ? "Adding..." : "Add Subcategory"}
+                  </Button>
                 </div>
-                <Button
-                  onClick={handleAddSubcategory}
-                  disabled={loading}
-                  className="w-full"
-                >
-                  {loading ? "Adding..." : "Add Subcategory"}
-                </Button>
-              </div>
-            </DialogContent>
-          </Dialog>
+              </DialogContent>
+            </Dialog>
           </div>
         </div>
 
@@ -416,11 +423,15 @@ const SubcategoryManagement = () => {
                   onChange={(e) => setEditSubcategoryName(e.target.value)}
                 />
               </div>
-              <Button
-                onClick={handleEditSubcategory}
-                disabled={loading}
-                className="w-full"
-              >
+              <div>
+                <Label>Height</Label>
+                <Input
+                  placeholder="e.g., 6 inch, 12 inch"
+                  value={editSubcategoryHeight}
+                  onChange={(e) => setEditSubcategoryHeight(e.target.value)}
+                />
+              </div>
+              <Button onClick={handleEditSubcategory} disabled={loading} className="w-full">
                 {loading ? "Updating..." : "Update Subcategory"}
               </Button>
             </div>
@@ -485,29 +496,38 @@ const SubcategoryManagement = () => {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {subcategories
-            .filter((subcat) =>
-              subcat.subcategory_name.toLowerCase().includes(searchQuery.toLowerCase())
-            )
-            .filter((subcat) => !showLowStockOnly || (subcat.available_count || 0) < 5)
-            .map((subcat) => (
+          {filteredSubcategories.map((subcat) => (
             <Card key={subcat.id} className="hover:shadow-lg transition-shadow">
+              {subcat.image_url && (
+                <div className="w-full h-40 overflow-hidden rounded-t-lg">
+                  <img
+                    src={subcat.image_url}
+                    alt={subcat.subcategory_name}
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+              )}
               <CardHeader>
                 <CardTitle className="flex justify-between items-start gap-2">
-                  <span>{subcat.subcategory_name}</span>
+                  <div>
+                    <span>{subcat.subcategory_name}</span>
+                    {subcat.height && (
+                      <p className="text-sm font-normal text-muted-foreground mt-1">Height: {subcat.height}</p>
+                    )}
+                  </div>
                   <div className="flex gap-1">
                     <Button
                       variant="ghost"
                       size="sm"
-                      onClick={() => openEditDialog(subcat)}
+                      onClick={() => triggerImageUpload(subcat.id)}
+                      disabled={uploadingId === subcat.id}
                     >
+                      <Camera className="w-4 h-4 text-muted-foreground" />
+                    </Button>
+                    <Button variant="ghost" size="sm" onClick={() => openEditDialog(subcat)}>
                       <Edit className="w-4 h-4 text-primary" />
                     </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleDeleteSubcategory(subcat.id, subcat.subcategory_name)}
-                    >
+                    <Button variant="ghost" size="sm" onClick={() => handleDeleteSubcategory(subcat.id, subcat.subcategory_name)}>
                       <Trash2 className="w-4 h-4 text-destructive" />
                     </Button>
                   </div>
@@ -526,11 +546,7 @@ const SubcategoryManagement = () => {
                   <p className="text-muted-foreground">
                     Available: <span className="font-bold text-lg text-green-600">{subcat.available_count}</span>
                   </p>
-                  <Button
-                    variant="outline"
-                    className="w-full"
-                    onClick={() => handleViewPieces(subcat.id, subcat.subcategory_name)}
-                  >
+                  <Button variant="outline" className="w-full" onClick={() => handleViewPieces(subcat.id, subcat.subcategory_name)}>
                     View Pieces
                   </Button>
                 </div>
@@ -539,9 +555,7 @@ const SubcategoryManagement = () => {
           ))}
         </div>
 
-        {subcategories.filter((subcat) =>
-          subcat.subcategory_name.toLowerCase().includes(searchQuery.toLowerCase())
-        ).filter((subcat) => !showLowStockOnly || (subcat.available_count || 0) < 5).length === 0 && (
+        {filteredSubcategories.length === 0 && (
           <Card className="p-8 text-center col-span-full">
             <p className="text-muted-foreground">
               {searchQuery ? `No subcategories found matching "${searchQuery}"` : showLowStockOnly ? "No low stock subcategories found." : "No subcategories found. Add your first subcategory to get started."}
