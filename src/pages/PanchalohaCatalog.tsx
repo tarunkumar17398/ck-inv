@@ -379,7 +379,7 @@ const PanchalohaCatalog = () => {
 
         {/* Mobile/Tablet card layout */}
         {(isMobile || isTablet) ? (
-          <div className="space-y-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {items.map(item => (
               <div
                 key={item.id}
