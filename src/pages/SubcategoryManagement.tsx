@@ -503,8 +503,9 @@ const SubcategoryManagement = () => {
                 <div className="w-36 h-44 shrink-0 bg-muted/30 flex items-center justify-center overflow-hidden">
                   {subcat.image_url ? (
                     <img
-                      src={subcat.image_url}
+                      src={subcat.image_url.split('?')[0]}
                       alt={subcat.subcategory_name}
+                      loading="lazy"
                       className="w-full h-full object-contain"
                     />
                   ) : (
