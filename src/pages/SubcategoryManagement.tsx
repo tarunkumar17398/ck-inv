@@ -258,9 +258,9 @@ const SubcategoryManagement = () => {
     const filtered = subcategories.filter((s) =>
       s.subcategory_name.toLowerCase().includes(searchQuery.toLowerCase())
     );
-    const csvRows = ["S.No,Subcategory Name,Available Qty"];
+    const csvRows = ["S.No,Subcategory Name,Height,Price,Available Qty"];
     filtered.forEach((s, i) => {
-      csvRows.push(`${i + 1},"${s.subcategory_name}",${s.available_count || 0}`);
+      csvRows.push(`${i + 1},"${s.subcategory_name}","${s.height || ''}",${s.default_price != null ? s.default_price : ''},${s.available_count || 0}`);
     });
     const blob = new Blob([csvRows.join("\n")], { type: "text/csv" });
     const url = URL.createObjectURL(blob);
