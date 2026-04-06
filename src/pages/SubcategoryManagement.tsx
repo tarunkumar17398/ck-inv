@@ -145,7 +145,7 @@ const SubcategoryManagement = () => {
 
     const { data: urlData } = supabase.storage.from("subcategory-images").getPublicUrl(filePath);
 
-    const imageUrl = `${urlData.publicUrl}?t=${Date.now()}`;
+    const imageUrl = urlData.publicUrl;
     const { error: updateError } = await supabase
       .from("subcategories")
       .update({ image_url: imageUrl })
