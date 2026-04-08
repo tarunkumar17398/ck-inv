@@ -31,6 +31,7 @@ interface Subcategory {
   id: string;
   subcategory_name: string;
   default_price: number | null;
+  height: string | null;
 }
 
 const AddItem = () => {
