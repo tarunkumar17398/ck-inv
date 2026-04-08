@@ -155,6 +155,21 @@ const ExportData = () => {
     }
   };
 
+  const getRowValues = (item: Item) => {
+    const t = columnToggles;
+    return [
+      t.itemCode ? item.item_code : "",
+      t.itemName ? (item.item_name || "") : "",
+      t.size ? (item.size || "") : "",
+      t.weight1 ? (item.weight || "") : "",
+      t.weightCKBR ? (item.weight ? formatWeightLabel(item.weight) : "") : "",
+      t.sno ? "S.No:" : "",
+      t.barcode ? item.item_code : "",
+      t.price ? (item.price ? formatPriceLabel(item.price) : "") : "",
+      t.o ? "O" : "",
+    ];
+  };
+
   const downloadFilteredAsCSV = () => {
     const filteredItems = items.filter(item => item.item_code.toLowerCase().includes(searchQuery.toLowerCase()));
     
@@ -168,17 +183,7 @@ const ExportData = () => {
     }
 
     const headers = ["ITEM CODE", "ITEM NAME", "SIZE", "Weight (g)", "Weight (CKBR)", "Sno", "Barcode", "Price", "O"];
-    const rows = filteredItems.map(item => [
-      item.item_code,
-      item.item_name || "",
-      item.size || "",
-      item.weight || "",
-      item.weight ? formatWeightLabel(item.weight) : "",
-      `S.No:`,
-      item.item_code,
-      item.price ? formatPriceLabel(item.price) : "",
-      "O"
-    ]);
+    const rows = filteredItems.map(item => getRowValues(item));
 
     const csv = [
       headers.join(","),
@@ -203,17 +208,7 @@ const ExportData = () => {
 
   const copyTableToClipboard = () => {
     const headers = ["ITEM CODE", "ITEM NAME", "SIZE", "Weight (g)", "Weight (CKBR)", "Sno", "Barcode", "Price", "O"];
-    const rows = items.map(item => [
-      item.item_code,
-      item.item_name || "",
-      item.size || "",
-      item.weight || "",
-      item.weight ? formatWeightLabel(item.weight) : "",
-      `S.No:`,
-      item.item_code,
-      item.price ? formatPriceLabel(item.price) : "",
-      "O"
-    ]);
+    const rows = items.map(item => getRowValues(item));
 
     const tsv = [
       headers.join("\t"),
@@ -245,18 +240,7 @@ const ExportData = () => {
     }
 
     const selectedItemsData = items.filter(item => selectedItems.has(item.id));
-    const rows = selectedItemsData.map(item => [
-      item.item_code,
-      item.item_name || "",
-      item.size || "",
-      item.weight || "",
-      item.weight ? formatWeightLabel(item.weight) : "",
-      `S.No:`,
-      item.item_code,
-      item.price ? formatPriceLabel(item.price) : "",
-      "O"
-    ]);
-
+    const rows = selectedItemsData.map(item => getRowValues(item));
     const tsv = rows.map(row => row.join("\t")).join("\n");
 
     navigator.clipboard.writeText(tsv).then(() => {
