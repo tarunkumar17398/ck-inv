@@ -9,6 +9,8 @@ import { formatPriceLabel, formatWeightLabel, formatSizeWithInches } from "@/lib
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { format } from "date-fns";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 
 interface Item {
   id: string;
@@ -28,8 +30,23 @@ const ExportData = () => {
   const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
   const [filter, setFilter] = useState("today");
   const [searchQuery, setSearchQuery] = useState("");
+  const [columnToggles, setColumnToggles] = useState({
+    itemCode: true,
+    itemName: true,
+    size: true,
+    weight1: true,
+    weightCKBR: true,
+    sno: true,
+    barcode: true,
+    price: true,
+    o: true,
+  });
   const navigate = useNavigate();
   const { toast } = useToast();
+
+  const toggleColumn = (key: keyof typeof columnToggles) => {
+    setColumnToggles(prev => ({ ...prev, [key]: !prev[key] }));
+  };
 
   useEffect(() => {
     loadItems();
@@ -138,6 +155,21 @@ const ExportData = () => {
     }
   };
 
+  const getRowValues = (item: Item) => {
+    const t = columnToggles;
+    return [
+      t.itemCode ? item.item_code : "",
+      t.itemName ? (item.item_name || "") : "",
+      t.size ? (item.size || "") : "",
+      t.weight1 ? (item.weight || "") : "",
+      t.weightCKBR ? (item.weight ? formatWeightLabel(item.weight) : "") : "",
+      t.sno ? "S.No:" : "",
+      t.barcode ? item.item_code : "",
+      t.price ? (item.price ? formatPriceLabel(item.price) : "") : "",
+      t.o ? "O" : "",
+    ];
+  };
+
   const downloadFilteredAsCSV = () => {
     const filteredItems = items.filter(item => item.item_code.toLowerCase().includes(searchQuery.toLowerCase()));
     
@@ -151,17 +183,7 @@ const ExportData = () => {
     }
 
     const headers = ["ITEM CODE", "ITEM NAME", "SIZE", "Weight (g)", "Weight (CKBR)", "Sno", "Barcode", "Price", "O"];
-    const rows = filteredItems.map(item => [
-      item.item_code,
-      item.item_name || "",
-      item.size || "",
-      item.weight || "",
-      item.weight ? formatWeightLabel(item.weight) : "",
-      `S.No:`,
-      item.item_code,
-      item.price ? formatPriceLabel(item.price) : "",
-      "O"
-    ]);
+    const rows = filteredItems.map(item => getRowValues(item));
 
     const csv = [
       headers.join(","),
@@ -186,17 +208,7 @@ const ExportData = () => {
 
   const copyTableToClipboard = () => {
     const headers = ["ITEM CODE", "ITEM NAME", "SIZE", "Weight (g)", "Weight (CKBR)", "Sno", "Barcode", "Price", "O"];
-    const rows = items.map(item => [
-      item.item_code,
-      item.item_name || "",
-      item.size || "",
-      item.weight || "",
-      item.weight ? formatWeightLabel(item.weight) : "",
-      `S.No:`,
-      item.item_code,
-      item.price ? formatPriceLabel(item.price) : "",
-      "O"
-    ]);
+    const rows = items.map(item => getRowValues(item));
 
     const tsv = [
       headers.join("\t"),
@@ -228,18 +240,7 @@ const ExportData = () => {
     }
 
     const selectedItemsData = items.filter(item => selectedItems.has(item.id));
-    const rows = selectedItemsData.map(item => [
-      item.item_code,
-      item.item_name || "",
-      item.size || "",
-      item.weight || "",
-      item.weight ? formatWeightLabel(item.weight) : "",
-      `S.No:`,
-      item.item_code,
-      item.price ? formatPriceLabel(item.price) : "",
-      "O"
-    ]);
-
+    const rows = selectedItemsData.map(item => getRowValues(item));
     const tsv = rows.map(row => row.join("\t")).join("\n");
 
     navigator.clipboard.writeText(tsv).then(() => {
@@ -431,6 +432,30 @@ const ExportData = () => {
           </span>
         </div>
 
+        <div className="flex flex-wrap gap-4 mb-6 p-4 bg-muted rounded-lg">
+          <span className="text-sm font-medium text-muted-foreground w-full">Toggle columns (OFF = empty content when copied):</span>
+          {([
+            ["itemCode", "Item Code"],
+            ["itemName", "Item Name"],
+            ["size", "Size"],
+            ["weight1", "Weight1"],
+            ["weightCKBR", "Weight CKBR"],
+            ["sno", "Sno"],
+            ["barcode", "Barcode"],
+            ["price", "Price"],
+            ["o", "O"],
+          ] as [keyof typeof columnToggles, string][]).map(([key, label]) => (
+            <div key={key} className="flex items-center gap-1.5">
+              <Switch
+                id={`toggle-${key}`}
+                checked={columnToggles[key]}
+                onCheckedChange={() => toggleColumn(key)}
+              />
+              <Label htmlFor={`toggle-${key}`} className="text-xs cursor-pointer">{label}</Label>
+            </div>
+          ))}
+        </div>
+
         <div className="bg-card rounded-lg border shadow-sm overflow-auto">
           <Table>
             <TableHeader className="select-none" style={{ userSelect: 'none', WebkitUserSelect: 'none', MozUserSelect: 'none', msUserSelect: 'none' } as React.CSSProperties}>
@@ -467,15 +492,15 @@ const ExportData = () => {
                       className="cursor-pointer w-4 h-4"
                     />
                   </TableCell>
-                  <TableCell className="font-semibold">{item.item_code}</TableCell>
-                  <TableCell>{item.item_name || ""}</TableCell>
-                  <TableCell>{item.size || ""}</TableCell>
-                  <TableCell>{item.weight || ""}</TableCell>
-                  <TableCell>{item.weight ? formatWeightLabel(item.weight) : ""}</TableCell>
-                  <TableCell>S.No:</TableCell>
-                  <TableCell>{item.item_code}</TableCell>
-                  <TableCell>{item.price ? formatPriceLabel(item.price) : ""}</TableCell>
-                  <TableCell>O</TableCell>
+                  <TableCell className="font-semibold">{columnToggles.itemCode ? item.item_code : ""}</TableCell>
+                  <TableCell>{columnToggles.itemName ? (item.item_name || "") : ""}</TableCell>
+                  <TableCell>{columnToggles.size ? (item.size || "") : ""}</TableCell>
+                  <TableCell>{columnToggles.weight1 ? (item.weight || "") : ""}</TableCell>
+                  <TableCell>{columnToggles.weightCKBR ? (item.weight ? formatWeightLabel(item.weight) : "") : ""}</TableCell>
+                  <TableCell>{columnToggles.sno ? "S.No:" : ""}</TableCell>
+                  <TableCell>{columnToggles.barcode ? item.item_code : ""}</TableCell>
+                  <TableCell>{columnToggles.price ? (item.price ? formatPriceLabel(item.price) : "") : ""}</TableCell>
+                  <TableCell>{columnToggles.o ? "O" : ""}</TableCell>
                 </TableRow>
               ))}
             </TableBody>
