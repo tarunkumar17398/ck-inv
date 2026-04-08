@@ -9,6 +9,8 @@ import { formatPriceLabel, formatWeightLabel, formatSizeWithInches } from "@/lib
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { format } from "date-fns";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 
 interface Item {
   id: string;
