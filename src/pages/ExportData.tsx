@@ -432,6 +432,30 @@ const ExportData = () => {
           </span>
         </div>
 
+        <div className="flex flex-wrap gap-4 mb-6 p-4 bg-muted rounded-lg">
+          <span className="text-sm font-medium text-muted-foreground w-full">Toggle columns (OFF = empty content when copied):</span>
+          {([
+            ["itemCode", "Item Code"],
+            ["itemName", "Item Name"],
+            ["size", "Size"],
+            ["weight1", "Weight1"],
+            ["weightCKBR", "Weight CKBR"],
+            ["sno", "Sno"],
+            ["barcode", "Barcode"],
+            ["price", "Price"],
+            ["o", "O"],
+          ] as [keyof typeof columnToggles, string][]).map(([key, label]) => (
+            <div key={key} className="flex items-center gap-1.5">
+              <Switch
+                id={`toggle-${key}`}
+                checked={columnToggles[key]}
+                onCheckedChange={() => toggleColumn(key)}
+              />
+              <Label htmlFor={`toggle-${key}`} className="text-xs cursor-pointer">{label}</Label>
+            </div>
+          ))}
+        </div>
+
         <div className="bg-card rounded-lg border shadow-sm overflow-auto">
           <Table>
             <TableHeader className="select-none" style={{ userSelect: 'none', WebkitUserSelect: 'none', MozUserSelect: 'none', msUserSelect: 'none' } as React.CSSProperties}>
