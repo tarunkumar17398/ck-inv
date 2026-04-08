@@ -30,8 +30,23 @@ const ExportData = () => {
   const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
   const [filter, setFilter] = useState("today");
   const [searchQuery, setSearchQuery] = useState("");
+  const [columnToggles, setColumnToggles] = useState({
+    itemCode: true,
+    itemName: true,
+    size: true,
+    weight1: true,
+    weightCKBR: true,
+    sno: true,
+    barcode: true,
+    price: true,
+    o: true,
+  });
   const navigate = useNavigate();
   const { toast } = useToast();
+
+  const toggleColumn = (key: keyof typeof columnToggles) => {
+    setColumnToggles(prev => ({ ...prev, [key]: !prev[key] }));
+  };
 
   useEffect(() => {
     loadItems();
