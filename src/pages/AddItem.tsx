@@ -743,6 +743,9 @@ const AddItem = () => {
                                     if (subcategory.default_price) {
                                       setCostPrice(subcategory.default_price.toString());
                                     }
+                                    if (subcategory.height) {
+                                      setSize(subcategory.height);
+                                    }
                                     setSubcategoryOpen(false);
                                   }}
                                 >
@@ -829,7 +832,7 @@ const AddItem = () => {
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Label>Size {selectedCategoryName !== "Panchaloha Idols" && "*"}</Label>
+                  <Label>{selectedCategoryName === "Panchaloha Idols" ? "Height" : "Size"} {selectedCategoryName !== "Panchaloha Idols" && "*"}</Label>
                   <Input
                     value={size}
                     onChange={(e) => setSize(e.target.value)}
