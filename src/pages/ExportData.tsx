@@ -492,15 +492,15 @@ const ExportData = () => {
                       className="cursor-pointer w-4 h-4"
                     />
                   </TableCell>
-                  <TableCell className="font-semibold">{item.item_code}</TableCell>
-                  <TableCell>{item.item_name || ""}</TableCell>
-                  <TableCell>{item.size || ""}</TableCell>
-                  <TableCell>{item.weight || ""}</TableCell>
-                  <TableCell>{item.weight ? formatWeightLabel(item.weight) : ""}</TableCell>
-                  <TableCell>S.No:</TableCell>
-                  <TableCell>{item.item_code}</TableCell>
-                  <TableCell>{item.price ? formatPriceLabel(item.price) : ""}</TableCell>
-                  <TableCell>O</TableCell>
+                  <TableCell className="font-semibold">{columnToggles.itemCode ? item.item_code : ""}</TableCell>
+                  <TableCell>{columnToggles.itemName ? (item.item_name || "") : ""}</TableCell>
+                  <TableCell>{columnToggles.size ? (item.size || "") : ""}</TableCell>
+                  <TableCell>{columnToggles.weight1 ? (item.weight || "") : ""}</TableCell>
+                  <TableCell>{columnToggles.weightCKBR ? (item.weight ? formatWeightLabel(item.weight) : "") : ""}</TableCell>
+                  <TableCell>{columnToggles.sno ? "S.No:" : ""}</TableCell>
+                  <TableCell>{columnToggles.barcode ? item.item_code : ""}</TableCell>
+                  <TableCell>{columnToggles.price ? (item.price ? formatPriceLabel(item.price) : "") : ""}</TableCell>
+                  <TableCell>{columnToggles.o ? "O" : ""}</TableCell>
                 </TableRow>
               ))}
             </TableBody>
