@@ -483,8 +483,10 @@ const AddItem = () => {
 
     if (!selectedCategory) missingFields.push("Category");
     if (!itemName.trim()) missingFields.push("Item Name");
-    if (!size.trim()) missingFields.push("Size");
-    if (!weight.trim()) missingFields.push("Weight");
+    if (selectedCategoryName !== "Panchaloha Idols") {
+      if (!size.trim()) missingFields.push("Size");
+      if (!weight.trim()) missingFields.push("Weight");
+    }
 
     // Check if Panchaloha Idols - require subcategory
     if (selectedCategoryName === "Panchaloha Idols") {
@@ -827,7 +829,7 @@ const AddItem = () => {
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Label>Size *</Label>
+                  <Label>Size {selectedCategoryName !== "Panchaloha Idols" && "*"}</Label>
                   <Input
                     value={size}
                     onChange={(e) => setSize(e.target.value)}
@@ -835,7 +837,7 @@ const AddItem = () => {
                   />
                 </div>
                 <div>
-                  <Label>Weight (in grams) *</Label>
+                  <Label>Weight (in grams) {selectedCategoryName !== "Panchaloha Idols" && "*"}</Label>
                   <Input
                     type="text"
                     inputMode="numeric"
