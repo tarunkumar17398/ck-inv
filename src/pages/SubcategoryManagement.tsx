@@ -29,6 +29,7 @@ const SubcategoryManagement = () => {
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [subcategoryName, setSubcategoryName] = useState("");
   const [subcategoryHeight, setSubcategoryHeight] = useState("");
+  const [subcategoryPrice, setSubcategoryPrice] = useState("");
   const [editingSubcategory, setEditingSubcategory] = useState<Subcategory | null>(null);
   const [editSubcategoryName, setEditSubcategoryName] = useState("");
   const [editSubcategoryHeight, setEditSubcategoryHeight] = useState("");
@@ -187,6 +188,7 @@ const SubcategoryManagement = () => {
       category_id: panchalohaCategory.id,
       subcategory_name: subcategoryName.trim(),
       height: subcategoryHeight.trim() || null,
+      default_price: subcategoryPrice ? parseFloat(subcategoryPrice) : null,
     });
 
     setLoading(false);
@@ -198,6 +200,7 @@ const SubcategoryManagement = () => {
     toast({ title: "Subcategory added", description: `${subcategoryName} added successfully` });
     setSubcategoryName("");
     setSubcategoryHeight("");
+    setSubcategoryPrice("");
     setShowAddDialog(false);
     loadSubcategories(panchalohaCategory.id);
   };
@@ -398,6 +401,16 @@ const SubcategoryManagement = () => {
                       placeholder="e.g., 6 inch, 12 inch"
                       value={subcategoryHeight}
                       onChange={(e) => setSubcategoryHeight(e.target.value)}
+                    />
+                  </div>
+                  <div>
+                    <Label>Price (₹)</Label>
+                    <Input
+                      type="number"
+                      min="0"
+                      placeholder="e.g., 1500"
+                      value={subcategoryPrice}
+                      onChange={(e) => setSubcategoryPrice(e.target.value)}
                     />
                   </div>
                   <Button onClick={handleAddSubcategory} disabled={loading} className="w-full">

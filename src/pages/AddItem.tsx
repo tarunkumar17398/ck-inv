@@ -51,6 +51,7 @@ const AddItem = () => {
   const [subcategories, setSubcategories] = useState<Subcategory[]>([]);
   const [selectedSubcategory, setSelectedSubcategory] = useState("");
   const [newSubcategoryName, setNewSubcategoryName] = useState("");
+  const [newSubcategoryPrice, setNewSubcategoryPrice] = useState("");
   const [showAddSubcategory, setShowAddSubcategory] = useState(false);
   const [subcategoryOpen, setSubcategoryOpen] = useState(false);
   const [quantity, setQuantity] = useState(1);
@@ -210,6 +211,7 @@ const AddItem = () => {
       .insert({
         category_id: selectedCategory,
         subcategory_name: newSubcategoryName.trim(),
+        default_price: newSubcategoryPrice ? parseFloat(newSubcategoryPrice) : null,
       })
       .select()
       .single();
@@ -229,6 +231,7 @@ const AddItem = () => {
     });
 
     setNewSubcategoryName("");
+    setNewSubcategoryPrice("");
     setShowAddSubcategory(false);
     loadSubcategories(selectedCategory);
     setSelectedSubcategory(data.id);
@@ -781,6 +784,16 @@ const AddItem = () => {
                               value={newSubcategoryName}
                               onChange={(e) => setNewSubcategoryName(e.target.value)}
                               placeholder="e.g., Nataraja, Lakshmi"
+                            />
+                          </div>
+                          <div>
+                            <Label>Price (₹)</Label>
+                            <Input
+                              type="number"
+                              min="0"
+                              value={newSubcategoryPrice}
+                              onChange={(e) => setNewSubcategoryPrice(e.target.value)}
+                              placeholder="e.g., 1500"
                             />
                           </div>
                           <Button onClick={handleAddSubcategory} className="w-full">
