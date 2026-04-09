@@ -29,6 +29,7 @@ const SubcategoryManagement = () => {
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [subcategoryName, setSubcategoryName] = useState("");
   const [subcategoryHeight, setSubcategoryHeight] = useState("");
+  const [subcategoryPrice, setSubcategoryPrice] = useState("");
   const [editingSubcategory, setEditingSubcategory] = useState<Subcategory | null>(null);
   const [editSubcategoryName, setEditSubcategoryName] = useState("");
   const [editSubcategoryHeight, setEditSubcategoryHeight] = useState("");

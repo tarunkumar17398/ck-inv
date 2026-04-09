@@ -51,6 +51,7 @@ const AddItem = () => {
   const [subcategories, setSubcategories] = useState<Subcategory[]>([]);
   const [selectedSubcategory, setSelectedSubcategory] = useState("");
   const [newSubcategoryName, setNewSubcategoryName] = useState("");
+  const [newSubcategoryPrice, setNewSubcategoryPrice] = useState("");
   const [showAddSubcategory, setShowAddSubcategory] = useState(false);
   const [subcategoryOpen, setSubcategoryOpen] = useState(false);
   const [quantity, setQuantity] = useState(1);
