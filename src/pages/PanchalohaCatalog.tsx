@@ -489,7 +489,11 @@ const PanchalohaCatalog = () => {
                     ) : null}
                   </div>
                 </div>
-                <div className="grid grid-cols-2 gap-2 mt-2 pl-7">
+                <div className="grid grid-cols-3 gap-2 mt-2 pl-7">
+                  <div>
+                    <Label className="text-[11px] text-muted-foreground">Height</Label>
+                    <Input value={item.height || ""} onChange={(e) => updateHeight(item.id, e.target.value)} className="h-8 text-sm" placeholder="—" />
+                  </div>
                   <div>
                     <Label className="text-[11px] text-muted-foreground">Cost ₹</Label>
                     <Input type="number" min="0" value={item.costPrice} onChange={(e) => updateCostPrice(item.id, e.target.value)} className="h-8 text-sm" />
