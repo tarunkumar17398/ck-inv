@@ -6,12 +6,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { ArrowLeft, Download, Eye, Loader2, AlertTriangle } from "lucide-react";
+import { ArrowLeft, Download, Eye, Loader2, AlertTriangle, Save, FolderOpen, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import jsPDF from "jspdf";
 
 interface SubcategoryImage {
@@ -35,6 +36,14 @@ interface CatalogItem {
   selectedImageId: string | null;
 }
 
+interface SavedCatalog {
+  id: string;
+  name: string;
+  settings: any;
+  created_at: string;
+  updated_at: string;
+}
+
 const ITEMS_PER_PAGE = 6;
 
 const PanchalohaCatalog = () => {
@@ -48,6 +57,15 @@ const PanchalohaCatalog = () => {
   const isMobile = useIsMobile();
   const [isTablet, setIsTablet] = useState(false);
 
+  // Save/Load state
+  const [savedCatalogs, setSavedCatalogs] = useState<SavedCatalog[]>([]);
+  const [currentCatalogId, setCurrentCatalogId] = useState<string | null>(null);
+  const [currentCatalogName, setCurrentCatalogName] = useState("");
+  const [showSaveDialog, setShowSaveDialog] = useState(false);
+  const [showLoadDialog, setShowLoadDialog] = useState(false);
+  const [saveName, setSaveName] = useState("");
+  const [saving, setSaving] = useState(false);
+
   useEffect(() => {
     const check = () => setIsTablet(window.innerWidth < 1024);
     check();
@@ -59,7 +77,16 @@ const PanchalohaCatalog = () => {
 
   useEffect(() => {
     loadData();
+    loadSavedCatalogs();
   }, []);
+
+  const loadSavedCatalogs = async () => {
+    const { data } = await supabase
+      .from("saved_catalogs")
+      .select("*")
+      .order("updated_at", { ascending: false });
+    setSavedCatalogs((data as SavedCatalog[]) || []);
+  };
 
   const loadData = async () => {
     setLoading(true);
@@ -106,7 +133,6 @@ const PanchalohaCatalog = () => {
       from += pageSize;
     }
 
-    // Load images
     const { data: allImages } = await supabase
       .from("subcategory_images")
       .select("*")
@@ -145,6 +171,120 @@ const PanchalohaCatalog = () => {
     }));
 
     setLoading(false);
+  };
+
+  // Build settings object from current state
+  const buildSettings = () => ({
+    multiplier,
+    showPrices,
+    variantFilter,
+    items: items.map(i => ({
+      id: i.id,
+      enabled: i.enabled,
+      costPrice: i.costPrice,
+      sellPrice: i.sellPrice,
+      height: i.height,
+      selectedImageId: i.selectedImageId,
+    })),
+  });
+
+  // Apply saved settings to current items
+  const applySettings = (settings: any) => {
+    setMultiplier(settings.multiplier || "2.0");
+    setShowPrices(settings.showPrices ?? true);
+    setVariantFilter(settings.variantFilter || "all");
+
+    if (settings.items && Array.isArray(settings.items)) {
+      const settingsMap: Record<string, any> = {};
+      settings.items.forEach((s: any) => { settingsMap[s.id] = s; });
+
+      setItems(prev => prev.map(item => {
+        const saved = settingsMap[item.id];
+        if (!saved) return item;
+        return {
+          ...item,
+          enabled: saved.enabled ?? item.enabled,
+          costPrice: saved.costPrice ?? item.costPrice,
+          sellPrice: saved.sellPrice ?? item.sellPrice,
+          height: saved.height ?? item.height,
+          selectedImageId: saved.selectedImageId ?? item.selectedImageId,
+        };
+      }));
+    }
+  };
+
+  const handleSave = async () => {
+    const name = saveName.trim();
+    if (!name) {
+      toast({ title: "Please enter a name", variant: "destructive" });
+      return;
+    }
+    setSaving(true);
+    const settings = buildSettings();
+
+    if (currentCatalogId) {
+      // Update existing
+      const { error } = await supabase
+        .from("saved_catalogs")
+        .update({ name, settings: settings as any, updated_at: new Date().toISOString() })
+        .eq("id", currentCatalogId);
+      if (error) {
+        toast({ title: "Failed to save", variant: "destructive" });
+      } else {
+        setCurrentCatalogName(name);
+        toast({ title: "Catalog updated!" });
+      }
+    } else {
+      // Insert new
+      const { data, error } = await supabase
+        .from("saved_catalogs")
+        .insert({ name, settings: settings as any })
+        .select()
+        .single();
+      if (error) {
+        toast({ title: "Failed to save", variant: "destructive" });
+      } else {
+        setCurrentCatalogId(data.id);
+        setCurrentCatalogName(name);
+        toast({ title: "Catalog saved!" });
+      }
+    }
+
+    setSaving(false);
+    setShowSaveDialog(false);
+    loadSavedCatalogs();
+  };
+
+  const handleLoad = async (catalog: SavedCatalog) => {
+    setCurrentCatalogId(catalog.id);
+    setCurrentCatalogName(catalog.name);
+    applySettings(catalog.settings);
+    setShowLoadDialog(false);
+    toast({ title: `Loaded: ${catalog.name}` });
+  };
+
+  const handleDelete = async (id: string) => {
+    const { error } = await supabase.from("saved_catalogs").delete().eq("id", id);
+    if (!error) {
+      if (currentCatalogId === id) {
+        setCurrentCatalogId(null);
+        setCurrentCatalogName("");
+      }
+      toast({ title: "Catalog deleted" });
+      loadSavedCatalogs();
+    }
+  };
+
+  const handleNewCatalog = () => {
+    setCurrentCatalogId(null);
+    setCurrentCatalogName("");
+    loadData();
+    toast({ title: "Starting fresh catalog" });
+  };
+
+  const openSaveDialog = () => {
+    setSaveName(currentCatalogName || "");
+    setShowSaveDialog(true);
   };
 
   const getSelectedImageUrl = (item: CatalogItem): string | null => {
@@ -188,10 +328,8 @@ const PanchalohaCatalog = () => {
     }));
   };
 
-  // Collect all unique variant labels
   const allVariantLabels = Array.from(new Set(items.flatMap(i => i.images.map(img => img.label)))).sort();
 
-  // Apply variant filter: show only items that have the selected variant, and auto-select it
   const applyVariantFilter = (label: string) => {
     setVariantFilter(label);
     if (label !== "all") {
@@ -402,21 +540,36 @@ const PanchalohaCatalog = () => {
     );
   }
 
-
   // Config mode
   return (
     <div className="min-h-screen bg-background">
       <header className="border-b bg-card shadow-sm">
-        <div className="container mx-auto px-4 py-3">
+        <div className="container mx-auto px-4 py-3 flex items-center justify-between">
           <Button variant="ghost" size="sm" onClick={() => navigate("/panchaloha-subcategories")}>
             <ArrowLeft className="w-4 h-4 mr-2" />
             Back
           </Button>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" onClick={() => setShowLoadDialog(true)}>
+              <FolderOpen className="w-4 h-4 mr-1" /> Load
+            </Button>
+            <Button variant="outline" size="sm" onClick={openSaveDialog}>
+              <Save className="w-4 h-4 mr-1" /> Save
+            </Button>
+            <Button variant="outline" size="sm" onClick={handleNewCatalog}>
+              New
+            </Button>
+          </div>
         </div>
       </header>
 
       <main className="container mx-auto px-4 py-4 md:py-8">
-        <h1 className="text-2xl md:text-3xl font-bold text-foreground mb-4">Create Catalog</h1>
+        <div className="flex items-center gap-3 mb-4">
+          <h1 className="text-2xl md:text-3xl font-bold text-foreground">Create Catalog</h1>
+          {currentCatalogName && (
+            <Badge variant="secondary" className="text-sm">{currentCatalogName}</Badge>
+          )}
+        </div>
 
         <div className="flex flex-col sm:flex-row flex-wrap items-start sm:items-center gap-3 sm:gap-6 mb-4 p-3 sm:p-4 border rounded-lg bg-card">
           <div className="flex items-center gap-2">
@@ -600,6 +753,56 @@ const PanchalohaCatalog = () => {
           </div>
         )}
       </main>
+
+      {/* Save Dialog */}
+      <Dialog open={showSaveDialog} onOpenChange={setShowSaveDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>{currentCatalogId ? "Update Catalog" : "Save Catalog"}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div>
+              <Label>Catalog Name (internal)</Label>
+              <Input value={saveName} onChange={(e) => setSaveName(e.target.value)} placeholder="e.g. Green Variant - April 2026" />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowSaveDialog(false)}>Cancel</Button>
+            <Button onClick={handleSave} disabled={saving}>
+              {saving ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : <Save className="w-4 h-4 mr-1" />}
+              {currentCatalogId ? "Update" : "Save"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Load Dialog */}
+      <Dialog open={showLoadDialog} onOpenChange={setShowLoadDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Load Saved Catalog</DialogTitle>
+          </DialogHeader>
+          {savedCatalogs.length === 0 ? (
+            <p className="text-sm text-muted-foreground py-4 text-center">No saved catalogs yet</p>
+          ) : (
+            <div className="space-y-2 max-h-[400px] overflow-auto">
+              {savedCatalogs.map(c => (
+                <div key={c.id} className={`flex items-center justify-between p-3 border rounded-lg hover:bg-accent/50 cursor-pointer ${c.id === currentCatalogId ? "border-primary bg-primary/5" : ""}`}>
+                  <div className="flex-1" onClick={() => handleLoad(c)}>
+                    <p className="font-medium text-sm">{c.name}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {new Date(c.updated_at).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}
+                    </p>
+                  </div>
+                  <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => handleDelete(c.id)}>
+                    <Trash2 className="w-4 h-4" />
+                  </Button>
+                </div>
+              ))}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
