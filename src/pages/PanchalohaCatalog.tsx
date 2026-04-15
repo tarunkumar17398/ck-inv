@@ -44,6 +44,7 @@ const PanchalohaCatalog = () => {
   const [showPreview, setShowPreview] = useState(false);
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
+  const [variantFilter, setVariantFilter] = useState("all");
   const isMobile = useIsMobile();
   const [isTablet, setIsTablet] = useState(false);
 
@@ -183,7 +184,28 @@ const PanchalohaCatalog = () => {
     }));
   };
 
-  const enabledItems = items.filter(i => i.enabled);
+  // Collect all unique variant labels
+  const allVariantLabels = Array.from(new Set(items.flatMap(i => i.images.map(img => img.label)))).sort();
+
+  // Apply variant filter: show only items that have the selected variant, and auto-select it
+  const applyVariantFilter = (label: string) => {
+    setVariantFilter(label);
+    if (label !== "all") {
+      setItems(prev => prev.map(i => {
+        const matchImg = i.images.find(img => img.label === label);
+        if (matchImg) {
+          return { ...i, selectedImageId: matchImg.id };
+        }
+        return i;
+      }));
+    }
+  };
+
+  const filteredItems = variantFilter === "all" 
+    ? items 
+    : items.filter(i => i.images.some(img => img.label === variantFilter));
+
+  const enabledItems = filteredItems.filter(i => i.enabled);
 
   const loadImageAsBase64 = async (url: string): Promise<string | null> => {
     try {
