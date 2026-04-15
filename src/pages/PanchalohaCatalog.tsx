@@ -11,7 +11,15 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import jsPDF from "jspdf";
+
+interface SubcategoryImage {
+  id: string;
+  image_url: string;
+  label: string;
+  sort_order: number;
+}
 
 interface CatalogItem {
   id: string;
@@ -23,6 +31,8 @@ interface CatalogItem {
   enabled: boolean;
   costPrice: string;
   sellPrice: string;
+  images: SubcategoryImage[];
+  selectedImageId: string | null;
 }
 
 const ITEMS_PER_PAGE = 6;
@@ -95,6 +105,19 @@ const PanchalohaCatalog = () => {
       from += pageSize;
     }
 
+    // Load images
+    const { data: allImages } = await supabase
+      .from("subcategory_images")
+      .select("*")
+      .in("subcategory_id", subcategoryIds)
+      .order("sort_order");
+
+    const imagesBySubcat: Record<string, SubcategoryImage[]> = {};
+    (allImages || []).forEach((img: any) => {
+      if (!imagesBySubcat[img.subcategory_id]) imagesBySubcat[img.subcategory_id] = [];
+      imagesBySubcat[img.subcategory_id].push(img);
+    });
+
     const availCounts = allPieces.reduce((acc, p) => {
       if (p.status === "available") acc[p.subcategory_id] = (acc[p.subcategory_id] || 0) + 1;
       return acc;
@@ -104,6 +127,7 @@ const PanchalohaCatalog = () => {
     setItems(subcats.map(s => {
       const cost = s.default_price ?? 0;
       const availCount = availCounts[s.id] || 0;
+      const images = imagesBySubcat[s.id] || [];
       return {
         id: s.id,
         subcategory_name: s.subcategory_name,
@@ -114,10 +138,18 @@ const PanchalohaCatalog = () => {
         enabled: availCount > 0,
         costPrice: cost ? String(cost) : "",
         sellPrice: cost ? String(Math.round(cost * mult)) : "",
+        images,
+        selectedImageId: images.length > 0 ? images[0].id : null,
       };
     }));
 
     setLoading(false);
+  };
+
+  const getSelectedImageUrl = (item: CatalogItem): string | null => {
+    if (item.images.length === 0) return item.image_url;
+    const selected = item.images.find(img => img.id === item.selectedImageId);
+    return selected?.image_url || item.images[0]?.image_url || item.image_url;
   };
 
   const toggleItem = (id: string) => {
@@ -127,6 +159,10 @@ const PanchalohaCatalog = () => {
       return;
     }
     setItems(prev => prev.map(i => i.id === id ? { ...i, enabled: !i.enabled } : i));
+  };
+
+  const selectImage = (itemId: string, imageId: string) => {
+    setItems(prev => prev.map(i => i.id === itemId ? { ...i, selectedImageId: imageId } : i));
   };
 
   const updateCostPrice = (id: string, value: string) => {
@@ -184,8 +220,9 @@ const PanchalohaCatalog = () => {
 
       const imageCache: Record<string, string | null> = {};
       for (const item of enabledItems) {
-        if (item.image_url) {
-          imageCache[item.id] = await loadImageAsBase64(item.image_url);
+        const imgUrl = getSelectedImageUrl(item);
+        if (imgUrl) {
+          imageCache[item.id] = await loadImageAsBase64(imgUrl);
         }
       }
 
@@ -305,11 +342,12 @@ const PanchalohaCatalog = () => {
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '5mm' }}>
                   {pageItems.map(item => {
                     const sell = parseFloat(item.sellPrice) || 0;
+                    const imgUrl = getSelectedImageUrl(item);
                     return (
                       <div key={item.id} style={{ border: '2.5px solid #333', borderRadius: '8px', overflow: 'hidden' }}>
-                        {item.image_url ? (
+                        {imgUrl ? (
                           <div style={{ aspectRatio: '2/3', overflow: 'hidden' }}>
-                            <img src={item.image_url} alt={item.subcategory_name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                            <img src={imgUrl} alt={item.subcategory_name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                           </div>
                         ) : (
                           <div style={{ aspectRatio: '2/3', background: '#e5e5e5', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#999', fontSize: '12px' }}>
@@ -389,11 +427,14 @@ const PanchalohaCatalog = () => {
                   <div className="flex items-start pt-1">
                     <Checkbox checked={item.enabled} onCheckedChange={() => toggleItem(item.id)} disabled={item.available_count === 0} />
                   </div>
-                  {item.image_url ? (
-                    <img src={item.image_url} alt="" className="w-14 h-14 object-cover rounded shrink-0" />
-                  ) : (
-                    <div className="w-14 h-14 bg-muted rounded flex items-center justify-center text-xs text-muted-foreground shrink-0">—</div>
-                  )}
+                  {(() => {
+                    const imgUrl = getSelectedImageUrl(item);
+                    return imgUrl ? (
+                      <img src={imgUrl} alt="" className="w-14 h-14 object-cover rounded shrink-0" />
+                    ) : (
+                      <div className="w-14 h-14 bg-muted rounded flex items-center justify-center text-xs text-muted-foreground shrink-0">—</div>
+                    );
+                  })()}
                   <div className="flex-1 min-w-0">
                     <p className="font-semibold text-sm break-words">{item.subcategory_name}</p>
                     <p className="text-xs text-muted-foreground">Qty: {item.available_count} {item.height ? `• ${item.height}` : ""}</p>
@@ -418,6 +459,21 @@ const PanchalohaCatalog = () => {
                     <Input type="number" min="0" value={item.sellPrice} onChange={(e) => updateSellPrice(item.id, e.target.value)} className="h-8 text-sm" />
                   </div>
                 </div>
+                {item.images.length > 1 && (
+                  <div className="mt-2 pl-7">
+                    <Label className="text-[11px] text-muted-foreground">Image Variant</Label>
+                    <Select value={item.selectedImageId || ""} onValueChange={(val) => selectImage(item.id, val)}>
+                      <SelectTrigger className="h-8 text-sm">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {item.images.map(img => (
+                          <SelectItem key={img.id} value={img.id}>{img.label}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
               </div>
             ))}
           </div>
@@ -431,48 +487,68 @@ const PanchalohaCatalog = () => {
                   <TableHead className="w-16">Image</TableHead>
                   <TableHead>Name (Available Qty)</TableHead>
                   <TableHead>Height</TableHead>
+                  <TableHead className="w-40">Image Variant</TableHead>
                   <TableHead className="w-32">Cost Price (₹)</TableHead>
                   <TableHead className="w-32">Selling Price (₹)</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {items.map(item => (
-                  <TableRow key={item.id} className={`${!item.enabled ? "opacity-50" : ""} ${item.available_count === 0 ? "bg-destructive/10" : ""}`}>
-                    <TableCell>
-                      <Checkbox checked={item.enabled} onCheckedChange={() => toggleItem(item.id)} disabled={item.available_count === 0} />
-                    </TableCell>
-                    <TableCell>
-                      {item.image_url ? (
-                        <img src={item.image_url} alt="" className="w-12 h-12 object-cover rounded" />
-                      ) : (
-                        <div className="w-12 h-12 bg-muted rounded flex items-center justify-center text-xs text-muted-foreground">—</div>
-                      )}
-                    </TableCell>
-                    <TableCell className="font-medium">
-                      <div className="flex flex-col gap-0.5">
-                        <span>{item.subcategory_name} <span className="text-muted-foreground">({item.available_count})</span></span>
-                        {item.available_count === 0 ? (
-                          <Badge variant="destructive" className="text-[10px] px-1.5 py-0 flex items-center gap-0.5 w-fit">
-                            <AlertTriangle className="w-2.5 h-2.5" />
-                            No Stock
-                          </Badge>
-                        ) : item.available_count < 5 ? (
-                          <Badge className="text-[10px] px-1.5 py-0 flex items-center gap-0.5 w-fit bg-orange-500 text-white border-orange-500">
-                            <AlertTriangle className="w-2.5 h-2.5" />
-                            Low Stock
-                          </Badge>
-                        ) : null}
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-muted-foreground">{item.height || "—"}</TableCell>
-                    <TableCell>
-                      <Input type="number" min="0" value={item.costPrice} onChange={(e) => updateCostPrice(item.id, e.target.value)} className="w-28" />
-                    </TableCell>
-                    <TableCell>
-                      <Input type="number" min="0" value={item.sellPrice} onChange={(e) => updateSellPrice(item.id, e.target.value)} className="w-28" />
-                    </TableCell>
-                  </TableRow>
-                ))}
+                {items.map(item => {
+                  const imgUrl = getSelectedImageUrl(item);
+                  return (
+                    <TableRow key={item.id} className={`${!item.enabled ? "opacity-50" : ""} ${item.available_count === 0 ? "bg-destructive/10" : ""}`}>
+                      <TableCell>
+                        <Checkbox checked={item.enabled} onCheckedChange={() => toggleItem(item.id)} disabled={item.available_count === 0} />
+                      </TableCell>
+                      <TableCell>
+                        {imgUrl ? (
+                          <img src={imgUrl} alt="" className="w-12 h-12 object-cover rounded" />
+                        ) : (
+                          <div className="w-12 h-12 bg-muted rounded flex items-center justify-center text-xs text-muted-foreground">—</div>
+                        )}
+                      </TableCell>
+                      <TableCell className="font-medium">
+                        <div className="flex flex-col gap-0.5">
+                          <span>{item.subcategory_name} <span className="text-muted-foreground">({item.available_count})</span></span>
+                          {item.available_count === 0 ? (
+                            <Badge variant="destructive" className="text-[10px] px-1.5 py-0 flex items-center gap-0.5 w-fit">
+                              <AlertTriangle className="w-2.5 h-2.5" />
+                              No Stock
+                            </Badge>
+                          ) : item.available_count < 5 ? (
+                            <Badge className="text-[10px] px-1.5 py-0 flex items-center gap-0.5 w-fit bg-orange-500 text-white border-orange-500">
+                              <AlertTriangle className="w-2.5 h-2.5" />
+                              Low Stock
+                            </Badge>
+                          ) : null}
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-muted-foreground">{item.height || "—"}</TableCell>
+                      <TableCell>
+                        {item.images.length > 1 ? (
+                          <Select value={item.selectedImageId || ""} onValueChange={(val) => selectImage(item.id, val)}>
+                            <SelectTrigger className="w-36">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {item.images.map(img => (
+                                <SelectItem key={img.id} value={img.id}>{img.label}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        ) : (
+                          <span className="text-xs text-muted-foreground">{item.images[0]?.label || "—"}</span>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        <Input type="number" min="0" value={item.costPrice} onChange={(e) => updateCostPrice(item.id, e.target.value)} className="w-28" />
+                      </TableCell>
+                      <TableCell>
+                        <Input type="number" min="0" value={item.sellPrice} onChange={(e) => updateSellPrice(item.id, e.target.value)} className="w-28" />
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
               </TableBody>
             </Table>
           </div>
