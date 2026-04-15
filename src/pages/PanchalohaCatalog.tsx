@@ -435,6 +435,20 @@ const PanchalohaCatalog = () => {
             <Switch checked={showPrices} onCheckedChange={setShowPrices} />
             <Label className="text-sm">Show Prices</Label>
           </div>
+          <div className="flex items-center gap-2">
+            <Label className="text-sm">Variant</Label>
+            <Select value={variantFilter} onValueChange={applyVariantFilter}>
+              <SelectTrigger className="w-32">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All</SelectItem>
+                {allVariantLabels.map(l => (
+                  <SelectItem key={l} value={l}>{l}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
           <Button onClick={() => setShowPreview(true)} disabled={enabledItems.length === 0} className="w-full sm:w-auto">
             <Eye className="w-4 h-4 mr-2" />
             Preview ({enabledItems.length} items)
