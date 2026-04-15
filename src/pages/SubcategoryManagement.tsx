@@ -6,10 +6,17 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { ArrowLeft, Plus, Edit, Trash2, AlertTriangle, Search, Download, Filter, IndianRupee, Camera, BookOpen } from "lucide-react";
+import { ArrowLeft, Plus, Edit, Trash2, AlertTriangle, Search, Download, Filter, IndianRupee, Camera, BookOpen, ImagePlus, X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+
+interface SubcategoryImage {
+  id: string;
+  image_url: string;
+  label: string;
+  sort_order: number;
+}
 
 interface Subcategory {
   id: string;
@@ -20,6 +27,7 @@ interface Subcategory {
   default_price?: number | null;
   image_url?: string | null;
   height?: string | null;
+  images?: SubcategoryImage[];
 }
 
 const SubcategoryManagement = () => {
@@ -40,8 +48,12 @@ const SubcategoryManagement = () => {
   const [savingPrices, setSavingPrices] = useState(false);
   const [loading, setLoading] = useState(false);
   const [uploadingId, setUploadingId] = useState<string | null>(null);
+  const [showImagesDialog, setShowImagesDialog] = useState(false);
+  const [imagesSubcategory, setImagesSubcategory] = useState<Subcategory | null>(null);
+  const [newImageLabel, setNewImageLabel] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
   const uploadTargetId = useRef<string | null>(null);
+  const imageDialogFileRef = useRef<HTMLInputElement>(null);
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -87,6 +99,8 @@ const SubcategoryManagement = () => {
     }
 
     const subcategoryIds = subcats.map(s => s.id);
+
+    // Load pieces and images in parallel
     let allPieces: { subcategory_id: string; status: string }[] = [];
     let from = 0;
     const pageSize = 1000;
@@ -101,7 +115,7 @@ const SubcategoryManagement = () => {
 
       if (piecesError) {
         toast({ title: "Error loading piece counts", description: piecesError.message, variant: "destructive" });
-        setSubcategories(subcats.map(s => ({ ...s, piece_count: 0, available_count: 0 })));
+        setSubcategories(subcats.map(s => ({ ...s, piece_count: 0, available_count: 0, images: [] })));
         return;
       }
 
@@ -109,6 +123,19 @@ const SubcategoryManagement = () => {
       hasMore = (batch?.length || 0) === pageSize;
       from += pageSize;
     }
+
+    // Load images from subcategory_images table
+    const { data: allImages } = await supabase
+      .from("subcategory_images")
+      .select("*")
+      .in("subcategory_id", subcategoryIds)
+      .order("sort_order");
+
+    const imagesBySubcat: Record<string, SubcategoryImage[]> = {};
+    (allImages || []).forEach((img: any) => {
+      if (!imagesBySubcat[img.subcategory_id]) imagesBySubcat[img.subcategory_id] = [];
+      imagesBySubcat[img.subcategory_id].push(img);
+    });
 
     const pieceCounts = allPieces.reduce((acc, piece) => {
       if (!acc[piece.subcategory_id]) acc[piece.subcategory_id] = { total: 0, available: 0 };
@@ -124,15 +151,17 @@ const SubcategoryManagement = () => {
       default_price: subcat.default_price ?? null,
       image_url: subcat.image_url ?? null,
       height: subcat.height ?? null,
+      images: imagesBySubcat[subcat.id] || [],
     }));
 
     setSubcategories(subcatsWithCounts);
   };
 
-  const handleImageUpload = async (file: File, subcatId: string) => {
+  const handleImageUpload = async (file: File, subcatId: string, label?: string) => {
     setUploadingId(subcatId);
     const ext = file.name.split('.').pop();
-    const filePath = `${subcatId}.${ext}`;
+    const timestamp = Date.now();
+    const filePath = `${subcatId}_${timestamp}.${ext}`;
 
     const { error: uploadError } = await supabase.storage
       .from("subcategory-images")
@@ -145,22 +174,78 @@ const SubcategoryManagement = () => {
     }
 
     const { data: urlData } = supabase.storage.from("subcategory-images").getPublicUrl(filePath);
-
     const imageUrl = urlData.publicUrl;
-    const { error: updateError } = await supabase
-      .from("subcategories")
-      .update({ image_url: imageUrl })
-      .eq("id", subcatId);
 
-    setUploadingId(null);
+    // Get current max sort_order
+    const subcat = subcategories.find(s => s.id === subcatId);
+    const maxOrder = (subcat?.images || []).reduce((max, img) => Math.max(max, img.sort_order), -1);
 
-    if (updateError) {
-      toast({ title: "Error saving image URL", description: updateError.message, variant: "destructive" });
+    // Insert into subcategory_images table
+    const { error: insertError } = await supabase
+      .from("subcategory_images")
+      .insert({
+        subcategory_id: subcatId,
+        image_url: imageUrl,
+        label: label || "Default",
+        sort_order: maxOrder + 1,
+      });
+
+    if (insertError) {
+      toast({ title: "Error saving image", description: insertError.message, variant: "destructive" });
+      setUploadingId(null);
       return;
     }
 
-    toast({ title: "Image uploaded", description: "Photo updated successfully" });
+    // Also update the primary image_url on subcategories if it's the first image
+    if (!subcat?.image_url && !subcat?.images?.length) {
+      await supabase
+        .from("subcategories")
+        .update({ image_url: imageUrl })
+        .eq("id", subcatId);
+    }
+
+    setUploadingId(null);
+    toast({ title: "Image uploaded", description: "Photo added successfully" });
     if (panchalohaCategory) loadSubcategories(panchalohaCategory.id);
+  };
+
+  const handleDeleteImage = async (imageId: string, subcatId: string) => {
+    const { error } = await supabase
+      .from("subcategory_images")
+      .delete()
+      .eq("id", imageId);
+
+    if (error) {
+      toast({ title: "Error deleting image", description: error.message, variant: "destructive" });
+      return;
+    }
+
+    // Update primary image_url
+    const { data: remaining } = await supabase
+      .from("subcategory_images")
+      .select("image_url")
+      .eq("subcategory_id", subcatId)
+      .order("sort_order")
+      .limit(1);
+
+    await supabase
+      .from("subcategories")
+      .update({ image_url: remaining?.[0]?.image_url || null })
+      .eq("id", subcatId);
+
+    toast({ title: "Image deleted" });
+    if (panchalohaCategory) loadSubcategories(panchalohaCategory.id);
+
+    // Update the images dialog state
+    if (imagesSubcategory?.id === subcatId) {
+      const updatedSubcat = subcategories.find(s => s.id === subcatId);
+      if (updatedSubcat) {
+        setImagesSubcategory({
+          ...updatedSubcat,
+          images: (updatedSubcat.images || []).filter(img => img.id !== imageId),
+        });
+      }
+    }
   };
 
   const triggerImageUpload = (subcatId: string) => {
@@ -172,6 +257,21 @@ const SubcategoryManagement = () => {
     const file = e.target.files?.[0];
     if (file && uploadTargetId.current) {
       handleImageUpload(file, uploadTargetId.current);
+    }
+    e.target.value = "";
+  };
+
+  const openImagesDialog = (subcat: Subcategory) => {
+    setImagesSubcategory(subcat);
+    setNewImageLabel("");
+    setShowImagesDialog(true);
+  };
+
+  const onImageDialogFileSelected = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file && imagesSubcategory) {
+      handleImageUpload(file, imagesSubcategory.id, newImageLabel.trim() || "Default");
+      setNewImageLabel("");
     }
     e.target.value = "";
   };
@@ -332,6 +432,14 @@ const SubcategoryManagement = () => {
     .filter((subcat) => subcat.subcategory_name.toLowerCase().includes(searchQuery.toLowerCase()))
     .filter((subcat) => !showLowStockOnly || (subcat.available_count || 0) < 5);
 
+  // Refresh images dialog data when subcategories reload
+  useEffect(() => {
+    if (imagesSubcategory) {
+      const updated = subcategories.find(s => s.id === imagesSubcategory.id);
+      if (updated) setImagesSubcategory(updated);
+    }
+  }, [subcategories]);
+
   return (
     <div className="min-h-screen bg-background">
       <input
@@ -340,6 +448,13 @@ const SubcategoryManagement = () => {
         className="hidden"
         accept="image/*"
         onChange={onFileSelected}
+      />
+      <input
+        type="file"
+        ref={imageDialogFileRef}
+        className="hidden"
+        accept="image/*"
+        onChange={onImageDialogFileSelected}
       />
       <header className="border-b bg-card shadow-sm">
         <div className="container mx-auto px-4 py-4">
@@ -498,6 +613,53 @@ const SubcategoryManagement = () => {
           </DialogContent>
         </Dialog>
 
+        {/* Images Management Dialog */}
+        <Dialog open={showImagesDialog} onOpenChange={setShowImagesDialog}>
+          <DialogContent className="max-w-lg max-h-[80vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Images - {imagesSubcategory?.subcategory_name}</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4 pt-2">
+              {(imagesSubcategory?.images || []).length === 0 && (
+                <p className="text-sm text-muted-foreground text-center py-4">No images yet. Add one below.</p>
+              )}
+              <div className="grid grid-cols-2 gap-3">
+                {(imagesSubcategory?.images || []).map((img) => (
+                  <div key={img.id} className="relative border rounded-lg overflow-hidden group">
+                    <img src={img.image_url.split('?')[0]} alt={img.label} className="w-full aspect-square object-cover" />
+                    <div className="absolute bottom-0 left-0 right-0 bg-black/60 text-white text-xs px-2 py-1 truncate">
+                      {img.label}
+                    </div>
+                    <button
+                      onClick={() => handleDeleteImage(img.id, imagesSubcategory!.id)}
+                      className="absolute top-1 right-1 bg-destructive text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+              <div className="border-t pt-4 space-y-2">
+                <Label className="text-sm">Add New Image</Label>
+                <Input
+                  placeholder="Label (e.g., Gold, Silver, Bronze)"
+                  value={newImageLabel}
+                  onChange={(e) => setNewImageLabel(e.target.value)}
+                />
+                <Button
+                  variant="outline"
+                  className="w-full"
+                  disabled={uploadingId === imagesSubcategory?.id}
+                  onClick={() => imageDialogFileRef.current?.click()}
+                >
+                  <ImagePlus className="w-4 h-4 mr-2" />
+                  {uploadingId === imagesSubcategory?.id ? "Uploading..." : "Choose & Upload Image"}
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+
         <div className="mb-6 relative">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
           <Input
@@ -513,7 +675,10 @@ const SubcategoryManagement = () => {
             <Card key={subcat.id} className={`hover:shadow-lg transition-shadow overflow-hidden ${(subcat.available_count || 0) === 0 ? 'border-destructive bg-destructive/5' : ''}`}>
               <div className="flex">
                 {/* Image on left */}
-                <div className="w-36 h-44 shrink-0 bg-muted/30 flex items-center justify-center overflow-hidden">
+                <div
+                  className="w-36 h-44 shrink-0 bg-muted/30 flex items-center justify-center overflow-hidden cursor-pointer relative group"
+                  onClick={() => openImagesDialog(subcat)}
+                >
                   {subcat.image_url ? (
                     <img
                       src={subcat.image_url.split('?')[0]}
@@ -524,6 +689,15 @@ const SubcategoryManagement = () => {
                   ) : (
                     <Camera className="w-8 h-8 text-muted-foreground/40" />
                   )}
+                  {/* Image count badge */}
+                  {(subcat.images?.length || 0) > 1 && (
+                    <Badge className="absolute bottom-1 right-1 text-[10px] px-1.5 py-0">
+                      {subcat.images?.length} photos
+                    </Badge>
+                  )}
+                  <div className="absolute inset-0 bg-black/30 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                    <ImagePlus className="w-6 h-6 text-white" />
+                  </div>
                 </div>
                 {/* Right side: info + actions */}
                 <div className="flex-1 p-3 flex flex-col justify-between min-w-0">
@@ -535,7 +709,7 @@ const SubcategoryManagement = () => {
                       )}
                     </div>
                     <div className="flex gap-0.5 shrink-0">
-                      <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => triggerImageUpload(subcat.id)} disabled={uploadingId === subcat.id}>
+                      <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openImagesDialog(subcat)} disabled={uploadingId === subcat.id}>
                         <Camera className="w-3.5 h-3.5 text-muted-foreground" />
                       </Button>
                       <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEditDialog(subcat)}>
