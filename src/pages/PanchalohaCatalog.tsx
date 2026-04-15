@@ -458,7 +458,7 @@ const PanchalohaCatalog = () => {
         {/* Mobile/Tablet card layout */}
         {(isMobile || isTablet) ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {items.map(item => (
+            {filteredItems.map(item => (
               <div
                 key={item.id}
                 className={`border rounded-lg p-3 bg-card ${!item.enabled ? "opacity-50" : ""} ${item.available_count === 0 ? "border-destructive bg-destructive/5" : ""}`}
@@ -533,7 +533,7 @@ const PanchalohaCatalog = () => {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {items.map(item => {
+                {filteredItems.map(item => {
                   const imgUrl = getSelectedImageUrl(item);
                   return (
                     <TableRow key={item.id} className={`${!item.enabled ? "opacity-50" : ""} ${item.available_count === 0 ? "bg-destructive/10" : ""}`}>
@@ -563,7 +563,9 @@ const PanchalohaCatalog = () => {
                           ) : null}
                         </div>
                       </TableCell>
-                      <TableCell className="text-muted-foreground">{item.height || "—"}</TableCell>
+                      <TableCell>
+                        <Input value={item.height || ""} onChange={(e) => updateHeight(item.id, e.target.value)} className="w-24" placeholder="—" />
+                      </TableCell>
                       <TableCell>
                         {item.images.length > 1 ? (
                           <Select value={item.selectedImageId || ""} onValueChange={(val) => selectImage(item.id, val)}>
