@@ -265,6 +265,41 @@ export type Database = {
           },
         ]
       }
+      subcategory_images: {
+        Row: {
+          created_at: string
+          id: string
+          image_url: string
+          label: string
+          sort_order: number
+          subcategory_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          image_url: string
+          label?: string
+          sort_order?: number
+          subcategory_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          image_url?: string
+          label?: string
+          sort_order?: number
+          subcategory_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "subcategory_images_subcategory_id_fkey"
+            columns: ["subcategory_id"]
+            isOneToOne: false
+            referencedRelation: "subcategories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_roles: {
         Row: {
           created_at: string
