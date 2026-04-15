@@ -176,6 +176,10 @@ const PanchalohaCatalog = () => {
     setItems(prev => prev.map(i => i.id === id ? { ...i, sellPrice: value } : i));
   };
 
+  const updateHeight = (id: string, value: string) => {
+    setItems(prev => prev.map(i => i.id === id ? { ...i, height: value || null } : i));
+  };
+
   const applyMultiplier = () => {
     const mult = parseFloat(multiplier) || 1;
     setItems(prev => prev.map(i => {
