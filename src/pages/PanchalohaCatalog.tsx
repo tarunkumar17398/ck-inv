@@ -44,6 +44,7 @@ const PanchalohaCatalog = () => {
   const [showPreview, setShowPreview] = useState(false);
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
+  const [variantFilter, setVariantFilter] = useState("all");
   const isMobile = useIsMobile();
   const [isTablet, setIsTablet] = useState(false);
 
@@ -175,6 +176,10 @@ const PanchalohaCatalog = () => {
     setItems(prev => prev.map(i => i.id === id ? { ...i, sellPrice: value } : i));
   };
 
+  const updateHeight = (id: string, value: string) => {
+    setItems(prev => prev.map(i => i.id === id ? { ...i, height: value || null } : i));
+  };
+
   const applyMultiplier = () => {
     const mult = parseFloat(multiplier) || 1;
     setItems(prev => prev.map(i => {
@@ -183,7 +188,28 @@ const PanchalohaCatalog = () => {
     }));
   };
 
-  const enabledItems = items.filter(i => i.enabled);
+  // Collect all unique variant labels
+  const allVariantLabels = Array.from(new Set(items.flatMap(i => i.images.map(img => img.label)))).sort();
+
+  // Apply variant filter: show only items that have the selected variant, and auto-select it
+  const applyVariantFilter = (label: string) => {
+    setVariantFilter(label);
+    if (label !== "all") {
+      setItems(prev => prev.map(i => {
+        const matchImg = i.images.find(img => img.label === label);
+        if (matchImg) {
+          return { ...i, selectedImageId: matchImg.id };
+        }
+        return i;
+      }));
+    }
+  };
+
+  const filteredItems = variantFilter === "all" 
+    ? items 
+    : items.filter(i => i.images.some(img => img.label === variantFilter));
+
+  const enabledItems = filteredItems.filter(i => i.enabled);
 
   const loadImageAsBase64 = async (url: string): Promise<string | null> => {
     try {
@@ -409,6 +435,20 @@ const PanchalohaCatalog = () => {
             <Switch checked={showPrices} onCheckedChange={setShowPrices} />
             <Label className="text-sm">Show Prices</Label>
           </div>
+          <div className="flex items-center gap-2">
+            <Label className="text-sm">Variant</Label>
+            <Select value={variantFilter} onValueChange={applyVariantFilter}>
+              <SelectTrigger className="w-32">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All</SelectItem>
+                {allVariantLabels.map(l => (
+                  <SelectItem key={l} value={l}>{l}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
           <Button onClick={() => setShowPreview(true)} disabled={enabledItems.length === 0} className="w-full sm:w-auto">
             <Eye className="w-4 h-4 mr-2" />
             Preview ({enabledItems.length} items)
@@ -418,7 +458,7 @@ const PanchalohaCatalog = () => {
         {/* Mobile/Tablet card layout */}
         {(isMobile || isTablet) ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {items.map(item => (
+            {filteredItems.map(item => (
               <div
                 key={item.id}
                 className={`border rounded-lg p-3 bg-card ${!item.enabled ? "opacity-50" : ""} ${item.available_count === 0 ? "border-destructive bg-destructive/5" : ""}`}
@@ -449,7 +489,11 @@ const PanchalohaCatalog = () => {
                     ) : null}
                   </div>
                 </div>
-                <div className="grid grid-cols-2 gap-2 mt-2 pl-7">
+                <div className="grid grid-cols-3 gap-2 mt-2 pl-7">
+                  <div>
+                    <Label className="text-[11px] text-muted-foreground">Height</Label>
+                    <Input value={item.height || ""} onChange={(e) => updateHeight(item.id, e.target.value)} className="h-8 text-sm" placeholder="—" />
+                  </div>
                   <div>
                     <Label className="text-[11px] text-muted-foreground">Cost ₹</Label>
                     <Input type="number" min="0" value={item.costPrice} onChange={(e) => updateCostPrice(item.id, e.target.value)} className="h-8 text-sm" />
@@ -493,7 +537,7 @@ const PanchalohaCatalog = () => {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {items.map(item => {
+                {filteredItems.map(item => {
                   const imgUrl = getSelectedImageUrl(item);
                   return (
                     <TableRow key={item.id} className={`${!item.enabled ? "opacity-50" : ""} ${item.available_count === 0 ? "bg-destructive/10" : ""}`}>
@@ -523,7 +567,9 @@ const PanchalohaCatalog = () => {
                           ) : null}
                         </div>
                       </TableCell>
-                      <TableCell className="text-muted-foreground">{item.height || "—"}</TableCell>
+                      <TableCell>
+                        <Input value={item.height || ""} onChange={(e) => updateHeight(item.id, e.target.value)} className="w-24" placeholder="—" />
+                      </TableCell>
                       <TableCell>
                         {item.images.length > 1 ? (
                           <Select value={item.selectedImageId || ""} onValueChange={(val) => selectImage(item.id, val)}>
