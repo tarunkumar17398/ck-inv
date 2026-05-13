@@ -2,3 +2,6 @@ project_id = "eucxuuepfsrbgktlqyqx"
 
 [functions.rfid-export]
 verify_jwt = false
+
+[functions.get-backup-signed-url]
+verify_jwt = false
