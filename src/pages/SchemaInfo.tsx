@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 const TABLES = [
   "admin_users",
   "categories",
+  "estimates",
   "google_drive_tokens",
   "item_code_counters",
   "item_pieces",
@@ -25,6 +26,32 @@ const SCHEMA: Record<string, Array<{ name: string; type: string; nullable: boole
     { name: "created_at", type: "timestamptz", nullable: true, default: "now()" },
     { name: "prefix", type: "text", nullable: false },
     { name: "name", type: "text", nullable: false },
+  ],
+  estimates: [
+    { name: "id", type: "uuid", nullable: false, default: "gen_random_uuid()" },
+    { name: "created_at", type: "timestamptz", nullable: false, default: "now()" },
+    { name: "updated_at", type: "timestamptz", nullable: false, default: "now()" },
+    { name: "customer_name", type: "text", nullable: true },
+    { name: "customer_phone", type: "text", nullable: true },
+    { name: "items", type: "jsonb", nullable: false, default: "'[]'" },
+    { name: "subtotal", type: "numeric", nullable: false, default: "0" },
+    { name: "discount_enabled", type: "boolean", nullable: false, default: "false" },
+    { name: "discount_type", type: "text", nullable: false, default: "'amount'" },
+    { name: "discount_value", type: "numeric", nullable: false, default: "0" },
+    { name: "discount_amount", type: "numeric", nullable: false, default: "0" },
+    { name: "extra_enabled", type: "boolean", nullable: false, default: "false" },
+    { name: "extra_label", type: "text", nullable: true },
+    { name: "extra_amount", type: "numeric", nullable: false, default: "0" },
+    { name: "extra_charges_enabled", type: "boolean", nullable: true, default: "false" },
+    { name: "extra_charges_label", type: "text", nullable: true },
+    { name: "extra_charges_amount", type: "numeric", nullable: true, default: "0" },
+    { name: "extra_charges_total", type: "numeric", nullable: true, default: "0" },
+    { name: "gst_enabled", type: "boolean", nullable: false, default: "true" },
+    { name: "gst_rate", type: "numeric", nullable: false, default: "18" },
+    { name: "gst_percentage", type: "numeric", nullable: true, default: "5" },
+    { name: "gst_amount", type: "numeric", nullable: false, default: "0" },
+    { name: "grand_total", type: "numeric", nullable: false, default: "0" },
+    { name: "store_snapshot", type: "jsonb", nullable: true, default: "'{}'" },
   ],
   google_drive_tokens: [
     { name: "id", type: "uuid", nullable: false, default: "gen_random_uuid()" },
@@ -164,10 +191,10 @@ export default function SchemaInfo() {
           </div>
           <div>
             <b>Direct REST access to tables:</b> Requires the <i>anon key</i> in both
-            <code> apikey </code> and <code> Authorization: Bearer </code> headers, AND a logged-in
-            user with the <code>admin</code> role (RLS blocks anonymous reads on every table).
-            For external apps without a user session, use the edge functions above, or create a new
-            <code> verify_jwt=false </code> edge function that uses the service role key.
+            <code> apikey </code> and <code> Authorization: Bearer </code> headers.
+            Public (anon) access is enabled on: <b>items</b> (SELECT), <b>categories</b> (SELECT),
+            and <b>estimates</b> (SELECT/INSERT/UPDATE/DELETE). All other tables require a
+            logged-in admin user (RLS blocks anonymous access).
           </div>
         </div>
       </section>

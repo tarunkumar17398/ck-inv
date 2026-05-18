@@ -63,14 +63,20 @@ export type Database = {
           discount_type: string
           discount_value: number
           extra_amount: number
+          extra_charges_amount: number | null
+          extra_charges_enabled: boolean | null
+          extra_charges_label: string | null
+          extra_charges_total: number | null
           extra_enabled: boolean
           extra_label: string | null
           grand_total: number
           gst_amount: number
           gst_enabled: boolean
+          gst_percentage: number | null
           gst_rate: number
           id: string
           items: Json
+          store_snapshot: Json | null
           subtotal: number
           updated_at: string
         }
@@ -83,14 +89,20 @@ export type Database = {
           discount_type?: string
           discount_value?: number
           extra_amount?: number
+          extra_charges_amount?: number | null
+          extra_charges_enabled?: boolean | null
+          extra_charges_label?: string | null
+          extra_charges_total?: number | null
           extra_enabled?: boolean
           extra_label?: string | null
           grand_total?: number
           gst_amount?: number
           gst_enabled?: boolean
+          gst_percentage?: number | null
           gst_rate?: number
           id?: string
           items?: Json
+          store_snapshot?: Json | null
           subtotal?: number
           updated_at?: string
         }
@@ -103,14 +115,20 @@ export type Database = {
           discount_type?: string
           discount_value?: number
           extra_amount?: number
+          extra_charges_amount?: number | null
+          extra_charges_enabled?: boolean | null
+          extra_charges_label?: string | null
+          extra_charges_total?: number | null
           extra_enabled?: boolean
           extra_label?: string | null
           grand_total?: number
           gst_amount?: number
           gst_enabled?: boolean
+          gst_percentage?: number | null
           gst_rate?: number
           id?: string
           items?: Json
+          store_snapshot?: Json | null
           subtotal?: number
           updated_at?: string
         }
