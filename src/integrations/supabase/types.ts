@@ -332,6 +332,33 @@ export type Database = {
         }
         Relationships: []
       }
+      store_settings: {
+        Row: {
+          id: string
+          store_address: string
+          store_gst_number: string
+          store_name: string
+          store_phone: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          store_address?: string
+          store_gst_number?: string
+          store_name?: string
+          store_phone?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          store_address?: string
+          store_gst_number?: string
+          store_name?: string
+          store_phone?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       subcategories: {
         Row: {
           category_id: string
