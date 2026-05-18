@@ -25,6 +25,7 @@ import UpdateBrassPrices from "./pages/UpdateBrassPrices";
 import RfidApiTest from "./pages/RfidApiTest";
 import BarcodePrint from "./pages/BarcodePrint";
 import PanchalohaCatalog from "./pages/PanchalohaCatalog";
+import SchemaInfo from "./pages/SchemaInfo";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -57,6 +58,7 @@ const App = () => (
             <Route path="/rfid-api-test" element={<ProtectedRoute><RfidApiTest /></ProtectedRoute>} />
             <Route path="/barcode-print" element={<ProtectedRoute><BarcodePrint /></ProtectedRoute>} />
             <Route path="/panchaloha-catalog" element={<ProtectedRoute><PanchalohaCatalog /></ProtectedRoute>} />
+            <Route path="/schema-info" element={<ProtectedRoute><SchemaInfo /></ProtectedRoute>} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
