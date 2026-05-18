@@ -191,10 +191,10 @@ export default function SchemaInfo() {
           </div>
           <div>
             <b>Direct REST access to tables:</b> Requires the <i>anon key</i> in both
-            <code> apikey </code> and <code> Authorization: Bearer </code> headers, AND a logged-in
-            user with the <code>admin</code> role (RLS blocks anonymous reads on every table).
-            For external apps without a user session, use the edge functions above, or create a new
-            <code> verify_jwt=false </code> edge function that uses the service role key.
+            <code> apikey </code> and <code> Authorization: Bearer </code> headers.
+            Public (anon) access is enabled on: <b>items</b> (SELECT), <b>categories</b> (SELECT),
+            and <b>estimates</b> (SELECT/INSERT/UPDATE/DELETE). All other tables require a
+            logged-in admin user (RLS blocks anonymous access).
           </div>
         </div>
       </section>
