@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 const TABLES = [
   "admin_users",
   "categories",
+  "estimates",
   "google_drive_tokens",
   "item_code_counters",
   "item_pieces",
