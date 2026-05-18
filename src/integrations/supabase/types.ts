@@ -53,6 +53,69 @@ export type Database = {
         }
         Relationships: []
       }
+      estimates: {
+        Row: {
+          created_at: string
+          customer_name: string | null
+          customer_phone: string | null
+          discount_amount: number
+          discount_enabled: boolean
+          discount_type: string
+          discount_value: number
+          extra_amount: number
+          extra_enabled: boolean
+          extra_label: string | null
+          grand_total: number
+          gst_amount: number
+          gst_enabled: boolean
+          gst_rate: number
+          id: string
+          items: Json
+          subtotal: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          customer_name?: string | null
+          customer_phone?: string | null
+          discount_amount?: number
+          discount_enabled?: boolean
+          discount_type?: string
+          discount_value?: number
+          extra_amount?: number
+          extra_enabled?: boolean
+          extra_label?: string | null
+          grand_total?: number
+          gst_amount?: number
+          gst_enabled?: boolean
+          gst_rate?: number
+          id?: string
+          items?: Json
+          subtotal?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          customer_name?: string | null
+          customer_phone?: string | null
+          discount_amount?: number
+          discount_enabled?: boolean
+          discount_type?: string
+          discount_value?: number
+          extra_amount?: number
+          extra_enabled?: boolean
+          extra_label?: string | null
+          grand_total?: number
+          gst_amount?: number
+          gst_enabled?: boolean
+          gst_rate?: number
+          id?: string
+          items?: Json
+          subtotal?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       google_drive_tokens: {
         Row: {
           access_token: string
