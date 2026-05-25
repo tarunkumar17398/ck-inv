@@ -126,6 +126,11 @@ const Inventory = () => {
     } else {
       console.log('No category filter applied (showing all)');
     }
+
+    // Missing-price tab: only items with NULL or 0 price
+    if (viewTab === "missing-price") {
+      query = query.or("price.is.null,price.eq.0");
+    }
     
     // Apply search filter ONLY if searchQuery is not empty
     if (searchQuery && searchQuery.trim()) {
