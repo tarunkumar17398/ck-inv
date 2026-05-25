@@ -67,6 +67,9 @@ const Inventory = () => {
   const [loadingMore, setLoadingMore] = useState(false);
   const [totalCount, setTotalCount] = useState(0);
   const [hasMore, setHasMore] = useState(true);
+  const [viewTab, setViewTab] = useState<"all" | "missing-price">("all");
+  const [priceEdits, setPriceEdits] = useState<Record<string, string>>({});
+  const [savingPriceId, setSavingPriceId] = useState<string | null>(null);
   
   // Print queue state
   const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
