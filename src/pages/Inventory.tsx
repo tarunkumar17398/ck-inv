@@ -551,6 +551,13 @@ const Inventory = () => {
           )}
         </div>
 
+        <Tabs value={viewTab} onValueChange={(v) => setViewTab(v as "all" | "missing-price")} className="mb-4">
+          <TabsList>
+            <TabsTrigger value="all">All Items</TabsTrigger>
+            <TabsTrigger value="missing-price">Missing Selling Price</TabsTrigger>
+          </TabsList>
+        </Tabs>
+
         <div className="flex flex-col gap-4 mb-6">
           <div className="flex flex-col sm:flex-row gap-4">
             <div className="flex-1 relative">
