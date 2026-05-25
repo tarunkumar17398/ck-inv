@@ -721,6 +721,87 @@ const Inventory = () => {
                 <p className="text-muted-foreground">Loading inventory...</p>
               </div>
             </div>
+          ) : viewTab === "missing-price" ? (
+            <div className="divide-y">
+              {filteredItems.length === 0 ? (
+                <div className="text-center py-12 text-muted-foreground">
+                  No items missing a selling price. 🎉
+                </div>
+              ) : (
+                filteredItems.map((item) => {
+                  const weight = parseFloat(item.weight || "0");
+                  const draft = priceEdits[item.id] ?? "";
+                  const draftNum = parseFloat(draft);
+                  const ratio = weight > 0 && draftNum > 0 ? (draftNum / weight).toFixed(2) : null;
+                  return (
+                    <div key={item.id} className="p-4 flex flex-col md:flex-row md:items-center gap-3">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="font-mono font-bold">{item.item_code}</span>
+                          <span className="text-xs px-2 py-0.5 bg-muted rounded text-muted-foreground">
+                            {item.categories.name}
+                          </span>
+                        </div>
+                        <p className="text-sm text-foreground line-clamp-1">{item.item_name}</p>
+                        <div className="text-xs text-muted-foreground mt-1 flex gap-3 flex-wrap">
+                          <span>Size: {item.size || "-"}</span>
+                          <span>Weight: {item.weight ? `${parseFloat(item.weight).toLocaleString()}g` : "-"}</span>
+                          <span>Cost: {item.cost_price ? `₹${item.cost_price}` : "-"}</span>
+                          {ratio && <span>Ratio: {ratio}</span>}
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <div className="relative">
+                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">₹</span>
+                          <Input
+                            type="number"
+                            inputMode="decimal"
+                            placeholder="Selling price"
+                            className="pl-7 w-40"
+                            value={draft}
+                            onChange={(e) =>
+                              setPriceEdits((p) => ({ ...p, [item.id]: e.target.value }))
+                            }
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter") handleSavePrice(item.id);
+                            }}
+                            autoFocus={false}
+                          />
+                        </div>
+                        <Button
+                          size="sm"
+                          onClick={() => handleSavePrice(item.id)}
+                          disabled={savingPriceId === item.id}
+                        >
+                          <Check className="w-4 h-4 mr-1" />
+                          {savingPriceId === item.id ? "Saving..." : "Save"}
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleEditClick(item)}
+                          title="Full edit"
+                        >
+                          <Pencil className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+              {hasMore && filteredItems.length > 0 && (
+                <div className="p-4 text-center">
+                  <Button
+                    onClick={() => loadItems(false)}
+                    disabled={loadingMore}
+                    variant="outline"
+                    className="min-w-[200px]"
+                  >
+                    {loadingMore ? "Loading..." : `Load More (${totalCount - items.length} remaining)`}
+                  </Button>
+                </div>
+              )}
+            </div>
           ) : (
             <>
               {/* Mobile Card View */}
