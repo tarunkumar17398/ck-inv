@@ -14,6 +14,7 @@ import { formatPriceLabel, formatWeightLabel, formatSizeWithInches, cn } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import bwipjs from "bwip-js";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { MobileInventoryCard } from "@/components/MobileInventoryCard";
@@ -66,6 +67,9 @@ const Inventory = () => {
   const [loadingMore, setLoadingMore] = useState(false);
   const [totalCount, setTotalCount] = useState(0);
   const [hasMore, setHasMore] = useState(true);
+  const [viewTab, setViewTab] = useState<"all" | "missing-price">("all");
+  const [priceEdits, setPriceEdits] = useState<Record<string, string>>({});
+  const [savingPriceId, setSavingPriceId] = useState<string | null>(null);
   
   // Print queue state
   const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
@@ -93,7 +97,7 @@ const Inventory = () => {
     if (isInitialized) {
       loadItems(true);
     }
-  }, [categoryFilter, searchQuery, sortOrder, isInitialized]);
+  }, [categoryFilter, searchQuery, sortOrder, isInitialized, viewTab]);
 
   const loadCategories = async () => {
     const { data } = await supabase.from("categories").select("*").order("name");
@@ -121,6 +125,11 @@ const Inventory = () => {
       query = query.eq("category_id", categoryFilter);
     } else {
       console.log('No category filter applied (showing all)');
+    }
+
+    // Missing-price tab: only items with NULL or 0 price
+    if (viewTab === "missing-price") {
+      query = query.or("price.is.null,price.eq.0");
     }
     
     // Apply search filter ONLY if searchQuery is not empty
@@ -271,6 +280,34 @@ const Inventory = () => {
       duplicate: "true",
     });
     navigate(`/add-item?${params.toString()}`);
+  };
+
+  const handleSavePrice = async (itemId: string) => {
+    const raw = priceEdits[itemId];
+    const value = parseFloat(raw || "");
+    if (!raw || isNaN(value) || value <= 0) {
+      toast({ title: "Enter a valid price", variant: "destructive" });
+      return;
+    }
+    setSavingPriceId(itemId);
+    const { error } = await supabase
+      .from("items")
+      .update({ price: value })
+      .eq("id", itemId);
+    setSavingPriceId(null);
+    if (error) {
+      toast({ title: "Error saving price", description: error.message, variant: "destructive" });
+      return;
+    }
+    toast({ title: "Price updated" });
+    // Remove the row locally so user can move to next
+    setItems((prev) => prev.filter((i) => i.id !== itemId));
+    setTotalCount((c) => Math.max(0, c - 1));
+    setPriceEdits((prev) => {
+      const next = { ...prev };
+      delete next[itemId];
+      return next;
+    });
   };
 
   // Print queue functions
@@ -514,6 +551,13 @@ const Inventory = () => {
           )}
         </div>
 
+        <Tabs value={viewTab} onValueChange={(v) => setViewTab(v as "all" | "missing-price")} className="mb-4">
+          <TabsList>
+            <TabsTrigger value="all">All Items</TabsTrigger>
+            <TabsTrigger value="missing-price">Missing Selling Price</TabsTrigger>
+          </TabsList>
+        </Tabs>
+
         <div className="flex flex-col gap-4 mb-6">
           <div className="flex flex-col sm:flex-row gap-4">
             <div className="flex-1 relative">
@@ -676,6 +720,87 @@ const Inventory = () => {
                 <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary mb-4"></div>
                 <p className="text-muted-foreground">Loading inventory...</p>
               </div>
+            </div>
+          ) : viewTab === "missing-price" ? (
+            <div className="divide-y">
+              {filteredItems.length === 0 ? (
+                <div className="text-center py-12 text-muted-foreground">
+                  No items missing a selling price. 🎉
+                </div>
+              ) : (
+                filteredItems.map((item) => {
+                  const weight = parseFloat(item.weight || "0");
+                  const draft = priceEdits[item.id] ?? "";
+                  const draftNum = parseFloat(draft);
+                  const ratio = weight > 0 && draftNum > 0 ? (draftNum / weight).toFixed(2) : null;
+                  return (
+                    <div key={item.id} className="p-4 flex flex-col md:flex-row md:items-center gap-3">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="font-mono font-bold">{item.item_code}</span>
+                          <span className="text-xs px-2 py-0.5 bg-muted rounded text-muted-foreground">
+                            {item.categories.name}
+                          </span>
+                        </div>
+                        <p className="text-sm text-foreground line-clamp-1">{item.item_name}</p>
+                        <div className="text-xs text-muted-foreground mt-1 flex gap-3 flex-wrap">
+                          <span>Size: {item.size || "-"}</span>
+                          <span>Weight: {item.weight ? `${parseFloat(item.weight).toLocaleString()}g` : "-"}</span>
+                          <span>Cost: {item.cost_price ? `₹${item.cost_price}` : "-"}</span>
+                          {ratio && <span>Ratio: {ratio}</span>}
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <div className="relative">
+                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">₹</span>
+                          <Input
+                            type="number"
+                            inputMode="decimal"
+                            placeholder="Selling price"
+                            className="pl-7 w-40"
+                            value={draft}
+                            onChange={(e) =>
+                              setPriceEdits((p) => ({ ...p, [item.id]: e.target.value }))
+                            }
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter") handleSavePrice(item.id);
+                            }}
+                            autoFocus={false}
+                          />
+                        </div>
+                        <Button
+                          size="sm"
+                          onClick={() => handleSavePrice(item.id)}
+                          disabled={savingPriceId === item.id}
+                        >
+                          <Check className="w-4 h-4 mr-1" />
+                          {savingPriceId === item.id ? "Saving..." : "Save"}
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleEditClick(item)}
+                          title="Full edit"
+                        >
+                          <Pencil className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+              {hasMore && filteredItems.length > 0 && (
+                <div className="p-4 text-center">
+                  <Button
+                    onClick={() => loadItems(false)}
+                    disabled={loadingMore}
+                    variant="outline"
+                    className="min-w-[200px]"
+                  >
+                    {loadingMore ? "Loading..." : `Load More (${totalCount - items.length} remaining)`}
+                  </Button>
+                </div>
+              )}
             </div>
           ) : (
             <>
