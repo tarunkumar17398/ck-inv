@@ -14,6 +14,7 @@ import { formatPriceLabel, formatWeightLabel, formatSizeWithInches, cn } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import bwipjs from "bwip-js";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { MobileInventoryCard } from "@/components/MobileInventoryCard";
