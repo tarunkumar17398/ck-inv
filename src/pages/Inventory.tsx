@@ -282,6 +282,34 @@ const Inventory = () => {
     navigate(`/add-item?${params.toString()}`);
   };
 
+  const handleSavePrice = async (itemId: string) => {
+    const raw = priceEdits[itemId];
+    const value = parseFloat(raw || "");
+    if (!raw || isNaN(value) || value <= 0) {
+      toast({ title: "Enter a valid price", variant: "destructive" });
+      return;
+    }
+    setSavingPriceId(itemId);
+    const { error } = await supabase
+      .from("items")
+      .update({ price: value })
+      .eq("id", itemId);
+    setSavingPriceId(null);
+    if (error) {
+      toast({ title: "Error saving price", description: error.message, variant: "destructive" });
+      return;
+    }
+    toast({ title: "Price updated" });
+    // Remove the row locally so user can move to next
+    setItems((prev) => prev.filter((i) => i.id !== itemId));
+    setTotalCount((c) => Math.max(0, c - 1));
+    setPriceEdits((prev) => {
+      const next = { ...prev };
+      delete next[itemId];
+      return next;
+    });
+  };
+
   // Print queue functions
   const toggleItemSelection = (itemId: string) => {
     setSelectedItems(prev => {
