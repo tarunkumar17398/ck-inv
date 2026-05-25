@@ -97,7 +97,7 @@ const Inventory = () => {
     if (isInitialized) {
       loadItems(true);
     }
-  }, [categoryFilter, searchQuery, sortOrder, isInitialized]);
+  }, [categoryFilter, searchQuery, sortOrder, isInitialized, viewTab]);
 
   const loadCategories = async () => {
     const { data } = await supabase.from("categories").select("*").order("name");
