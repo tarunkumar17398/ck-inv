@@ -723,6 +723,17 @@ const Inventory = () => {
             </div>
           ) : viewTab === "missing-price" ? (
             <div className="divide-y">
+              <div className="p-3 flex justify-between items-center bg-muted/30">
+                <span className="text-sm text-muted-foreground">
+                  {totalCount} item{totalCount === 1 ? "" : "s"} missing selling price
+                  {categoryFilter !== "all" && categories.find(c => c.id === categoryFilter) &&
+                    ` in ${categories.find(c => c.id === categoryFilter)?.name}`}
+                </span>
+                <Button size="sm" variant="outline" onClick={handlePrintMissingPrice}>
+                  <Printer className="w-4 h-4 mr-2" />
+                  Print A4
+                </Button>
+              </div>
               {filteredItems.length === 0 ? (
                 <div className="text-center py-12 text-muted-foreground">
                   No items missing a selling price. 🎉
