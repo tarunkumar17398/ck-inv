@@ -198,6 +198,107 @@ const Inventory = () => {
     setMaxSize("");
   };
 
+
+  const handlePrintMissingPrice = async () => {
+    // Fetch ALL missing-price items (bypass 1000-row limit) respecting category filter
+    let all: Item[] = [];
+    let from = 0;
+    const pageSize = 1000;
+    while (true) {
+      let q = supabase
+        .from("items")
+        .select("*, categories(name, prefix)")
+        .eq("status", "in_stock")
+        .or("price.is.null,price.eq.0");
+      if (categoryFilter && categoryFilter !== "all") {
+        q = q.eq("category_id", categoryFilter);
+      }
+      const { data, error } = await q.order("item_code", { ascending: true }).range(from, from + pageSize - 1);
+      if (error) {
+        toast({ title: "Error", description: error.message, variant: "destructive" });
+        return;
+      }
+      const batch = (data || []) as unknown as Item[];
+      all = [...all, ...batch];
+      if (batch.length < pageSize) break;
+      from += pageSize;
+    }
+
+    if (all.length === 0) {
+      toast({ title: "Nothing to print", description: "No items missing selling price." });
+      return;
+    }
+
+    const catLabel = categoryFilter !== "all"
+      ? categories.find((c) => c.id === categoryFilter)?.name || "All"
+      : "All Categories";
+
+    const rows = all
+      .map(
+        (it, idx) => `
+          <tr>
+            <td class="num">${idx + 1}</td>
+            <td class="code">${it.item_code || ""}</td>
+            <td>${(it.item_name || "").replace(/</g, "&lt;")}</td>
+            <td class="ctr">${it.categories?.name || ""}</td>
+            <td class="ctr">${it.size || ""}</td>
+            <td class="ctr">${it.weight ? `${Math.round(parseFloat(it.weight))}g` : ""}</td>
+            <td class="ctr">${it.cost_price != null ? `₹${it.cost_price}` : ""}</td>
+            <td class="price"></td>
+          </tr>`
+      )
+      .join("");
+
+    const html = `<!doctype html><html><head><meta charset="utf-8"><title>Missing Selling Price</title>
+      <style>
+        @page { size: A4; margin: 10mm 10mm 14mm 10mm; }
+        * { box-sizing: border-box; }
+        body { font-family: Arial, sans-serif; color: #000; margin: 0; font-size: 10pt; }
+        .header { display:flex; justify-content:space-between; align-items:flex-end; margin-bottom: 8px; border-bottom: 2px solid #000; padding-bottom: 6px; }
+        .header h1 { margin: 0; font-size: 14pt; }
+        .header .meta { font-size: 9pt; text-align: right; }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { border: 1px solid #000; padding: 3px 5px; vertical-align: middle; }
+        th { background: #eee; font-size: 9pt; text-align: left; }
+        td.num { width: 6%; text-align: center; }
+        td.code { width: 11%; font-family: monospace; font-weight: bold; }
+        td.ctr { text-align: center; }
+        td.price { width: 14%; height: 22px; }
+        tr { page-break-inside: avoid; }
+        thead { display: table-header-group; }
+        @media print { .noprint { display: none; } }
+        .noprint { position: fixed; top: 10px; right: 10px; }
+        .noprint button { padding: 8px 16px; font-size: 12pt; cursor: pointer; }
+      </style></head><body>
+      <div class="noprint"><button onclick="window.print()">Print</button></div>
+      <div class="header">
+        <h1>Missing Selling Price</h1>
+        <div class="meta">
+          Category: <strong>${catLabel}</strong><br/>
+          Total: <strong>${all.length}</strong> &nbsp;|&nbsp; ${new Date().toLocaleDateString("en-GB")}
+        </div>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th>#</th><th>Item Code</th><th>Item Name</th><th>Category</th>
+            <th>Size</th><th>Weight</th><th>Cost</th><th>Selling Price</th>
+          </tr>
+        </thead>
+        <tbody>${rows}</tbody>
+      </table>
+      <script>window.onload=()=>setTimeout(()=>window.print(),300);</script>
+      </body></html>`;
+
+    const w = window.open("", "_blank");
+    if (!w) {
+      toast({ title: "Popup blocked", description: "Allow popups to print.", variant: "destructive" });
+      return;
+    }
+    w.document.write(html);
+    w.document.close();
+  };
+
   const handleEditClick = (item: Item) => {
     setEditingItem(item);
     setEditFormData({
@@ -723,6 +824,17 @@ const Inventory = () => {
             </div>
           ) : viewTab === "missing-price" ? (
             <div className="divide-y">
+              <div className="p-3 flex justify-between items-center bg-muted/30">
+                <span className="text-sm text-muted-foreground">
+                  {totalCount} item{totalCount === 1 ? "" : "s"} missing selling price
+                  {categoryFilter !== "all" && categories.find(c => c.id === categoryFilter) &&
+                    ` in ${categories.find(c => c.id === categoryFilter)?.name}`}
+                </span>
+                <Button size="sm" variant="outline" onClick={handlePrintMissingPrice}>
+                  <Printer className="w-4 h-4 mr-2" />
+                  Print A4
+                </Button>
+              </div>
               {filteredItems.length === 0 ? (
                 <div className="text-center py-12 text-muted-foreground">
                   No items missing a selling price. 🎉
