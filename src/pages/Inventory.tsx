@@ -281,7 +281,7 @@ const Inventory = () => {
         <thead>
           <tr>
             <th>#</th><th>Item Code</th><th>Item Name</th><th>Category</th>
-            <th>Size</th><th>Weight</th><th>Cost</th><th>Selling Price</th>
+            <th>Size</th><th>Weight</th><th>Selling Price</th>
           </tr>
         </thead>
         <tbody>${rows}</tbody>
