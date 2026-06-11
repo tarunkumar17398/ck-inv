@@ -243,7 +243,6 @@ const Inventory = () => {
             <td class="ctr">${it.categories?.name || ""}</td>
             <td class="ctr">${it.size || ""}</td>
             <td class="ctr">${it.weight ? `${Math.round(parseFloat(it.weight))}g` : ""}</td>
-            <td class="ctr">${it.cost_price != null ? `₹${it.cost_price}` : ""}</td>
             <td class="price"></td>
           </tr>`
       )
@@ -282,7 +281,7 @@ const Inventory = () => {
         <thead>
           <tr>
             <th>#</th><th>Item Code</th><th>Item Name</th><th>Category</th>
-            <th>Size</th><th>Weight</th><th>Cost</th><th>Selling Price</th>
+            <th>Size</th><th>Weight</th><th>Selling Price</th>
           </tr>
         </thead>
         <tbody>${rows}</tbody>
