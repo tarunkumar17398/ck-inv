@@ -288,8 +288,8 @@ const StockPrint = () => {
                       <div className="inline-block w-3 h-3 border border-black"></div>
                     </td>
                     <td className="py-0.5 px-1 text-center border border-black">
-                      {item.sold_date 
-                        ? new Date(item.sold_date).toLocaleDateString("en-GB")
+                      {item.sold_date
+                        ? new Date(item.sold_date).toLocaleDateString("en-GB", { day: "2-digit", month: "2-digit" })
                         : ""}
                     </td>
                   </tr>
