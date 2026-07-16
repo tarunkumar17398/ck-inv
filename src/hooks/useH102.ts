@@ -37,6 +37,7 @@ const CMD_STOP = finalizeCmd(new Uint8Array([0xcf, 0xff, 0x00, 0x02, 0x00]));
 const CMD_POWER_8 = finalizeCmd(new Uint8Array([0xcf, 0x00, 0x00, 0x84, 0x01, 8]));
 const CMD_Q_ZERO = finalizeCmd(new Uint8Array([0xcf, 0x00, 0x00, 0x8b, 0x01, 0]));
 const CMD_SESSION = finalizeCmd(new Uint8Array([0xcf, 0xff, 0x00, 0x8c, 0x09, 0, 0, 0, 0, 0, 0, 0, 0, 0]));
+const CMD_GET_BATTERY = finalizeCmd(new Uint8Array([0xcf, 0x00, 0x00, 0x83, 0x00]));
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
@@ -47,7 +48,7 @@ export interface H102Options {
 
 export function useH102(opts: H102Options = {}) {
   const [connected, setConnected] = useState(false);
-  const [power] = useState(8);
+  const [battery, setBattery] = useState<number | null>(null);
   const [scanning, setScanning] = useState(false);
   const [supported] = useState(
     typeof navigator !== "undefined" && !!(navigator as any).bluetooth
@@ -59,6 +60,7 @@ export function useH102(opts: H102Options = {}) {
   const packetBufRef = useRef<Uint8Array>(new Uint8Array(0));
   const expectedLenRef = useRef<number>(0);
   const scanTimeoutRef = useRef<any>(null);
+  const batteryIntervalRef = useRef<any>(null);
   const scanActiveRef = useRef(false);
   const optsRef = useRef(opts);
   optsRef.current = opts;
@@ -66,7 +68,15 @@ export function useH102(opts: H102Options = {}) {
   const parsePacket = useCallback((buf: Uint8Array) => {
     const dv = new DataView(buf.buffer, buf.byteOffset, buf.byteLength);
     const cmd = dv.getUint8(3);
-    if ([0x83, 0x02, 0x89, 0x8b, 0x8c, 0x84].includes(cmd)) return;
+    if (cmd === 0x83) {
+      if (dv.byteLength >= 7) {
+        try {
+          setBattery(dv.getUint8(5));
+        } catch { /* ignore */ }
+      }
+      return;
+    }
+    if ([0x02, 0x89, 0x8b, 0x8c, 0x84].includes(cmd)) return;
     try {
       const rawRssi = dv.getUint8(6);
       const signed = rawRssi > 127 ? rawRssi - 256 : rawRssi;
@@ -126,8 +136,10 @@ export function useH102(opts: H102Options = {}) {
     writeCharRef.current = null;
     notifyCharRef.current = null;
     scanActiveRef.current = false;
+    if (batteryIntervalRef.current) { clearInterval(batteryIntervalRef.current); batteryIntervalRef.current = null; }
     setScanning(false);
     setConnected(false);
+    setBattery(null);
   }, [onNotify]);
 
   const connect = useCallback(async () => {
@@ -159,6 +171,14 @@ export function useH102(opts: H102Options = {}) {
         await sleep(150);
       }
       setConnected(true);
+      await sleep(300);
+      try { await writeChar.writeValue(CMD_GET_BATTERY); } catch { /* ignore */ }
+      if (batteryIntervalRef.current) clearInterval(batteryIntervalRef.current);
+      batteryIntervalRef.current = setInterval(async () => {
+        if (writeCharRef.current && !scanActiveRef.current) {
+          try { await writeCharRef.current.writeValue(CMD_GET_BATTERY); } catch { /* ignore */ }
+        }
+      }, 60000);
     } catch (e: any) {
       optsRef.current.onError?.(e?.message || "Failed to connect");
       await disconnect();
@@ -200,5 +220,5 @@ export function useH102(opts: H102Options = {}) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  return { supported, connected, power, scanning, connect, disconnect, scanOnce };
+  return { supported, connected, power: 8, battery, scanning, connect, disconnect, scanOnce };
 }

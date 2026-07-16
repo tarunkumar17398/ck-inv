@@ -71,7 +71,7 @@ const QuickTag = () => {
   const epcInputRef = useRef<HTMLInputElement>(null);
   const debounceRef = useRef<any>(null);
 
-  const { supported, connected, power, scanning, connect, disconnect, scanOnce } = useH102({
+  const { supported, connected, power, battery, scanning, connect, disconnect, scanOnce } = useH102({
     onTag: (tag) => {
       setEpc(tag);
     },
@@ -257,6 +257,22 @@ const QuickTag = () => {
                   </span>
                   <span className="font-medium text-sm sm:text-base truncate">
                     H102 Connected · {power} dBm
+                    {battery !== null && (
+                      <>
+                        {" · 🔋 "}
+                        <span
+                          className={
+                            battery > 50
+                              ? "text-green-600 dark:text-green-400"
+                              : battery >= 20
+                              ? "text-orange-500"
+                              : "text-red-500"
+                          }
+                        >
+                          {battery}%
+                        </span>
+                      </>
+                    )}
                   </span>
                 </>
               ) : (
