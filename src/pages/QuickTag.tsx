@@ -180,7 +180,7 @@ const QuickTag = () => {
 
   return (
     <div className="min-h-screen bg-background p-3 sm:p-6">
-      <div className="max-w-4xl mx-auto space-y-4">
+      <div className="max-w-4xl mx-auto space-y-4 print:hidden">
         {/* Header */}
         <div className="flex items-center gap-2">
           <Button variant="ghost" size="icon" onClick={() => navigate("/dashboard")}>
