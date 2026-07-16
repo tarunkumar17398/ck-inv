@@ -113,7 +113,47 @@ const QuickTag = () => {
     return () => clearTimeout(debounceRef.current);
   }, [query, selected]);
 
-  const handleSelect = (item: ItemRow) => {
+  const fetchUntagged = useCallback(async () => {
+    setUntaggedLoading(true);
+    const { data, error } = await supabase
+      .from("items")
+      .select("id, item_code, item_name, size, categories(name)")
+      .eq("status", "in_stock")
+      .is("rfid_epc", null)
+      .order("item_code", { ascending: true });
+    setUntaggedLoading(false);
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    const grouped: Record<string, { id: string; item_code: string; item_name: string; size: string | null }[]> = {};
+    for (const row of (data as any[]) || []) {
+      const cat = row.categories?.name || "Uncategorized";
+      if (!grouped[cat]) grouped[cat] = [];
+      grouped[cat].push({ id: row.id, item_code: row.item_code, item_name: row.item_name, size: row.size });
+    }
+    setUntagged(grouped);
+  }, []);
+
+  useEffect(() => {
+    fetchUntagged();
+  }, [fetchUntagged]);
+
+  const loadItemByCode = async (code: string) => {
+    setQuery(code);
+    const { data, error } = await supabase
+      .from("items")
+      .select("id, item_code, item_name, particulars, size, cost_price, price, weight, rfid_epc")
+      .eq("item_code", code)
+      .eq("status", "in_stock")
+      .maybeSingle();
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    if (data) handleSelect(data as ItemRow);
+  };
+
     setSelected(item);
     setQuery(item.item_code);
     setShowDropdown(false);
