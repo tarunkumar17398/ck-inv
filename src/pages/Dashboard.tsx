@@ -15,6 +15,7 @@ import {
   Database,
   Barcode,
   Menu,
+  Radio,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -150,6 +151,10 @@ const Dashboard = () => {
       <Button variant="outline" className="h-16 sm:h-24 text-sm sm:text-lg justify-start sm:justify-center px-4" onClick={() => navigate("/backup-restore")}>
         <Database className="w-5 h-5 sm:w-6 sm:h-6 mr-2 flex-shrink-0" />
         <span className="truncate">Backup & Restore</span>
+      </Button>
+      <Button variant="outline" className="h-16 sm:h-24 text-sm sm:text-lg justify-start sm:justify-center px-4" onClick={() => navigate("/quick-tag")}>
+        <Radio className="w-5 h-5 sm:w-6 sm:h-6 mr-2 flex-shrink-0" />
+        <span className="truncate">Quick Tag (RFID)</span>
       </Button>
     </>
   );
