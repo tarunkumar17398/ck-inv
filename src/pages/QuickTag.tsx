@@ -6,10 +6,16 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Bluetooth, BluetoothOff, X, Radio, AlertCircle, CheckCircle2 } from "lucide-react";
+import { ArrowLeft, Bluetooth, BluetoothOff, X, Radio, AlertCircle, CheckCircle2, Printer } from "lucide-react";
 import { toast } from "sonner";
 import { useH102 } from "@/hooks/useH102";
-import { cleanSizeDisplay } from "@/lib/utils";
+import { cleanSizeDisplay, formatPriceLabel, formatWeightLabel, formatSizeWithInches } from "@/lib/utils";
+import bwipjs from "bwip-js";
+import type { RenderOptions } from "bwip-js";
+
+const bwipjsLib = bwipjs as typeof bwipjs & {
+  toSVG: (opts: RenderOptions) => string;
+};
 import {
   AlertDialog,
   AlertDialogAction,
