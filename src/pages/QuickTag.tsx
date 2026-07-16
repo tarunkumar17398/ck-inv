@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Bluetooth, BluetoothOff, X, Radio, AlertCircle, CheckCircle2, Printer } from "lucide-react";
+import { ArrowLeft, Bluetooth, BluetoothOff, X, Radio, AlertCircle, CheckCircle2, Printer, RefreshCw, ChevronDown, ChevronRight } from "lucide-react";
 import { toast } from "sonner";
 import { useH102 } from "@/hooks/useH102";
 import { cleanSizeDisplay, formatPriceLabel, formatWeightLabel, formatSizeWithInches } from "@/lib/utils";
@@ -66,6 +66,9 @@ const QuickTag = () => {
     weight: string;
     barcodeSvg: string;
   } | null>(null);
+  const [untagged, setUntagged] = useState<Record<string, { id: string; item_code: string; item_name: string; size: string | null }[]>>({});
+  const [untaggedLoading, setUntaggedLoading] = useState(false);
+  const [expandedCats, setExpandedCats] = useState<Record<string, boolean>>({});
 
   const itemInputRef = useRef<HTMLInputElement>(null);
   const epcInputRef = useRef<HTMLInputElement>(null);
@@ -110,6 +113,47 @@ const QuickTag = () => {
     return () => clearTimeout(debounceRef.current);
   }, [query, selected]);
 
+  const fetchUntagged = useCallback(async () => {
+    setUntaggedLoading(true);
+    const { data, error } = await supabase
+      .from("items")
+      .select("id, item_code, item_name, size, categories(name)")
+      .eq("status", "in_stock")
+      .is("rfid_epc", null)
+      .order("item_code", { ascending: true });
+    setUntaggedLoading(false);
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    const grouped: Record<string, { id: string; item_code: string; item_name: string; size: string | null }[]> = {};
+    for (const row of (data as any[]) || []) {
+      const cat = row.categories?.name || "Uncategorized";
+      if (!grouped[cat]) grouped[cat] = [];
+      grouped[cat].push({ id: row.id, item_code: row.item_code, item_name: row.item_name, size: row.size });
+    }
+    setUntagged(grouped);
+  }, []);
+
+  useEffect(() => {
+    fetchUntagged();
+  }, [fetchUntagged]);
+
+  const loadItemByCode = async (code: string) => {
+    setQuery(code);
+    const { data, error } = await supabase
+      .from("items")
+      .select("id, item_code, item_name, particulars, size, cost_price, price, weight, rfid_epc")
+      .eq("item_code", code)
+      .eq("status", "in_stock")
+      .maybeSingle();
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    if (data) handleSelect(data as ItemRow);
+  };
+
   const handleSelect = (item: ItemRow) => {
     setSelected(item);
     setQuery(item.item_code);
@@ -153,7 +197,8 @@ const QuickTag = () => {
     setEdits({});
     setEditingField(null);
     setTimeout(() => itemInputRef.current?.focus(), 50);
-  }, [selected, epc]);
+    fetchUntagged();
+  }, [selected, epc, fetchUntagged]);
 
   const hasEdits = Object.keys(edits).length > 0;
 
@@ -524,7 +569,78 @@ const QuickTag = () => {
             </button>
           </CardContent>
         </Card>
+
+        {/* Missing RFID Tags */}
+        {(() => {
+          const categoryNames = Object.keys(untagged).sort();
+          const totalItems = categoryNames.reduce((sum, c) => sum + untagged[c].length, 0);
+          return (
+            <Card className="bg-muted/40 border-muted">
+              <CardHeader className="py-3 flex-row items-center justify-between space-y-0">
+                <div>
+                  <CardTitle className="text-sm font-medium text-muted-foreground">Untagged Items</CardTitle>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    {totalItems} items missing RFID tags across {categoryNames.length} categories
+                  </p>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-7 w-7"
+                  onClick={fetchUntagged}
+                  disabled={untaggedLoading}
+                  title="Refresh"
+                >
+                  <RefreshCw className={`w-3.5 h-3.5 ${untaggedLoading ? "animate-spin" : ""}`} />
+                </Button>
+              </CardHeader>
+              {categoryNames.length > 0 && (
+                <CardContent className="pt-0 pb-3 space-y-1">
+                  {categoryNames.map((cat) => {
+                    const items = untagged[cat];
+                    const expanded = !!expandedCats[cat];
+                    return (
+                      <div key={cat} className="border rounded-md bg-background/60">
+                        <button
+                          type="button"
+                          onClick={() => setExpandedCats((p) => ({ ...p, [cat]: !p[cat] }))}
+                          className="w-full flex items-center justify-between px-3 py-2 text-sm hover:bg-accent/40 rounded-md"
+                        >
+                          <span className="flex items-center gap-2">
+                            {expanded ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
+                            <span className="font-medium">{cat}</span>
+                            <span className="text-muted-foreground text-xs">· {items.length} items</span>
+                          </span>
+                          <span className="text-xs text-primary">{expanded ? "Hide" : "Show"}</span>
+                        </button>
+                        {expanded && (
+                          <div className="border-t max-h-64 overflow-y-auto divide-y">
+                            {items.map((it) => (
+                              <button
+                                key={it.id}
+                                type="button"
+                                onClick={() => loadItemByCode(it.item_code)}
+                                className="w-full text-left px-3 py-1.5 text-xs hover:bg-accent flex items-center gap-2"
+                              >
+                                <span className="font-mono font-semibold">{it.item_code}</span>
+                                <span className="text-muted-foreground truncate">· {it.item_name}</span>
+                                {it.size && (
+                                  <span className="text-muted-foreground">· {cleanSizeDisplay(it.size)}</span>
+                                )}
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </CardContent>
+              )}
+            </Card>
+          );
+        })()}
       </div>
+
 
       <AlertDialog open={overwriteOpen} onOpenChange={setOverwriteOpen}>
         <AlertDialogContent>
