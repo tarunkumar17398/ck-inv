@@ -62,6 +62,7 @@ const Inventory = () => {
     price: "",
     cost_price: "",
     rfid_epc: "",
+    woo_product_id: "",
   });
   const [loading, setLoading] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -307,6 +308,7 @@ const Inventory = () => {
       price: item.price?.toString() || "",
       cost_price: item.cost_price?.toString() || "",
       rfid_epc: item.rfid_epc || "",
+      woo_product_id: (item as any).woo_product_id?.toString() || "",
     });
     setEditDialogOpen(true);
   };
@@ -324,7 +326,8 @@ const Inventory = () => {
         price: editFormData.price ? parseFloat(editFormData.price) : null,
         cost_price: editFormData.cost_price ? parseFloat(editFormData.cost_price) : null,
         rfid_epc: editFormData.rfid_epc || null,
-      })
+        woo_product_id: editFormData.woo_product_id ? parseInt(editFormData.woo_product_id, 10) : null,
+      } as any)
       .eq("id", editingItem.id);
 
     if (error) {
@@ -1258,6 +1261,19 @@ const Inventory = () => {
                     placeholder="e.g., A7B700000000000000023303"
                   />
                 </div>
+
+                <div>
+                  <Label>WooCommerce Product ID</Label>
+                  <Input
+                    type="number"
+                    value={editFormData.woo_product_id}
+                    onChange={(e) =>
+                      setEditFormData({ ...editFormData, woo_product_id: e.target.value })
+                    }
+                    placeholder="Leave empty for store-only items"
+                  />
+                </div>
+
 
                 <div className="flex gap-2 justify-end">
                   <Button

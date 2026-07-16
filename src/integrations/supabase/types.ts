@@ -261,6 +261,7 @@ export type Database = {
           status: string
           stock_print_hidden: boolean | null
           weight: string | null
+          woo_product_id: number | null
         }
         Insert: {
           category_id: string
@@ -279,6 +280,7 @@ export type Database = {
           status?: string
           stock_print_hidden?: boolean | null
           weight?: string | null
+          woo_product_id?: number | null
         }
         Update: {
           category_id?: string
@@ -297,6 +299,7 @@ export type Database = {
           status?: string
           stock_print_hidden?: boolean | null
           weight?: string | null
+          woo_product_id?: number | null
         }
         Relationships: [
           {
