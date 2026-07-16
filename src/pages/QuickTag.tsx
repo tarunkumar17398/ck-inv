@@ -115,6 +115,8 @@ const QuickTag = () => {
     setQuery(item.item_code);
     setShowDropdown(false);
     setResults([]);
+    setEdits({});
+    setEditingField(null);
     setTimeout(() => epcInputRef.current?.focus(), 50);
   };
 
@@ -123,6 +125,8 @@ const QuickTag = () => {
     setQuery("");
     setResults([]);
     setShowDropdown(false);
+    setEdits({});
+    setEditingField(null);
     setTimeout(() => itemInputRef.current?.focus(), 50);
   };
 
