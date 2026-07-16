@@ -118,14 +118,21 @@ const QuickTag = () => {
   const fetchUntagged = useCallback(async () => {
     setUntaggedLoading(true);
     const PAGE_SIZE = 1000;
+
+    const { data: cats, error: catErr } = await supabase.from("categories").select("id, name");
+    if (catErr) {
+      toast.error(catErr.message);
+      setUntaggedLoading(false);
+      return;
+    }
+
     let page = 0;
     const allItems: any[] = [];
     while (true) {
       const { data, error } = await supabase
         .from("items")
-        .select("id, item_code, item_name, size, category_id, categories(name)")
+        .select("id, item_code, item_name, size, category_id, rfid_epc")
         .eq("status", "in_stock")
-        .is("rfid_epc", null)
         .order("item_code", { ascending: true })
         .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1);
       if (error) {
@@ -138,13 +145,29 @@ const QuickTag = () => {
       page++;
     }
     setUntaggedLoading(false);
-    const grouped: Record<string, { id: string; item_code: string; item_name: string; size: string | null }[]> = {};
+
+    const stats: CategoryStat[] = (cats || []).map((c: any) => ({
+      id: c.id,
+      name: c.name,
+      total: 0,
+      tagged: 0,
+      untagged: 0,
+      items: [],
+    }));
+    const byId = new Map(stats.map((s) => [s.id, s]));
     for (const row of allItems) {
-      const cat = row.categories?.name || "Uncategorized";
-      if (!grouped[cat]) grouped[cat] = [];
-      grouped[cat].push({ id: row.id, item_code: row.item_code, item_name: row.item_name, size: row.size });
+      const s = byId.get(row.category_id);
+      if (!s) continue;
+      s.total++;
+      if (row.rfid_epc) {
+        s.tagged++;
+      } else {
+        s.untagged++;
+        s.items.push({ id: row.id, item_code: row.item_code, item_name: row.item_name, size: row.size });
+      }
     }
-    setUntagged(grouped);
+    stats.sort((a, b) => a.name.localeCompare(b.name));
+    setCategoryStats(stats);
   }, []);
 
   useEffect(() => {
