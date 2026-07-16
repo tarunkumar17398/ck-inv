@@ -67,7 +67,15 @@ export function useH102(opts: H102Options = {}) {
   const parsePacket = useCallback((buf: Uint8Array) => {
     const dv = new DataView(buf.buffer, buf.byteOffset, buf.byteLength);
     const cmd = dv.getUint8(3);
-    if ([0x83, 0x02, 0x89, 0x8b, 0x8c, 0x84].includes(cmd)) return;
+    if (cmd === 0x83) {
+      if (dv.byteLength >= 7) {
+        try {
+          setBattery(dv.getUint8(5));
+        } catch { /* ignore */ }
+      }
+      return;
+    }
+    if ([0x02, 0x89, 0x8b, 0x8c, 0x84].includes(cmd)) return;
     try {
       const rawRssi = dv.getUint8(6);
       const signed = rawRssi > 127 ? rawRssi - 256 : rawRssi;
