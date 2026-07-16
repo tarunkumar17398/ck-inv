@@ -154,6 +154,7 @@ const QuickTag = () => {
     if (data) handleSelect(data as ItemRow);
   };
 
+  const handleSelect = (item: ItemRow) => {
     setSelected(item);
     setQuery(item.item_code);
     setShowDropdown(false);
