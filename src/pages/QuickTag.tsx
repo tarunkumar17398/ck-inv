@@ -167,7 +167,7 @@ const QuickTag = () => {
     } catch (e) {
       console.error("SVG barcode generation error:", e);
     }
-    setPrintLabel({
+    setPrintData({
       itemCode: selected.item_code,
       particulars: selected.particulars || selected.item_name,
       price: selected.price ? formatPriceLabel(selected.price) : "",
