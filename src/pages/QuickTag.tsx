@@ -6,10 +6,16 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Bluetooth, BluetoothOff, X, Radio, AlertCircle, CheckCircle2 } from "lucide-react";
+import { ArrowLeft, Bluetooth, BluetoothOff, X, Radio, AlertCircle, CheckCircle2, Printer } from "lucide-react";
 import { toast } from "sonner";
 import { useH102 } from "@/hooks/useH102";
-import { cleanSizeDisplay } from "@/lib/utils";
+import { cleanSizeDisplay, formatPriceLabel, formatWeightLabel, formatSizeWithInches } from "@/lib/utils";
+import bwipjs from "bwip-js";
+import type { RenderOptions } from "bwip-js";
+
+const bwipjsLib = bwipjs as typeof bwipjs & {
+  toSVG: (opts: RenderOptions) => string;
+};
 import {
   AlertDialog,
   AlertDialogAction,
@@ -25,9 +31,11 @@ interface ItemRow {
   id: string;
   item_code: string;
   item_name: string;
+  particulars: string | null;
   size: string | null;
   cost_price: number | null;
   price: number | null;
+  weight: string | null;
   rfid_epc: string | null;
 }
 
@@ -42,6 +50,14 @@ const QuickTag = () => {
   const [sessionCount, setSessionCount] = useState(0);
   const [lastTagged, setLastTagged] = useState<{ code: string; name: string } | null>(null);
   const [overwriteOpen, setOverwriteOpen] = useState(false);
+  const [printData, setPrintData] = useState<{
+    itemCode: string;
+    particulars: string;
+    price: string;
+    size: string;
+    weight: string;
+    barcodeSvg: string;
+  } | null>(null);
 
   const itemInputRef = useRef<HTMLInputElement>(null);
   const epcInputRef = useRef<HTMLInputElement>(null);
@@ -72,7 +88,7 @@ const QuickTag = () => {
     debounceRef.current = setTimeout(async () => {
       const { data, error } = await supabase
         .from("items")
-        .select("id, item_code, item_name, size, cost_price, price, rfid_epc")
+        .select("id, item_code, item_name, particulars, size, cost_price, price, weight, rfid_epc")
         .ilike("item_code", `%${query}%`)
         .eq("status", "in_stock")
         .limit(8);
@@ -136,9 +152,35 @@ const QuickTag = () => {
 
   const canSave = !!selected && !!epc.trim() && !saving;
 
+  const printLabel = useCallback(() => {
+    if (!selected) return;
+    let barcodeSvg = "";
+    try {
+      barcodeSvg = bwipjsLib.toSVG({
+        bcid: "code128",
+        text: selected.item_code,
+        height: 12,
+        includetext: true,
+        textxalign: "center",
+        textsize: 10,
+      });
+    } catch (e) {
+      console.error("SVG barcode generation error:", e);
+    }
+    setPrintData({
+      itemCode: selected.item_code,
+      particulars: selected.particulars || selected.item_name,
+      price: selected.price ? formatPriceLabel(selected.price) : "",
+      size: formatSizeWithInches(selected.size) || "",
+      weight: selected.weight ? formatWeightLabel(parseFloat(selected.weight)) : "",
+      barcodeSvg,
+    });
+    setTimeout(() => window.print(), 100);
+  }, [selected]);
+
   return (
     <div className="min-h-screen bg-background p-3 sm:p-6">
-      <div className="max-w-4xl mx-auto space-y-4">
+      <div className="max-w-4xl mx-auto space-y-4 print:hidden">
         {/* Header */}
         <div className="flex items-center gap-2">
           <Button variant="ghost" size="icon" onClick={() => navigate("/dashboard")}>
@@ -325,14 +367,26 @@ const QuickTag = () => {
               </Card>
             )}
 
-            <Button
-              className="w-full h-12"
-              disabled={!canSave}
-              onClick={handleSaveClick}
-            >
-              <CheckCircle2 className="w-4 h-4 mr-2" />
-              {saving ? "Saving..." : "Save EPC to Item"}
-            </Button>
+            <div className="flex gap-2">
+              <Button
+                className="flex-1 h-12"
+                disabled={!canSave}
+                onClick={handleSaveClick}
+              >
+                <CheckCircle2 className="w-4 h-4 mr-2" />
+                {saving ? "Saving..." : "Save EPC to Item"}
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                className="h-12"
+                disabled={!selected}
+                onClick={printLabel}
+              >
+                <Printer className="w-4 h-4 mr-2" />
+                Print Label
+              </Button>
+            </div>
           </CardContent>
         </Card>
 
@@ -385,6 +439,148 @@ const QuickTag = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Hidden print layout — copied from BarcodePrint */}
+      <div className="print-layout" style={{ position: "absolute", left: "-9999px", top: 0 }}>
+        {printData && (
+          <div
+            className="label-page"
+            style={{
+              width: "110mm",
+              height: "28mm",
+              position: "relative",
+              boxSizing: "border-box",
+              background: "hsl(0 0% 100%)",
+              border: "none",
+              fontFamily: "Calibri, Arial, sans-serif",
+              pageBreakAfter: "always",
+              pageBreakInside: "avoid",
+              overflow: "hidden",
+              WebkitFontSmoothing: "antialiased",
+              MozOsxFontSmoothing: "grayscale",
+            }}
+          >
+            <div style={{ position: "absolute", left: "6.9mm", top: "6mm", fontSize: "11pt", color: "hsl(0 0% 0%)" }}>O</div>
+            <div style={{ position: "absolute", left: "12mm", top: "-1mm", fontSize: "11pt", color: "hsl(0 0% 0%)" }}>
+              S.No: {printData.itemCode}
+            </div>
+            <div
+              style={{
+                position: "absolute",
+                left: "11mm",
+                top: "4mm",
+                width: "44mm",
+                maxHeight: "9mm",
+                fontSize: "9pt",
+                lineHeight: 1.2,
+                overflow: "hidden",
+                whiteSpace: "normal",
+                overflowWrap: "anywhere",
+                color: "hsl(0 0% 0%)",
+              }}
+            >
+              {printData.particulars}
+            </div>
+            <div style={{ position: "absolute", left: "12mm", top: "12mm", fontSize: "11pt", color: "hsl(0 0% 0%)" }}>
+              {printData.price}
+            </div>
+            <div style={{ position: "absolute", left: "38mm", top: "12mm", fontSize: "11pt", color: "hsl(0 0% 0%)" }}>
+              {printData.size}
+            </div>
+            <div
+              style={{
+                position: "absolute",
+                left: "62mm",
+                top: "-1mm",
+                width: "38mm",
+                height: "16mm",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+              dangerouslySetInnerHTML={{ __html: printData.barcodeSvg || "" }}
+            />
+            <div
+              style={{
+                position: "absolute",
+                left: "62mm",
+                top: "13mm",
+                width: "38mm",
+                fontSize: "11pt",
+                textAlign: "center",
+                color: "hsl(0 0% 0%)",
+              }}
+            >
+              {printData.weight}
+            </div>
+          </div>
+        )}
+      </div>
+
+      <style>{`
+        @media screen {
+          .print-layout {
+            position: absolute !important;
+            left: -9999px !important;
+            top: 0 !important;
+          }
+        }
+        @media print {
+          @page {
+            size: 110mm 28mm;
+            margin: 0;
+          }
+          * {
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+          }
+          html, body {
+            margin: 0 !important;
+            padding: 0 !important;
+            background: hsl(0 0% 100%) !important;
+            font-family: Calibri, Arial, sans-serif !important;
+            -webkit-text-size-adjust: 100% !important;
+            -webkit-font-smoothing: antialiased !important;
+            text-rendering: geometricPrecision !important;
+          }
+          .min-h-screen {
+            min-height: 0 !important;
+            padding: 0 !important;
+            background: hsl(0 0% 100%) !important;
+          }
+          .print-layout {
+            position: static !important;
+            left: auto !important;
+            top: auto !important;
+            display: block !important;
+          }
+          .label-page {
+            width: 110mm !important;
+            height: 28mm !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            page-break-after: always !important;
+            page-break-inside: avoid !important;
+            position: relative !important;
+            background: hsl(0 0% 100%) !important;
+            border: none !important;
+            overflow: hidden !important;
+            font-family: Calibri, Arial, sans-serif !important;
+            color: hsl(0 0% 0%) !important;
+          }
+          .label-page:last-child {
+            page-break-after: auto !important;
+          }
+          .label-page svg {
+            max-width: 100% !important;
+            max-height: 100% !important;
+            shape-rendering: crispEdges !important;
+          }
+          .label-page div {
+            color: hsl(0 0% 0%) !important;
+          }
+        }
+      `}</style>
     </div>
   );
 };
