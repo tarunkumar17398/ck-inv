@@ -71,7 +71,7 @@ const QuickTag = () => {
   const epcInputRef = useRef<HTMLInputElement>(null);
   const debounceRef = useRef<any>(null);
 
-  const { supported, connected, power, scanning, connect, disconnect, scanOnce } = useH102({
+  const { supported, connected, power, battery, scanning, connect, disconnect, scanOnce } = useH102({
     onTag: (tag) => {
       setEpc(tag);
     },
