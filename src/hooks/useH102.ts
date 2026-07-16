@@ -168,6 +168,14 @@ export function useH102(opts: H102Options = {}) {
         await sleep(150);
       }
       setConnected(true);
+      await sleep(300);
+      try { await writeChar.writeValue(CMD_GET_BATTERY); } catch { /* ignore */ }
+      if (batteryIntervalRef.current) clearInterval(batteryIntervalRef.current);
+      batteryIntervalRef.current = setInterval(async () => {
+        if (writeCharRef.current && !scanActiveRef.current) {
+          try { await writeCharRef.current.writeValue(CMD_GET_BATTERY); } catch { /* ignore */ }
+        }
+      }, 60000);
     } catch (e: any) {
       optsRef.current.onError?.(e?.message || "Failed to connect");
       await disconnect();
