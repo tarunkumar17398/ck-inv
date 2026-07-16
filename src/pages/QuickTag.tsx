@@ -80,7 +80,7 @@ const QuickTag = () => {
     debounceRef.current = setTimeout(async () => {
       const { data, error } = await supabase
         .from("items")
-        .select("id, item_code, item_name, size, cost_price, price, rfid_epc")
+        .select("id, item_code, item_name, particulars, size, cost_price, price, weight, rfid_epc")
         .ilike("item_code", `%${query}%`)
         .eq("status", "in_stock")
         .limit(8);
