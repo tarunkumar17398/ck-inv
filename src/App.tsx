@@ -59,6 +59,7 @@ const App = () => (
             <Route path="/rfid-api-test" element={<ProtectedRoute><RfidApiTest /></ProtectedRoute>} />
             <Route path="/barcode-print" element={<ProtectedRoute><BarcodePrint /></ProtectedRoute>} />
             <Route path="/panchaloha-catalog" element={<ProtectedRoute><PanchalohaCatalog /></ProtectedRoute>} />
+            <Route path="/quick-tag" element={<ProtectedRoute><QuickTag /></ProtectedRoute>} />
             
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
