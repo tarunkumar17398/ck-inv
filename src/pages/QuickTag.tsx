@@ -543,8 +543,10 @@ const QuickTag = () => {
             -webkit-font-smoothing: antialiased !important;
             text-rendering: geometricPrecision !important;
           }
-          body > *:not(.print-layout) {
-            display: none !important;
+          .min-h-screen {
+            min-height: 0 !important;
+            padding: 0 !important;
+            background: hsl(0 0% 100%) !important;
           }
           .print-layout {
             position: static !important;
