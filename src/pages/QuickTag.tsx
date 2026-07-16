@@ -144,6 +144,32 @@ const QuickTag = () => {
 
   const canSave = !!selected && !!epc.trim() && !saving;
 
+  const printLabel = useCallback(() => {
+    if (!selected) return;
+    let barcodeSvg = "";
+    try {
+      barcodeSvg = bwipjsLib.toSVG({
+        bcid: "code128",
+        text: selected.item_code,
+        height: 12,
+        includetext: true,
+        textxalign: "center",
+        textsize: 10,
+      });
+    } catch (e) {
+      console.error("SVG barcode generation error:", e);
+    }
+    setPrintLabel({
+      itemCode: selected.item_code,
+      particulars: selected.particulars || selected.item_name,
+      price: selected.price ? formatPriceLabel(selected.price) : "",
+      size: formatSizeWithInches(selected.size) || "",
+      weight: selected.weight ? formatWeightLabel(parseFloat(selected.weight)) : "",
+      barcodeSvg,
+    });
+    setTimeout(() => window.print(), 100);
+  }, [selected]);
+
   return (
     <div className="min-h-screen bg-background p-3 sm:p-6">
       <div className="max-w-4xl mx-auto space-y-4">
