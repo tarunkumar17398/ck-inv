@@ -439,6 +439,146 @@ const QuickTag = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Hidden print layout — copied from BarcodePrint */}
+      <div className="print-layout" style={{ position: "absolute", left: "-9999px", top: 0 }}>
+        {printData && (
+          <div
+            className="label-page"
+            style={{
+              width: "110mm",
+              height: "28mm",
+              position: "relative",
+              boxSizing: "border-box",
+              background: "hsl(0 0% 100%)",
+              border: "none",
+              fontFamily: "Calibri, Arial, sans-serif",
+              pageBreakAfter: "always",
+              pageBreakInside: "avoid",
+              overflow: "hidden",
+              WebkitFontSmoothing: "antialiased",
+              MozOsxFontSmoothing: "grayscale",
+            }}
+          >
+            <div style={{ position: "absolute", left: "6.9mm", top: "6mm", fontSize: "11pt", color: "hsl(0 0% 0%)" }}>O</div>
+            <div style={{ position: "absolute", left: "12mm", top: "-1mm", fontSize: "11pt", color: "hsl(0 0% 0%)" }}>
+              S.No: {printData.itemCode}
+            </div>
+            <div
+              style={{
+                position: "absolute",
+                left: "11mm",
+                top: "4mm",
+                width: "44mm",
+                maxHeight: "9mm",
+                fontSize: "9pt",
+                lineHeight: 1.2,
+                overflow: "hidden",
+                whiteSpace: "normal",
+                overflowWrap: "anywhere",
+                color: "hsl(0 0% 0%)",
+              }}
+            >
+              {printData.particulars}
+            </div>
+            <div style={{ position: "absolute", left: "12mm", top: "12mm", fontSize: "11pt", color: "hsl(0 0% 0%)" }}>
+              {printData.price}
+            </div>
+            <div style={{ position: "absolute", left: "38mm", top: "12mm", fontSize: "11pt", color: "hsl(0 0% 0%)" }}>
+              {printData.size}
+            </div>
+            <div
+              style={{
+                position: "absolute",
+                left: "62mm",
+                top: "-1mm",
+                width: "38mm",
+                height: "16mm",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+              dangerouslySetInnerHTML={{ __html: printData.barcodeSvg || "" }}
+            />
+            <div
+              style={{
+                position: "absolute",
+                left: "62mm",
+                top: "13mm",
+                width: "38mm",
+                fontSize: "11pt",
+                textAlign: "center",
+                color: "hsl(0 0% 0%)",
+              }}
+            >
+              {printData.weight}
+            </div>
+          </div>
+        )}
+      </div>
+
+      <style>{`
+        @media screen {
+          .print-layout {
+            position: absolute !important;
+            left: -9999px !important;
+            top: 0 !important;
+          }
+        }
+        @media print {
+          @page {
+            size: 110mm 28mm;
+            margin: 0;
+          }
+          * {
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+          }
+          html, body {
+            margin: 0 !important;
+            padding: 0 !important;
+            background: hsl(0 0% 100%) !important;
+            font-family: Calibri, Arial, sans-serif !important;
+            -webkit-text-size-adjust: 100% !important;
+            -webkit-font-smoothing: antialiased !important;
+            text-rendering: geometricPrecision !important;
+          }
+          body > *:not(.print-layout) {
+            display: none !important;
+          }
+          .print-layout {
+            position: static !important;
+            left: auto !important;
+            top: auto !important;
+            display: block !important;
+          }
+          .label-page {
+            width: 110mm !important;
+            height: 28mm !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            page-break-after: always !important;
+            page-break-inside: avoid !important;
+            position: relative !important;
+            background: hsl(0 0% 100%) !important;
+            border: none !important;
+            overflow: hidden !important;
+            font-family: Calibri, Arial, sans-serif !important;
+            color: hsl(0 0% 0%) !important;
+          }
+          .label-page:last-child {
+            page-break-after: auto !important;
+          }
+          .label-page svg {
+            max-width: 100% !important;
+            max-height: 100% !important;
+            shape-rendering: crispEdges !important;
+          }
+          .label-page div {
+            color: hsl(0 0% 0%) !important;
+          }
+        }
+      `}</style>
     </div>
   );
 };
