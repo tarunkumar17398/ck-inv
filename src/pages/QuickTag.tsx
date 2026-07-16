@@ -115,19 +115,29 @@ const QuickTag = () => {
 
   const fetchUntagged = useCallback(async () => {
     setUntaggedLoading(true);
-    const { data, error } = await supabase
-      .from("items")
-      .select("id, item_code, item_name, size, categories(name)")
-      .eq("status", "in_stock")
-      .is("rfid_epc", null)
-      .order("item_code", { ascending: true });
-    setUntaggedLoading(false);
-    if (error) {
-      toast.error(error.message);
-      return;
+    const PAGE_SIZE = 1000;
+    let page = 0;
+    const allItems: any[] = [];
+    while (true) {
+      const { data, error } = await supabase
+        .from("items")
+        .select("id, item_code, item_name, size, category_id, categories(name)")
+        .eq("status", "in_stock")
+        .is("rfid_epc", null)
+        .order("item_code", { ascending: true })
+        .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1);
+      if (error) {
+        toast.error(error.message);
+        break;
+      }
+      if (!data || data.length === 0) break;
+      allItems.push(...data);
+      if (data.length < PAGE_SIZE) break;
+      page++;
     }
+    setUntaggedLoading(false);
     const grouped: Record<string, { id: string; item_code: string; item_name: string; size: string | null }[]> = {};
-    for (const row of (data as any[]) || []) {
+    for (const row of allItems) {
       const cat = row.categories?.name || "Uncategorized";
       if (!grouped[cat]) grouped[cat] = [];
       grouped[cat].push({ id: row.id, item_code: row.item_code, item_name: row.item_name, size: row.size });
