@@ -50,6 +50,14 @@ const QuickTag = () => {
   const [sessionCount, setSessionCount] = useState(0);
   const [lastTagged, setLastTagged] = useState<{ code: string; name: string } | null>(null);
   const [overwriteOpen, setOverwriteOpen] = useState(false);
+  const [printData, setPrintData] = useState<{
+    itemCode: string;
+    particulars: string;
+    price: string;
+    size: string;
+    weight: string;
+    barcodeSvg: string;
+  } | null>(null);
 
   const itemInputRef = useRef<HTMLInputElement>(null);
   const epcInputRef = useRef<HTMLInputElement>(null);
