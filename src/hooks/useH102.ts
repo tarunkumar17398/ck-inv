@@ -37,6 +37,7 @@ const CMD_STOP = finalizeCmd(new Uint8Array([0xcf, 0xff, 0x00, 0x02, 0x00]));
 const CMD_POWER_8 = finalizeCmd(new Uint8Array([0xcf, 0x00, 0x00, 0x84, 0x01, 8]));
 const CMD_Q_ZERO = finalizeCmd(new Uint8Array([0xcf, 0x00, 0x00, 0x8b, 0x01, 0]));
 const CMD_SESSION = finalizeCmd(new Uint8Array([0xcf, 0xff, 0x00, 0x8c, 0x09, 0, 0, 0, 0, 0, 0, 0, 0, 0]));
+const CMD_GET_BATTERY = finalizeCmd(new Uint8Array([0xcf, 0x00, 0x00, 0x83, 0x00]));
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
