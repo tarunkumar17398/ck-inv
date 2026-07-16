@@ -607,15 +607,15 @@ const QuickTag = () => {
 
         {/* Missing RFID Tags */}
         {(() => {
-          const categoryNames = Object.keys(untagged).sort();
-          const totalItems = categoryNames.reduce((sum, c) => sum + untagged[c].length, 0);
+          const totalMissing = categoryStats.reduce((sum, s) => sum + s.untagged, 0);
+          const fullyTagged = categoryStats.filter((s) => s.total > 0 && s.untagged === 0).length;
           return (
             <Card className="bg-muted/40 border-muted">
               <CardHeader className="py-3 flex-row items-center justify-between space-y-0">
                 <div>
                   <CardTitle className="text-sm font-medium text-muted-foreground">Untagged Items</CardTitle>
                   <p className="text-xs text-muted-foreground mt-0.5">
-                    {totalItems} items missing RFID tags across {categoryNames.length} categories
+                    {totalMissing} items missing tags · {fullyTagged} categories fully tagged
                   </p>
                 </div>
                 <Button
@@ -629,28 +629,42 @@ const QuickTag = () => {
                   <RefreshCw className={`w-3.5 h-3.5 ${untaggedLoading ? "animate-spin" : ""}`} />
                 </Button>
               </CardHeader>
-              {categoryNames.length > 0 && (
+              {categoryStats.length > 0 && (
                 <CardContent className="pt-0 pb-3 space-y-1">
-                  {categoryNames.map((cat) => {
-                    const items = untagged[cat];
-                    const expanded = !!expandedCats[cat];
+                  {categoryStats.map((s) => {
+                    const expanded = !!expandedCats[s.name];
+                    const complete = s.untagged === 0;
+                    const canExpand = s.untagged > 0;
                     return (
-                      <div key={cat} className="border rounded-md bg-background/60">
+                      <div key={s.id} className="border rounded-md bg-background/60">
                         <button
                           type="button"
-                          onClick={() => setExpandedCats((p) => ({ ...p, [cat]: !p[cat] }))}
-                          className="w-full flex items-center justify-between px-3 py-2 text-sm hover:bg-accent/40 rounded-md"
+                          onClick={() => canExpand && setExpandedCats((p) => ({ ...p, [s.name]: !p[s.name] }))}
+                          disabled={!canExpand}
+                          className="w-full flex items-center justify-between px-3 py-2 text-sm hover:bg-accent/40 rounded-md disabled:cursor-default disabled:hover:bg-transparent"
                         >
                           <span className="flex items-center gap-2">
-                            {expanded ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
-                            <span className="font-medium">{cat}</span>
-                            <span className="text-muted-foreground text-xs">· {items.length} items</span>
+                            {canExpand ? (
+                              expanded ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />
+                            ) : (
+                              <span className="w-3.5 h-3.5" />
+                            )}
+                            <span className="font-medium">{s.name}</span>
+                            <span className="text-muted-foreground text-xs">·</span>
+                            <span className={`text-xs font-medium ${complete ? "text-green-600 dark:text-green-400" : "text-red-500"}`}>
+                              {complete ? "✓ " : ""}{s.untagged} missing
+                            </span>
+                            <span className="text-muted-foreground text-xs">/ {s.total} total</span>
                           </span>
-                          <span className="text-xs text-primary">{expanded ? "Hide" : "Show"}</span>
+                          {complete ? (
+                            <span className="text-xs text-green-600 dark:text-green-400 font-medium">✓ Complete</span>
+                          ) : (
+                            <span className="text-xs text-primary">{expanded ? "Hide" : "Show"}</span>
+                          )}
                         </button>
-                        {expanded && (
+                        {expanded && canExpand && (
                           <div className="border-t max-h-64 overflow-y-auto divide-y">
-                            {items.map((it) => (
+                            {s.items.map((it) => (
                               <button
                                 key={it.id}
                                 type="button"
@@ -674,6 +688,7 @@ const QuickTag = () => {
             </Card>
           );
         })()}
+
       </div>
 
 
