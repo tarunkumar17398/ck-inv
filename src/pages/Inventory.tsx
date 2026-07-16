@@ -1262,6 +1262,19 @@ const Inventory = () => {
                   />
                 </div>
 
+                <div>
+                  <Label>WooCommerce Product ID</Label>
+                  <Input
+                    type="number"
+                    value={editFormData.woo_product_id}
+                    onChange={(e) =>
+                      setEditFormData({ ...editFormData, woo_product_id: e.target.value })
+                    }
+                    placeholder="Leave empty for store-only items"
+                  />
+                </div>
+
+
                 <div className="flex gap-2 justify-end">
                   <Button
                     variant="outline"
