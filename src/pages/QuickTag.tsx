@@ -31,9 +31,11 @@ interface ItemRow {
   id: string;
   item_code: string;
   item_name: string;
+  particulars: string | null;
   size: string | null;
   cost_price: number | null;
   price: number | null;
+  weight: string | null;
   rfid_epc: string | null;
 }
 
