@@ -66,6 +66,9 @@ const QuickTag = () => {
     weight: string;
     barcodeSvg: string;
   } | null>(null);
+  const [untagged, setUntagged] = useState<Record<string, { id: string; item_code: string; item_name: string; size: string | null }[]>>({});
+  const [untaggedLoading, setUntaggedLoading] = useState(false);
+  const [expandedCats, setExpandedCats] = useState<Record<string, boolean>>({});
 
   const itemInputRef = useRef<HTMLInputElement>(null);
   const epcInputRef = useRef<HTMLInputElement>(null);
