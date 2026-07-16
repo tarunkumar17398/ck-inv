@@ -48,7 +48,7 @@ export interface H102Options {
 
 export function useH102(opts: H102Options = {}) {
   const [connected, setConnected] = useState(false);
-  const [power] = useState(8);
+  const [battery, setBattery] = useState<number | null>(null);
   const [scanning, setScanning] = useState(false);
   const [supported] = useState(
     typeof navigator !== "undefined" && !!(navigator as any).bluetooth
