@@ -197,7 +197,8 @@ const QuickTag = () => {
     setEdits({});
     setEditingField(null);
     setTimeout(() => itemInputRef.current?.focus(), 50);
-  }, [selected, epc]);
+    fetchUntagged();
+  }, [selected, epc, fetchUntagged]);
 
   const hasEdits = Object.keys(edits).length > 0;
 
