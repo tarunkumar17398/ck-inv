@@ -25,6 +25,7 @@ import UpdateBrassPrices from "./pages/UpdateBrassPrices";
 import RfidApiTest from "./pages/RfidApiTest";
 import BarcodePrint from "./pages/BarcodePrint";
 import PanchalohaCatalog from "./pages/PanchalohaCatalog";
+import QuickTag from "./pages/QuickTag";
 
 import NotFound from "./pages/NotFound";
 
