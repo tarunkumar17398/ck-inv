@@ -136,8 +136,10 @@ export function useH102(opts: H102Options = {}) {
     writeCharRef.current = null;
     notifyCharRef.current = null;
     scanActiveRef.current = false;
+    if (batteryIntervalRef.current) { clearInterval(batteryIntervalRef.current); batteryIntervalRef.current = null; }
     setScanning(false);
     setConnected(false);
+    setBattery(null);
   }, [onNotify]);
 
   const connect = useCallback(async () => {
