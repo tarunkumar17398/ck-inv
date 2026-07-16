@@ -62,6 +62,7 @@ const Inventory = () => {
     price: "",
     cost_price: "",
     rfid_epc: "",
+    woo_product_id: "",
   });
   const [loading, setLoading] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
