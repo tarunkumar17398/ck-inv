@@ -150,8 +150,38 @@ const QuickTag = () => {
     setQuery("");
     setEpc("");
     setResults([]);
+    setEdits({});
+    setEditingField(null);
     setTimeout(() => itemInputRef.current?.focus(), 50);
   }, [selected, epc]);
+
+  const hasEdits = Object.keys(edits).length > 0;
+
+  const saveEdits = async () => {
+    if (!selected || !hasEdits) return;
+    const payload: Record<string, any> = {};
+    if (edits.item_name !== undefined) payload.item_name = edits.item_name.trim();
+    if (edits.size !== undefined) payload.size = edits.size.trim() || null;
+    if (edits.cost_price !== undefined) {
+      const n = parseFloat(edits.cost_price);
+      payload.cost_price = isNaN(n) ? null : n;
+    }
+    if (edits.price !== undefined) {
+      const n = parseFloat(edits.price);
+      payload.price = isNaN(n) ? null : n;
+    }
+    setSavingEdits(true);
+    const { error } = await supabase.from("items").update(payload).eq("id", selected.id);
+    setSavingEdits(false);
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    setSelected({ ...selected, ...payload } as ItemRow);
+    setEdits({});
+    setEditingField(null);
+    toast.success("Item updated");
+  };
 
   const handleSaveClick = () => {
     if (!selected || !epc.trim()) return;
