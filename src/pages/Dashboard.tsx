@@ -286,10 +286,33 @@ const Dashboard = () => {
       return;
     }
 
-    toast({
-      title: "Sale recorded",
-      description: `${itemDetails.item_code} marked as sold`,
-    });
+    // Fire-and-forget WooCommerce sync for regular items with a linked product
+    let syncFailed = false;
+    if (!itemDetails.isPiece && itemDetails.woo_product_id) {
+      try {
+        const res = await fetch("https://evolution-api-n8n.xblns2.easypanel.host/webhook/woo-sync", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ woo_product_id: itemDetails.woo_product_id }),
+        });
+        if (!res.ok) syncFailed = true;
+      } catch {
+        syncFailed = true;
+      }
+    }
+
+    if (syncFailed) {
+      toast({
+        title: "Sold ✓ — website sync failed",
+        description: "Update cosmicstudio.in manually.",
+        variant: "destructive",
+      });
+    } else {
+      toast({
+        title: "Sale recorded",
+        description: `${itemDetails.item_code} marked as sold`,
+      });
+    }
 
     // Reset form but keep dialog open for batch entry
     setItemCode("");
