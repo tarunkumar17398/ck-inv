@@ -50,6 +50,14 @@ const QuickTag = () => {
   const [sessionCount, setSessionCount] = useState(0);
   const [lastTagged, setLastTagged] = useState<{ code: string; name: string } | null>(null);
   const [overwriteOpen, setOverwriteOpen] = useState(false);
+  const [edits, setEdits] = useState<{
+    item_name?: string;
+    size?: string;
+    cost_price?: string;
+    price?: string;
+  }>({});
+  const [editingField, setEditingField] = useState<string | null>(null);
+  const [savingEdits, setSavingEdits] = useState(false);
   const [printData, setPrintData] = useState<{
     itemCode: string;
     particulars: string;
