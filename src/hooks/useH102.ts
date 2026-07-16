@@ -69,10 +69,12 @@ export function useH102(opts: H102Options = {}) {
     const dv = new DataView(buf.buffer, buf.byteOffset, buf.byteLength);
     const cmd = dv.getUint8(3);
     if (cmd === 0x83) {
-      if (dv.byteLength >= 7) {
-        try {
-          setBattery(dv.getUint8(5));
-        } catch { /* ignore */ }
+      const allBytes = Array.from(new Uint8Array(dv.buffer))
+        .map(b => b.toString(16).padStart(2, '0').toUpperCase());
+      console.log('BATTERY RAW:', allBytes.join(' '));
+      console.log('BATTERY LENGTH:', dv.byteLength);
+      for (let i = 5; i < dv.byteLength - 2; i++) {
+        console.log(`Byte[${i}] decimal:`, dv.getUint8(i), 'hex:', dv.getUint8(i).toString(16));
       }
       return;
     }
