@@ -220,5 +220,5 @@ export function useH102(opts: H102Options = {}) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  return { supported, connected, power, scanning, connect, disconnect, scanOnce };
+  return { supported, connected, power: 8, battery, scanning, connect, disconnect, scanOnce };
 }
