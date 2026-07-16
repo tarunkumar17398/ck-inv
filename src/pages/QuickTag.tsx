@@ -367,14 +367,26 @@ const QuickTag = () => {
               </Card>
             )}
 
-            <Button
-              className="w-full h-12"
-              disabled={!canSave}
-              onClick={handleSaveClick}
-            >
-              <CheckCircle2 className="w-4 h-4 mr-2" />
-              {saving ? "Saving..." : "Save EPC to Item"}
-            </Button>
+            <div className="flex gap-2">
+              <Button
+                className="flex-1 h-12"
+                disabled={!canSave}
+                onClick={handleSaveClick}
+              >
+                <CheckCircle2 className="w-4 h-4 mr-2" />
+                {saving ? "Saving..." : "Save EPC to Item"}
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                className="h-12"
+                disabled={!selected}
+                onClick={printLabel}
+              >
+                <Printer className="w-4 h-4 mr-2" />
+                Print Label
+              </Button>
+            </div>
           </CardContent>
         </Card>
 
