@@ -1,0 +1,1 @@
+ALTER TABLE public.items ADD COLUMN woo_product_id INTEGER;
