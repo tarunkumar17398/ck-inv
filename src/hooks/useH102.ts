@@ -60,6 +60,7 @@ export function useH102(opts: H102Options = {}) {
   const packetBufRef = useRef<Uint8Array>(new Uint8Array(0));
   const expectedLenRef = useRef<number>(0);
   const scanTimeoutRef = useRef<any>(null);
+  const batteryIntervalRef = useRef<any>(null);
   const scanActiveRef = useRef(false);
   const optsRef = useRef(opts);
   optsRef.current = opts;
