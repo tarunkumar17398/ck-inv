@@ -50,6 +50,14 @@ const QuickTag = () => {
   const [sessionCount, setSessionCount] = useState(0);
   const [lastTagged, setLastTagged] = useState<{ code: string; name: string } | null>(null);
   const [overwriteOpen, setOverwriteOpen] = useState(false);
+  const [edits, setEdits] = useState<{
+    item_name?: string;
+    size?: string;
+    cost_price?: string;
+    price?: string;
+  }>({});
+  const [editingField, setEditingField] = useState<string | null>(null);
+  const [savingEdits, setSavingEdits] = useState(false);
   const [printData, setPrintData] = useState<{
     itemCode: string;
     particulars: string;
@@ -107,6 +115,8 @@ const QuickTag = () => {
     setQuery(item.item_code);
     setShowDropdown(false);
     setResults([]);
+    setEdits({});
+    setEditingField(null);
     setTimeout(() => epcInputRef.current?.focus(), 50);
   };
 
@@ -115,6 +125,8 @@ const QuickTag = () => {
     setQuery("");
     setResults([]);
     setShowDropdown(false);
+    setEdits({});
+    setEditingField(null);
     setTimeout(() => itemInputRef.current?.focus(), 50);
   };
 
@@ -138,8 +150,38 @@ const QuickTag = () => {
     setQuery("");
     setEpc("");
     setResults([]);
+    setEdits({});
+    setEditingField(null);
     setTimeout(() => itemInputRef.current?.focus(), 50);
   }, [selected, epc]);
+
+  const hasEdits = Object.keys(edits).length > 0;
+
+  const saveEdits = async () => {
+    if (!selected || !hasEdits) return;
+    const payload: Record<string, any> = {};
+    if (edits.item_name !== undefined) payload.item_name = edits.item_name.trim();
+    if (edits.size !== undefined) payload.size = edits.size.trim() || null;
+    if (edits.cost_price !== undefined) {
+      const n = parseFloat(edits.cost_price);
+      payload.cost_price = isNaN(n) ? null : n;
+    }
+    if (edits.price !== undefined) {
+      const n = parseFloat(edits.price);
+      payload.price = isNaN(n) ? null : n;
+    }
+    setSavingEdits(true);
+    const { error } = await supabase.from("items").update(payload).eq("id", selected.id);
+    setSavingEdits(false);
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    setSelected({ ...selected, ...payload } as ItemRow);
+    setEdits({});
+    setEditingField(null);
+    toast.success("Item updated");
+  };
 
   const handleSaveClick = () => {
     if (!selected || !epc.trim()) return;
@@ -336,36 +378,88 @@ const QuickTag = () => {
               </div>
             </div>
 
-            {selected && (
-              <Card className="bg-muted/30 border-primary/30">
-                <CardContent className="pt-4 grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm">
-                  <div>
-                    <div className="text-xs text-muted-foreground">Item Code</div>
-                    <div className="font-mono font-semibold">{selected.item_code}</div>
-                  </div>
-                  <div className="col-span-2 sm:col-span-1">
-                    <div className="text-xs text-muted-foreground">Name</div>
-                    <div className="truncate">{selected.item_name}</div>
-                  </div>
-                  <div>
-                    <div className="text-xs text-muted-foreground">Size</div>
-                    <div>{cleanSizeDisplay(selected.size)}</div>
-                  </div>
-                  <div>
-                    <div className="text-xs text-muted-foreground">Cost Price</div>
-                    <div>{selected.cost_price ?? "-"}</div>
-                  </div>
-                  <div className="col-span-2 sm:col-span-4">
-                    <div className="text-xs text-muted-foreground">Current EPC</div>
-                    <div className="font-mono text-xs break-all">
-                      {selected.rfid_epc || (
-                        <span className="text-muted-foreground italic">Not tagged</span>
-                      )}
+            {selected && (() => {
+              const nameVal = edits.item_name ?? selected.item_name ?? "";
+              const sizeVal = edits.size ?? selected.size ?? "";
+              const costVal = edits.cost_price ?? (selected.cost_price?.toString() ?? "");
+              const priceVal = edits.price ?? (selected.price?.toString() ?? "");
+
+              const renderField = (
+                key: "item_name" | "size" | "cost_price" | "price",
+                label: string,
+                value: string,
+                displayValue: string,
+                inputType: "text" | "number" = "text",
+                className = "",
+              ) => (
+                <div className={className}>
+                  <div className="text-xs text-muted-foreground">{label}</div>
+                  {editingField === key ? (
+                    <Input
+                      autoFocus
+                      type={inputType}
+                      value={value}
+                      onChange={(e) =>
+                        setEdits((prev) => ({ ...prev, [key]: e.target.value }))
+                      }
+                      onBlur={() => setEditingField(null)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === "Escape") {
+                          e.preventDefault();
+                          setEditingField(null);
+                        }
+                      }}
+                      className="h-7 text-sm mt-0.5"
+                    />
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => setEditingField(key)}
+                      className="text-left w-full truncate hover:bg-background/60 rounded px-1 -mx-1 py-0.5 cursor-text"
+                      title="Click to edit"
+                    >
+                      {displayValue || <span className="text-muted-foreground italic">—</span>}
+                    </button>
+                  )}
+                </div>
+              );
+
+              return (
+                <Card className="bg-muted/30 border-primary/30">
+                  <CardContent className="pt-4 space-y-3">
+                    <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 text-sm">
+                      <div>
+                        <div className="text-xs text-muted-foreground">Item Code</div>
+                        <div className="font-mono font-semibold">{selected.item_code}</div>
+                      </div>
+                      {renderField("item_name", "Name", nameVal, nameVal, "text", "col-span-2 sm:col-span-2")}
+                      {renderField("size", "Size", sizeVal, cleanSizeDisplay(sizeVal), "text")}
+                      {renderField("cost_price", "Cost Price", costVal, costVal || "-", "number")}
+                      {renderField("price", "Selling Price", priceVal, priceVal || "-", "number")}
+                      <div className="col-span-2 sm:col-span-5">
+                        <div className="text-xs text-muted-foreground">Current EPC</div>
+                        <div className="font-mono text-xs break-all">
+                          {selected.rfid_epc || (
+                            <span className="text-muted-foreground italic">Not tagged</span>
+                          )}
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
+                    {hasEdits && (
+                      <div className="flex justify-end">
+                        <Button
+                          size="sm"
+                          onClick={saveEdits}
+                          disabled={savingEdits}
+                        >
+                          {savingEdits ? "Saving..." : "Save changes"}
+                        </Button>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              );
+            })()}
 
             <div className="flex gap-2">
               <Button
