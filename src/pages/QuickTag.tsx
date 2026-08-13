@@ -71,6 +71,9 @@ const QuickTag = () => {
   const [categoryStats, setCategoryStats] = useState<CategoryStat[]>([]);
   const [untaggedLoading, setUntaggedLoading] = useState(false);
   const [expandedCats, setExpandedCats] = useState<Record<string, boolean>>({});
+  const [duplicates, setDuplicates] = useState<DuplicateGroup[]>([]);
+  const [dupLoading, setDupLoading] = useState(false);
+  const [dupConflict, setDupConflict] = useState<DuplicateItem | null>(null);
 
   const itemInputRef = useRef<HTMLInputElement>(null);
   const epcInputRef = useRef<HTMLInputElement>(null);
