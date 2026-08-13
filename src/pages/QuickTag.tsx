@@ -689,6 +689,59 @@ const QuickTag = () => {
           );
         })()}
 
+        {/* Duplicate EPCs */}
+        <Card className={duplicates.length > 0 ? "border-destructive/50 bg-destructive/5" : "border-green-600/40 bg-green-600/5"}>
+          <CardHeader className="py-3 flex-row items-center justify-between space-y-0">
+            <CardTitle className={`text-sm font-medium ${duplicates.length > 0 ? "text-destructive" : "text-green-600 dark:text-green-400"}`}>
+              {duplicates.length > 0
+                ? `Duplicate EPCs — ${duplicates.length} conflicts found`
+                : "✓ No duplicate EPCs"}
+            </CardTitle>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7"
+              onClick={fetchDuplicates}
+              disabled={dupLoading}
+              title="Refresh"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${dupLoading ? "animate-spin" : ""}`} />
+            </Button>
+          </CardHeader>
+          {duplicates.length > 0 && (
+            <CardContent className="pt-0 pb-3 space-y-2">
+              {duplicates.map((d) => (
+                <div key={d.epc} className="border rounded-md bg-background/70 p-2 space-y-1">
+                  <div className="text-xs font-mono break-all">
+                    <span className="text-muted-foreground">EPC: </span>
+                    {d.epc}
+                  </div>
+                  {d.items.map((it, i) => (
+                    <div key={it.id} className="flex items-center justify-between gap-2 text-xs">
+                      <span className="truncate">
+                        <span className="text-muted-foreground mr-1">
+                          {i === d.items.length - 1 ? "└──" : "├──"}
+                        </span>
+                        <span className="font-mono font-semibold">{it.item_code}</span>
+                        <span className="text-muted-foreground"> · {it.item_name}</span>
+                        {it.size && <span className="text-muted-foreground"> · {cleanSizeDisplay(it.size)}</span>}
+                      </span>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-6 px-2 text-[11px] flex-shrink-0"
+                        onClick={() => clearEpcFromItem(it.id, it.item_code)}
+                      >
+                        Clear EPC
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              ))}
+            </CardContent>
+          )}
+        </Card>
+
       </div>
 
 
