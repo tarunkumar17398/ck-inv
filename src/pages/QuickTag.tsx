@@ -228,7 +228,7 @@ const QuickTag = () => {
   const fetchAllTaggedItems = async () => {
     const PAGE_SIZE = 1000;
     let page = 0;
-    const allItems: any[] = [];
+    let allItems: any[] = [];
 
     while (true) {
       const { data, error } = await supabase
