@@ -209,10 +209,67 @@ const QuickTag = () => {
     setTimeout(() => itemInputRef.current?.focus(), 50);
   };
 
-  const doSave = useCallback(async () => {
+  const fetchDuplicates = useCallback(async () => {
+    setDupLoading(true);
+    const PAGE_SIZE = 1000;
+    let page = 0;
+    const allItems: any[] = [];
+    while (true) {
+      const { data, error } = await supabase
+        .from("items")
+        .select("id, item_code, item_name, size, rfid_epc")
+        .eq("status", "in_stock")
+        .not("rfid_epc", "is", null)
+        .order("item_code", { ascending: true })
+        .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1);
+      if (error) {
+        toast.error(error.message);
+        break;
+      }
+      if (!data || data.length === 0) break;
+      allItems.push(...data);
+      if (data.length < PAGE_SIZE) break;
+      page++;
+    }
+    setDupLoading(false);
+    const groups = new Map<string, DuplicateItem[]>();
+    for (const row of allItems) {
+      const key = String(row.rfid_epc).toUpperCase();
+      if (!key) continue;
+      const arr = groups.get(key) || [];
+      arr.push({ id: row.id, item_code: row.item_code, item_name: row.item_name, size: row.size });
+      groups.set(key, arr);
+    }
+    const dups: DuplicateGroup[] = [];
+    groups.forEach((items, epcKey) => {
+      if (items.length > 1) dups.push({ epc: epcKey, items });
+    });
+    dups.sort((a, b) => a.epc.localeCompare(b.epc));
+    setDuplicates(dups);
+  }, []);
+
+  useEffect(() => {
+    fetchDuplicates();
+  }, [fetchDuplicates]);
+
+  const clearEpcFromItem = async (id: string, code: string) => {
+    const { error } = await supabase.from("items").update({ rfid_epc: null }).eq("id", id);
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    toast.success(`EPC cleared from ${code}`);
+    fetchDuplicates();
+    fetchUntagged();
+  };
+
+  const doSave = useCallback(async (clearFromItemId?: string) => {
     if (!selected || !epc.trim()) return;
     setSaving(true);
     const cleanEpc = epc.trim().toUpperCase();
+    if (clearFromItemId) {
+      await supabase.from("items").update({ rfid_epc: null }).eq("id", clearFromItemId);
+    }
     const { error } = await supabase
       .from("items")
       .update({ rfid_epc: cleanEpc })
@@ -233,7 +290,9 @@ const QuickTag = () => {
     setEditingField(null);
     setTimeout(() => itemInputRef.current?.focus(), 50);
     fetchUntagged();
-  }, [selected, epc, fetchUntagged]);
+    fetchDuplicates();
+  }, [selected, epc, fetchUntagged, fetchDuplicates]);
+
 
   const hasEdits = Object.keys(edits).length > 0;
 
