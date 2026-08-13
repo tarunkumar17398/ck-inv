@@ -347,15 +347,13 @@ const QuickTag = () => {
   const handleSaveClick = async () => {
     if (!selected || !epc.trim()) return;
     const cleanEpc = epc.trim().toUpperCase();
-    // Real-time duplicate check against other items
-    const { data: conflicts } = await supabase
-      .from("items")
-      .select("id, item_code, item_name, size")
-      .eq("rfid_epc", cleanEpc)
-      .neq("id", selected.id)
-      .limit(1);
-    if (conflicts && conflicts.length > 0) {
-      setDupConflict(conflicts[0] as DuplicateItem);
+    // Real-time duplicate check against ALL other tagged items (paginated)
+    const allTagged = await fetchAllTaggedItems();
+    const conflict = allTagged.find(
+      (row) => String(row.rfid_epc).toUpperCase() === cleanEpc && row.id !== selected.id
+    );
+    if (conflict) {
+      setDupConflict(conflict as DuplicateItem);
       return;
     }
     if (selected.rfid_epc && selected.rfid_epc.toUpperCase() !== cleanEpc) {
