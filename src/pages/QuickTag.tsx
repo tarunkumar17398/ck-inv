@@ -225,28 +225,34 @@ const QuickTag = () => {
     setTimeout(() => itemInputRef.current?.focus(), 50);
   };
 
-  const fetchDuplicates = useCallback(async () => {
-    setDupLoading(true);
+  const fetchAllTaggedItems = async () => {
     const PAGE_SIZE = 1000;
     let page = 0;
-    const allItems: any[] = [];
+    let allItems: any[] = [];
+
     while (true) {
       const { data, error } = await supabase
         .from("items")
         .select("id, item_code, item_name, size, rfid_epc")
         .eq("status", "in_stock")
         .not("rfid_epc", "is", null)
-        .order("item_code", { ascending: true })
         .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1);
-      if (error) {
-        toast.error(error.message);
-        break;
-      }
+
+      if (error) break;
       if (!data || data.length === 0) break;
-      allItems.push(...data);
+
+      allItems = [...allItems, ...data];
+
       if (data.length < PAGE_SIZE) break;
       page++;
     }
+
+    return allItems;
+  };
+
+  const fetchDuplicates = useCallback(async () => {
+    setDupLoading(true);
+    const allItems = await fetchAllTaggedItems();
     setDupLoading(false);
     const groups = new Map<string, DuplicateItem[]>();
     for (const row of allItems) {
@@ -341,15 +347,13 @@ const QuickTag = () => {
   const handleSaveClick = async () => {
     if (!selected || !epc.trim()) return;
     const cleanEpc = epc.trim().toUpperCase();
-    // Real-time duplicate check against other items
-    const { data: conflicts } = await supabase
-      .from("items")
-      .select("id, item_code, item_name, size")
-      .eq("rfid_epc", cleanEpc)
-      .neq("id", selected.id)
-      .limit(1);
-    if (conflicts && conflicts.length > 0) {
-      setDupConflict(conflicts[0] as DuplicateItem);
+    // Real-time duplicate check against ALL other tagged items (paginated)
+    const allTagged = await fetchAllTaggedItems();
+    const conflict = allTagged.find(
+      (row) => String(row.rfid_epc).toUpperCase() === cleanEpc && row.id !== selected.id
+    );
+    if (conflict) {
+      setDupConflict(conflict as DuplicateItem);
       return;
     }
     if (selected.rfid_epc && selected.rfid_epc.toUpperCase() !== cleanEpc) {
