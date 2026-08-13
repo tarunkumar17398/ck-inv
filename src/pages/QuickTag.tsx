@@ -716,6 +716,43 @@ const QuickTag = () => {
         </AlertDialogContent>
       </AlertDialog>
 
+      <AlertDialog open={!!dupConflict} onOpenChange={(o) => { if (!o) setDupConflict(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>⚠️ Duplicate EPC Detected</AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-2">
+                <div>This EPC is already assigned to:</div>
+                <div className="text-foreground font-medium">
+                  <span className="font-mono">[{dupConflict?.item_code}]</span> {dupConflict?.item_name}
+                </div>
+                <div>This may mean the wrong tag was scanned.</div>
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel
+              onClick={() => {
+                setDupConflict(null);
+                setEpc("");
+                setTimeout(() => epcInputRef.current?.focus(), 50);
+              }}
+            >
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                const oldId = dupConflict?.id;
+                setDupConflict(null);
+                doSave(oldId);
+              }}
+            >
+              Overwrite Anyway
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       {/* Hidden print layout — copied from BarcodePrint */}
       <div className="print-layout" style={{ position: "absolute", left: "-9999px", top: 0 }}>
         {printData && (
