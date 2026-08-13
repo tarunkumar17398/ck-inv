@@ -322,9 +322,21 @@ const QuickTag = () => {
     toast.success("Item updated");
   };
 
-  const handleSaveClick = () => {
+  const handleSaveClick = async () => {
     if (!selected || !epc.trim()) return;
-    if (selected.rfid_epc && selected.rfid_epc.toUpperCase() !== epc.trim().toUpperCase()) {
+    const cleanEpc = epc.trim().toUpperCase();
+    // Real-time duplicate check against other items
+    const { data: conflicts } = await supabase
+      .from("items")
+      .select("id, item_code, item_name, size")
+      .eq("rfid_epc", cleanEpc)
+      .neq("id", selected.id)
+      .limit(1);
+    if (conflicts && conflicts.length > 0) {
+      setDupConflict(conflicts[0] as DuplicateItem);
+      return;
+    }
+    if (selected.rfid_epc && selected.rfid_epc.toUpperCase() !== cleanEpc) {
       setOverwriteOpen(true);
       return;
     }
