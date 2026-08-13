@@ -39,6 +39,19 @@ interface ItemRow {
   rfid_epc: string | null;
 }
 
+interface DuplicateItem {
+  id: string;
+  item_code: string;
+  item_name: string;
+  size?: string | null;
+}
+
+interface DuplicateGroup {
+  epc: string;
+  items: DuplicateItem[];
+}
+
+
 const QuickTag = () => {
   const navigate = useNavigate();
   const [query, setQuery] = useState("");
