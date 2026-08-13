@@ -39,6 +39,19 @@ interface ItemRow {
   rfid_epc: string | null;
 }
 
+interface DuplicateItem {
+  id: string;
+  item_code: string;
+  item_name: string;
+  size?: string | null;
+}
+
+interface DuplicateGroup {
+  epc: string;
+  items: DuplicateItem[];
+}
+
+
 const QuickTag = () => {
   const navigate = useNavigate();
   const [query, setQuery] = useState("");
@@ -71,6 +84,9 @@ const QuickTag = () => {
   const [categoryStats, setCategoryStats] = useState<CategoryStat[]>([]);
   const [untaggedLoading, setUntaggedLoading] = useState(false);
   const [expandedCats, setExpandedCats] = useState<Record<string, boolean>>({});
+  const [duplicates, setDuplicates] = useState<DuplicateGroup[]>([]);
+  const [dupLoading, setDupLoading] = useState(false);
+  const [dupConflict, setDupConflict] = useState<DuplicateItem | null>(null);
 
   const itemInputRef = useRef<HTMLInputElement>(null);
   const epcInputRef = useRef<HTMLInputElement>(null);
@@ -209,10 +225,67 @@ const QuickTag = () => {
     setTimeout(() => itemInputRef.current?.focus(), 50);
   };
 
-  const doSave = useCallback(async () => {
+  const fetchDuplicates = useCallback(async () => {
+    setDupLoading(true);
+    const PAGE_SIZE = 1000;
+    let page = 0;
+    const allItems: any[] = [];
+    while (true) {
+      const { data, error } = await supabase
+        .from("items")
+        .select("id, item_code, item_name, size, rfid_epc")
+        .eq("status", "in_stock")
+        .not("rfid_epc", "is", null)
+        .order("item_code", { ascending: true })
+        .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1);
+      if (error) {
+        toast.error(error.message);
+        break;
+      }
+      if (!data || data.length === 0) break;
+      allItems.push(...data);
+      if (data.length < PAGE_SIZE) break;
+      page++;
+    }
+    setDupLoading(false);
+    const groups = new Map<string, DuplicateItem[]>();
+    for (const row of allItems) {
+      const key = String(row.rfid_epc).toUpperCase();
+      if (!key) continue;
+      const arr = groups.get(key) || [];
+      arr.push({ id: row.id, item_code: row.item_code, item_name: row.item_name, size: row.size });
+      groups.set(key, arr);
+    }
+    const dups: DuplicateGroup[] = [];
+    groups.forEach((items, epcKey) => {
+      if (items.length > 1) dups.push({ epc: epcKey, items });
+    });
+    dups.sort((a, b) => a.epc.localeCompare(b.epc));
+    setDuplicates(dups);
+  }, []);
+
+  useEffect(() => {
+    fetchDuplicates();
+  }, [fetchDuplicates]);
+
+  const clearEpcFromItem = async (id: string, code: string) => {
+    const { error } = await supabase.from("items").update({ rfid_epc: null }).eq("id", id);
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    toast.success(`EPC cleared from ${code}`);
+    fetchDuplicates();
+    fetchUntagged();
+  };
+
+  const doSave = useCallback(async (clearFromItemId?: string) => {
     if (!selected || !epc.trim()) return;
     setSaving(true);
     const cleanEpc = epc.trim().toUpperCase();
+    if (clearFromItemId) {
+      await supabase.from("items").update({ rfid_epc: null }).eq("id", clearFromItemId);
+    }
     const { error } = await supabase
       .from("items")
       .update({ rfid_epc: cleanEpc })
@@ -233,7 +306,9 @@ const QuickTag = () => {
     setEditingField(null);
     setTimeout(() => itemInputRef.current?.focus(), 50);
     fetchUntagged();
-  }, [selected, epc, fetchUntagged]);
+    fetchDuplicates();
+  }, [selected, epc, fetchUntagged, fetchDuplicates]);
+
 
   const hasEdits = Object.keys(edits).length > 0;
 
@@ -263,9 +338,21 @@ const QuickTag = () => {
     toast.success("Item updated");
   };
 
-  const handleSaveClick = () => {
+  const handleSaveClick = async () => {
     if (!selected || !epc.trim()) return;
-    if (selected.rfid_epc && selected.rfid_epc.toUpperCase() !== epc.trim().toUpperCase()) {
+    const cleanEpc = epc.trim().toUpperCase();
+    // Real-time duplicate check against other items
+    const { data: conflicts } = await supabase
+      .from("items")
+      .select("id, item_code, item_name, size")
+      .eq("rfid_epc", cleanEpc)
+      .neq("id", selected.id)
+      .limit(1);
+    if (conflicts && conflicts.length > 0) {
+      setDupConflict(conflicts[0] as DuplicateItem);
+      return;
+    }
+    if (selected.rfid_epc && selected.rfid_epc.toUpperCase() !== cleanEpc) {
       setOverwriteOpen(true);
       return;
     }
@@ -689,6 +776,59 @@ const QuickTag = () => {
           );
         })()}
 
+        {/* Duplicate EPCs */}
+        <Card className={duplicates.length > 0 ? "border-destructive/50 bg-destructive/5" : "border-green-600/40 bg-green-600/5"}>
+          <CardHeader className="py-3 flex-row items-center justify-between space-y-0">
+            <CardTitle className={`text-sm font-medium ${duplicates.length > 0 ? "text-destructive" : "text-green-600 dark:text-green-400"}`}>
+              {duplicates.length > 0
+                ? `Duplicate EPCs — ${duplicates.length} conflicts found`
+                : "✓ No duplicate EPCs"}
+            </CardTitle>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7"
+              onClick={fetchDuplicates}
+              disabled={dupLoading}
+              title="Refresh"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${dupLoading ? "animate-spin" : ""}`} />
+            </Button>
+          </CardHeader>
+          {duplicates.length > 0 && (
+            <CardContent className="pt-0 pb-3 space-y-2">
+              {duplicates.map((d) => (
+                <div key={d.epc} className="border rounded-md bg-background/70 p-2 space-y-1">
+                  <div className="text-xs font-mono break-all">
+                    <span className="text-muted-foreground">EPC: </span>
+                    {d.epc}
+                  </div>
+                  {d.items.map((it, i) => (
+                    <div key={it.id} className="flex items-center justify-between gap-2 text-xs">
+                      <span className="truncate">
+                        <span className="text-muted-foreground mr-1">
+                          {i === d.items.length - 1 ? "└──" : "├──"}
+                        </span>
+                        <span className="font-mono font-semibold">{it.item_code}</span>
+                        <span className="text-muted-foreground"> · {it.item_name}</span>
+                        {it.size && <span className="text-muted-foreground"> · {cleanSizeDisplay(it.size)}</span>}
+                      </span>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-6 px-2 text-[11px] flex-shrink-0"
+                        onClick={() => clearEpcFromItem(it.id, it.item_code)}
+                      >
+                        Clear EPC
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              ))}
+            </CardContent>
+          )}
+        </Card>
+
       </div>
 
 
@@ -711,6 +851,43 @@ const QuickTag = () => {
               }}
             >
               Confirm
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={!!dupConflict} onOpenChange={(o) => { if (!o) setDupConflict(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>⚠️ Duplicate EPC Detected</AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-2">
+                <div>This EPC is already assigned to:</div>
+                <div className="text-foreground font-medium">
+                  <span className="font-mono">[{dupConflict?.item_code}]</span> {dupConflict?.item_name}
+                </div>
+                <div>This may mean the wrong tag was scanned.</div>
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel
+              onClick={() => {
+                setDupConflict(null);
+                setEpc("");
+                setTimeout(() => epcInputRef.current?.focus(), 50);
+              }}
+            >
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                const oldId = dupConflict?.id;
+                setDupConflict(null);
+                doSave(oldId);
+              }}
+            >
+              Overwrite Anyway
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
