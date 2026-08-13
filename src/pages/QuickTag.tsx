@@ -803,14 +803,15 @@ const QuickTag = () => {
             <CardContent className="pt-0 pb-3 space-y-2">
               {duplicates.map((d) => (
                 <div key={d.epc} className="border rounded-md bg-background/70 p-2 space-y-1">
-                  <div className="text-xs font-mono break-all">
-                    <span className="text-muted-foreground">EPC: </span>
-                    {d.epc}
+                  <div className="text-xs font-mono break-all flex items-center gap-2 flex-wrap">
+                    <span className="text-muted-foreground">EPC:</span>
+                    <span>{d.epc}</span>
+                    <span className="text-[10px] text-muted-foreground">({d.items.length} items)</span>
                   </div>
                   {d.items.map((it, i) => (
-                    <div key={it.id} className="flex items-center justify-between gap-2 text-xs">
-                      <span className="truncate">
-                        <span className="text-muted-foreground mr-1">
+                    <div key={it.id} className="flex items-center justify-between gap-2 text-xs py-0.5">
+                      <span className="truncate flex-1">
+                        <span className="text-muted-foreground mr-1 font-mono">
                           {i === d.items.length - 1 ? "└──" : "├──"}
                         </span>
                         <span className="font-mono font-semibold">{it.item_code}</span>
@@ -823,7 +824,7 @@ const QuickTag = () => {
                         className="h-6 px-2 text-[11px] flex-shrink-0"
                         onClick={() => clearEpcFromItem(it.id, it.item_code)}
                       >
-                        Clear EPC
+                        Clear
                       </Button>
                     </div>
                   ))}
