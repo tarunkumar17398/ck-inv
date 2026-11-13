@@ -252,8 +252,11 @@ export type Database = {
           id: string
           item_code: string
           item_name: string
+          old_price: number | null
           particulars: string | null
           price: number | null
+          price_revised_at: string | null
+          rate_label_printed_at: string | null
           rfid_epc: string | null
           size: string | null
           sold_date: string | null
@@ -271,8 +274,11 @@ export type Database = {
           id?: string
           item_code: string
           item_name: string
+          old_price?: number | null
           particulars?: string | null
           price?: number | null
+          price_revised_at?: string | null
+          rate_label_printed_at?: string | null
           rfid_epc?: string | null
           size?: string | null
           sold_date?: string | null
@@ -290,8 +296,11 @@ export type Database = {
           id?: string
           item_code?: string
           item_name?: string
+          old_price?: number | null
           particulars?: string | null
           price?: number | null
+          price_revised_at?: string | null
+          rate_label_printed_at?: string | null
           rfid_epc?: string | null
           size?: string | null
           sold_date?: string | null
