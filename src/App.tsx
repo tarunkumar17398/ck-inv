@@ -26,6 +26,8 @@ import RfidApiTest from "./pages/RfidApiTest";
 import BarcodePrint from "./pages/BarcodePrint";
 import PanchalohaCatalog from "./pages/PanchalohaCatalog";
 import QuickTag from "./pages/QuickTag";
+import RateRevision from "./pages/RateRevision";
+import RateStickerPrint from "./pages/RateStickerPrint";
 
 import NotFound from "./pages/NotFound";
 
@@ -60,6 +62,8 @@ const App = () => (
             <Route path="/barcode-print" element={<ProtectedRoute><BarcodePrint /></ProtectedRoute>} />
             <Route path="/panchaloha-catalog" element={<ProtectedRoute><PanchalohaCatalog /></ProtectedRoute>} />
             <Route path="/quick-tag" element={<ProtectedRoute><QuickTag /></ProtectedRoute>} />
+            <Route path="/rate-revision" element={<ProtectedRoute><RateRevision /></ProtectedRoute>} />
+            <Route path="/rate-sticker-print" element={<ProtectedRoute><RateStickerPrint /></ProtectedRoute>} />
             
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />

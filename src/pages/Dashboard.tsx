@@ -16,6 +16,8 @@ import {
   Barcode,
   Menu,
   Radio,
+  IndianRupee,
+  Tags,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -139,6 +141,14 @@ const Dashboard = () => {
       <Button variant="outline" className="h-16 sm:h-24 text-sm sm:text-lg justify-start sm:justify-center px-4" onClick={() => navigate("/barcode-print")}>
         <Barcode className="w-5 h-5 sm:w-6 sm:h-6 mr-2 flex-shrink-0" />
         <span className="truncate">Barcode Printer</span>
+      </Button>
+      <Button variant="outline" className="h-16 sm:h-24 text-sm sm:text-lg justify-start sm:justify-center px-4" onClick={() => navigate("/rate-revision")}>
+        <IndianRupee className="w-5 h-5 sm:w-6 sm:h-6 mr-2 flex-shrink-0" />
+        <span className="truncate">Rate Revision</span>
+      </Button>
+      <Button variant="outline" className="h-16 sm:h-24 text-sm sm:text-lg justify-start sm:justify-center px-4" onClick={() => navigate("/rate-sticker-print")}>
+        <Tags className="w-5 h-5 sm:w-6 sm:h-6 mr-2 flex-shrink-0" />
+        <span className="truncate">Rate Stickers</span>
       </Button>
       <Button variant="outline" className="h-16 sm:h-24 text-sm sm:text-lg justify-start sm:justify-center px-4" onClick={() => navigate("/stock-analysis")}>
         <TrendingUp className="w-5 h-5 sm:w-6 sm:h-6 mr-2 flex-shrink-0" />
