@@ -141,6 +141,9 @@ export function applyManualPrice(
   if (!Number.isFinite(manualPrice) || manualPrice <= 0) {
     return { ...result, newPrice: null, note: "Enter a valid price", skipReason: "Enter a valid price" };
   }
+  if (manualPrice < 100) {
+    return { ...result, newPrice: null, note: "Minimum price is ₹100", skipReason: "Minimum price is ₹100" };
+  }
   if (currentPrice !== null && manualPrice < currentPrice) {
     return { ...result, newPrice: null, note: "Price cannot decrease", skipReason: "Price cannot decrease" };
   }

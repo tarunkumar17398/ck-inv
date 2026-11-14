@@ -69,4 +69,11 @@ describe("calculateRevisedPrice", () => {
     expect(result.newPrice).toBeNull();
     expect(result.skipReason).toBe("Price cannot decrease");
   });
+
+  test("rejects a manual price under ₹100", () => {
+    const calculated = calculateRevisedPrice({ weight: "1", price: 50 }, DEFAULT_RATE_REVISION_SETTINGS);
+    const result = applyManualPrice(calculated, 50, "99");
+    expect(result.newPrice).toBeNull();
+    expect(result.skipReason).toBe("Minimum price is ₹100");
+  });
 });
