@@ -79,7 +79,9 @@ const RateRevision = () => {
   const [categoryId, setCategoryId] = useState("");
   const [items, setItems] = useState<InventoryItem[]>([]);
   const [settings, setSettings] = useState<RateRevisionSettings>(readSettings);
-  const [manualPrices, setManualPrices] = useState<Record<string, string>>({});
+  const [overrides, setOverrides] = useState<Record<string, string>>({});
+  const [committedManualPrices, setCommittedManualPrices] = useState<Record<string, string>>({});
+  const [overrideWarnings, setOverrideWarnings] = useState<Record<string, string>>({});
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<FilterMode>("To revise");
@@ -138,7 +140,9 @@ const RateRevision = () => {
       if (alive) {
         setItems(allItems);
         setSelectedIds(new Set());
-        setManualPrices({});
+        setOverrides({});
+        setCommittedManualPrices({});
+        setOverrideWarnings({});
         setLoading(false);
       }
     };
@@ -147,10 +151,13 @@ const RateRevision = () => {
   }, [categoryId, toast]);
 
   const rows = useMemo(() => items.map((item) => {
-    const calculated = calculateRevisedPrice(item, settings);
-    const result = applyManualPrice(calculated, item.price, manualPrices[item.id] || "");
-    return { item, result };
-  }), [items, settings, manualPrices]);
+    const calc = calculateRevisedPrice(item, settings);
+    const warning = overrideWarnings[item.id];
+    const result = warning
+      ? { ...calc, newPrice: null, note: warning, skipReason: warning }
+      : applyManualPrice(calc, item.price, committedManualPrices[item.id] || "");
+    return { item, calc, result, warning };
+  }), [items, settings, committedManualPrices, overrideWarnings]);
 
   const readyRows = rows.filter(({ result }) => result.newPrice !== null);
   const skippedRows = rows.filter(({ result }) => result.newPrice === null);
@@ -167,14 +174,52 @@ const RateRevision = () => {
   const cappedCount = rows.filter(({ result }) => result.capped).length;
   const applicableSelectedCount = readyRows.filter(({ item }) => selectedIds.has(item.id)).length;
   const query = search.trim().toLowerCase();
-  const visibleRows = rows.filter(({ item, result }) => {
-    const matchesMode = filter === "All" || (filter === "To revise" ? result.newPrice !== null : result.newPrice === null);
+  const visibleRows = rows.filter(({ item, calc }) => {
+    const matchesMode = filter === "All" || (filter === "To revise" ? calc.newPrice !== null : calc.newPrice === null);
     const matchesSearch = !query || item.item_code.toLowerCase().includes(query) || item.item_name.toLowerCase().includes(query) || (item.particulars || "").toLowerCase().includes(query);
     return matchesMode && matchesSearch;
   });
 
   const changeNumber = (key: Exclude<keyof RateRevisionSettings, "roundTo">, value: string) => {
     setSettings((current) => ({ ...current, [key]: value === "" ? 0 : Number(value) }));
+  };
+
+  const commitManualPrice = (item: InventoryItem, draftValue: string) => {
+    const manualValue = draftValue.replace(/\D/g, "");
+    if (!manualValue) {
+      setCommittedManualPrices((current) => {
+        const updated = { ...current };
+        delete updated[item.id];
+        return updated;
+      });
+      setOverrideWarnings((current) => {
+        const updated = { ...current };
+        delete updated[item.id];
+        return updated;
+      });
+      return;
+    }
+
+    const validation = applyManualPrice(calculateRevisedPrice(item, settings), item.price, manualValue);
+    const warning = validation.skipReason === "Minimum price is ₹100" || validation.skipReason === "Price cannot decrease"
+      ? validation.skipReason
+      : null;
+    if (warning) {
+      setCommittedManualPrices((current) => {
+        const updated = { ...current };
+        delete updated[item.id];
+        return updated;
+      });
+      setOverrideWarnings((current) => ({ ...current, [item.id]: warning }));
+      return;
+    }
+
+    setCommittedManualPrices((current) => ({ ...current, [item.id]: manualValue }));
+    setOverrideWarnings((current) => {
+      const updated = { ...current };
+      delete updated[item.id];
+      return updated;
+    });
   };
 
   const toggleItem = (id: string, checked: boolean) => {
