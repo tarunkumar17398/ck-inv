@@ -187,6 +187,11 @@ const RateRevision = () => {
   const commitManualPrice = (item: InventoryItem, draftValue: string) => {
     const manualValue = draftValue.replace(/\D/g, "");
     if (!manualValue) {
+      setOverrides((current) => {
+        const updated = { ...current };
+        delete updated[item.id];
+        return updated;
+      });
       setCommittedManualPrices((current) => {
         const updated = { ...current };
         delete updated[item.id];
@@ -412,9 +417,9 @@ const RateRevision = () => {
                   <td className="whitespace-nowrap px-3 py-2">{result.weightKg === null ? "—" : `${result.weightKg.toFixed(3)} kg`}</td>
                   <td className="whitespace-nowrap px-3 py-2">{item.price === null ? "—" : currency(item.price)}</td>
                   <td className="whitespace-nowrap px-3 py-2">{result.currentPerKg === null ? "—" : currency(result.currentPerKg)}</td>
-                  <td className="w-36 px-3 py-2"><Input aria-label={`New price for ${item.item_code}`} type="number" min="0" value={manualPrices[item.id] || ""} placeholder={result.newPrice === null ? "—" : String(result.newPrice)} onChange={(event) => setManualPrices((current) => ({ ...current, [item.id]: event.target.value }))} /></td>
+                  <td className="w-36 px-3 py-2"><Input aria-label={`New price for ${item.item_code}`} type="text" inputMode="numeric" value={overrides[item.id] ?? committedManualPrices[item.id] ?? ""} placeholder={calc.newPrice === null ? "—" : String(calc.newPrice)} onChange={(event) => setOverrides((current) => ({ ...current, [item.id]: event.target.value.replace(/\D/g, "") }))} onBlur={(event) => commitManualPrice(item, event.currentTarget.value)} onKeyDown={(event) => { if (event.key === "Enter") { event.preventDefault(); commitManualPrice(item, event.currentTarget.value); event.currentTarget.blur(); } }} /></td>
                   <td className="whitespace-nowrap px-3 py-2 font-mono">{result.newPrice === null ? "—" : formatPriceLabel(result.newPrice)}</td>
-                  <td className="whitespace-nowrap px-3 py-2 text-muted-foreground">{result.note}</td>
+                  <td className={`whitespace-nowrap px-3 py-2 ${warning ? "text-destructive" : "text-muted-foreground"}`}>{warning || result.note}</td>
                 </tr>)}
                 {!loading && visibleRows.length === 0 && <tr><td className="px-4 py-12 text-center text-muted-foreground" colSpan={9}>No items match this view.</td></tr>}
               </tbody>
