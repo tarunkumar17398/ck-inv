@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import {
+  applyManualPrice,
   calculateRevisedPrice,
   DEFAULT_RATE_REVISION_SETTINGS,
 } from "../src/lib/rateRevision.ts";
@@ -37,7 +38,7 @@ describe("calculateRevisedPrice", () => {
   test("does not reduce an existing price when rounding would otherwise do so", () => {
     const result = calculateRevisedPrice(
       { weight: "0.1", price: 1005 },
-      { ...DEFAULT_RATE_REVISION_SETTINGS, maxIncreasePct: 0 },
+      { ...DEFAULT_RATE_REVISION_SETTINGS, maxIncreasePct: 0, oldRateThreshold: 20000 },
     );
     expect(result.newPrice).toBeNull();
     expect(result.skipReason).toBe("No increase needed");
@@ -46,12 +47,26 @@ describe("calculateRevisedPrice", () => {
   test("keeps a capped rounded price at or below the cap", () => {
     const settings = { ...DEFAULT_RATE_REVISION_SETTINGS, maxIncreasePct: 39.9 };
     const result = calculateRevisedPrice({ weight: "5", price: 10000 }, settings);
-    expect(result.newPrice).toBe(13000);
+    expect(result.newPrice).toBe(13900);
     expect(result.newPrice).toBeLessThanOrEqual(10000 * 1.399);
   });
 
   test("flags weights that cannot produce a plausible price per kilogram", () => {
     const result = calculateRevisedPrice({ weight: "not-a-weight", price: 10000 }, DEFAULT_RATE_REVISION_SETTINGS);
     expect(result.skipReason).toBe("Check weight");
+  });
+
+  test("allows a manual increase even when formula estimation cannot read weight", () => {
+    const calculated = calculateRevisedPrice({ weight: null, price: 500 }, DEFAULT_RATE_REVISION_SETTINGS);
+    const result = applyManualPrice(calculated, 500, "700");
+    expect(result.newPrice).toBe(700);
+    expect(result.note).toBe("Manual");
+  });
+
+  test("rejects a manual price decrease", () => {
+    const calculated = calculateRevisedPrice({ weight: "1", price: 500 }, DEFAULT_RATE_REVISION_SETTINGS);
+    const result = applyManualPrice(calculated, 500, "499");
+    expect(result.newPrice).toBeNull();
+    expect(result.skipReason).toBe("Price cannot decrease");
   });
 });
