@@ -70,7 +70,7 @@ function currency(value: number): string {
 }
 
 function csvCell(value: string | number | null): string {
-  return `"${String(value ?? "").replaceAll('"', '""')}"`;
+  return `"${String(value ?? "").replace(/"/g, '""')}"`;
 }
 
 const RateRevision = () => {
@@ -160,6 +160,7 @@ const RateRevision = () => {
     ? readyRows.reduce((total, { item, result }) => total + (((result.newPrice || 0) - (item.price || 0)) / Math.max(item.price || 0, 1)) * 100, 0) / readyRows.length
     : 0;
   const cappedCount = rows.filter(({ result }) => result.capped).length;
+  const applicableSelectedCount = readyRows.filter(({ item }) => selectedIds.has(item.id)).length;
   const query = search.trim().toLowerCase();
   const visibleRows = rows.filter(({ item, result }) => {
     const matchesMode = filter === "All" || (filter === "To revise" ? result.newPrice !== null : result.newPrice === null);
@@ -342,7 +343,7 @@ const RateRevision = () => {
           <Input className="w-full sm:ml-auto sm:w-72" placeholder="Search code or name" aria-label="Search code or name" value={search} onChange={(event) => setSearch(event.target.value)} />
           <Button variant="outline" onClick={downloadCsv}><Download className="mr-2 h-4 w-4" />Preview CSV</Button>
           <Button variant="outline" disabled={undoLoading} onClick={() => setUndoConfirmOpen(true)}><RotateCcw className="mr-2 h-4 w-4" />Undo last</Button>
-          <Button disabled={!selectedIds.size || !!progress} onClick={() => setConfirmOpen(true)}><IndianRupee className="mr-2 h-4 w-4" />Apply {selectedIds.size} prices</Button>
+          <Button disabled={!applicableSelectedCount || !!progress} onClick={() => setConfirmOpen(true)}><IndianRupee className="mr-2 h-4 w-4" />Apply {applicableSelectedCount} prices</Button>
         </div>
         {progress && <div className="space-y-2" role="status"><div className="flex justify-between text-sm"><span>Saving revised prices</span><span>{progress.done} / {progress.total}</span></div><Progress value={progress.total ? (progress.done / progress.total) * 100 : 0} /></div>}
 

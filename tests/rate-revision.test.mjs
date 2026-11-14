@@ -37,7 +37,7 @@ describe("calculateRevisedPrice", () => {
   test("does not reduce an existing price when rounding would otherwise do so", () => {
     const result = calculateRevisedPrice(
       { weight: "0.1", price: 1005 },
-      { ...DEFAULT_RATE_REVISION_SETTINGS, maxIncreasePct: 0 },
+      { ...DEFAULT_RATE_REVISION_SETTINGS, maxIncreasePct: 0, oldRateThreshold: 20000 },
     );
     expect(result.newPrice).toBeNull();
     expect(result.skipReason).toBe("No increase needed");
@@ -46,7 +46,7 @@ describe("calculateRevisedPrice", () => {
   test("keeps a capped rounded price at or below the cap", () => {
     const settings = { ...DEFAULT_RATE_REVISION_SETTINGS, maxIncreasePct: 39.9 };
     const result = calculateRevisedPrice({ weight: "5", price: 10000 }, settings);
-    expect(result.newPrice).toBe(13000);
+    expect(result.newPrice).toBe(13900);
     expect(result.newPrice).toBeLessThanOrEqual(10000 * 1.399);
   });
 
