@@ -5,4 +5,4 @@
 - [x] Build the Rate Revision page with batch apply and undo.
 - [x] Build the two-per-label Rate Sticker Print page and mark-printed flow.
 - [x] Register both protected pages and Dashboard links.
-- [ ] Verify tests, preview build logs, and the new pages.
+- [x] Verify tests, preview build logs, and the new pages.
