@@ -157,7 +157,12 @@ const RateRevision = () => {
   const totalBefore = readyRows.reduce((total, { item }) => total + (item.price || 0), 0);
   const totalAfter = readyRows.reduce((total, { result }) => total + (result.newPrice || 0), 0);
   const averageIncrease = readyRows.length
-    ? readyRows.reduce((total, { item, result }) => total + (((result.newPrice || 0) - (item.price || 0)) / Math.max(item.price || 0, 1)) * 100, 0) / readyRows.length
+    ? (() => {
+        const pricedRows = readyRows.filter(({ item }) => (item.price || 0) > 0);
+        return pricedRows.length
+          ? pricedRows.reduce((total, { item, result }) => total + (((result.newPrice || 0) - (item.price || 0)) / (item.price || 0)) * 100, 0) / pricedRows.length
+          : 0;
+      })()
     : 0;
   const cappedCount = rows.filter(({ result }) => result.capped).length;
   const applicableSelectedCount = readyRows.filter(({ item }) => selectedIds.has(item.id)).length;

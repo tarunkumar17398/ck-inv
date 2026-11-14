@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import {
+  applyManualPrice,
   calculateRevisedPrice,
   DEFAULT_RATE_REVISION_SETTINGS,
 } from "../src/lib/rateRevision.ts";
@@ -53,5 +54,19 @@ describe("calculateRevisedPrice", () => {
   test("flags weights that cannot produce a plausible price per kilogram", () => {
     const result = calculateRevisedPrice({ weight: "not-a-weight", price: 10000 }, DEFAULT_RATE_REVISION_SETTINGS);
     expect(result.skipReason).toBe("Check weight");
+  });
+
+  test("allows a manual increase even when formula estimation cannot read weight", () => {
+    const calculated = calculateRevisedPrice({ weight: null, price: 500 }, DEFAULT_RATE_REVISION_SETTINGS);
+    const result = applyManualPrice(calculated, 500, "700");
+    expect(result.newPrice).toBe(700);
+    expect(result.note).toBe("Manual");
+  });
+
+  test("rejects a manual price decrease", () => {
+    const calculated = calculateRevisedPrice({ weight: "1", price: 500 }, DEFAULT_RATE_REVISION_SETTINGS);
+    const result = applyManualPrice(calculated, 500, "499");
+    expect(result.newPrice).toBeNull();
+    expect(result.skipReason).toBe("Price cannot decrease");
   });
 });
