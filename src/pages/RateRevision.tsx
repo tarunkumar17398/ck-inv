@@ -410,7 +410,7 @@ const RateRevision = () => {
                 <th className="px-3 py-3">Code</th><th className="px-3 py-3">Particulars</th><th className="px-3 py-3">Weight (kg)</th><th className="px-3 py-3">Old price</th><th className="px-3 py-3">Old ₹/kg</th><th className="px-3 py-3">New price</th><th className="px-3 py-3">Price code</th><th className="px-3 py-3">Note</th>
               </tr></thead>
               <tbody>
-                {loading ? <tr><td className="px-4 py-12 text-center text-muted-foreground" colSpan={9}>Loading stock…</td></tr> : visibleRows.map(({ item, result }) => <tr key={item.id} className="border-b last:border-0">
+                {loading ? <tr><td className="px-4 py-12 text-center text-muted-foreground" colSpan={9}>Loading stock…</td></tr> : visibleRows.map(({ item, calc, result, warning }) => <tr key={item.id} className="border-b last:border-0">
                   <td className="px-3 py-2"><Checkbox aria-label={`Select ${item.item_code}`} checked={selectedIds.has(item.id)} disabled={result.newPrice === null} onCheckedChange={(checked) => toggleItem(item.id, checked === true)} /></td>
                   <td className="whitespace-nowrap px-3 py-2 font-medium">{item.item_code}</td>
                   <td className="max-w-64 px-3 py-2"><div className="truncate" title={item.particulars || item.item_name}>{item.particulars || item.item_name}</div></td>
