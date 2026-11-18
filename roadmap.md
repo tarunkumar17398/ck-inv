@@ -6,3 +6,4 @@
 - [x] Build the two-per-label Rate Sticker Print page and mark-printed flow.
 - [x] Register both protected pages and Dashboard links.
 - [x] Verify tests, preview build logs, and the new pages.
+- [x] Add current-price and item-code sorting to rate revision and rate sticker lists without changing filters or selections.

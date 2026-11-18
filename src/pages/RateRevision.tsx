@@ -21,6 +21,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
 import { applyManualPrice, calculateRevisedPrice, DEFAULT_RATE_REVISION_SETTINGS, type RateRevisionSettings } from "@/lib/rateRevision";
+import { sortByPriceOrItemCode, type ItemSortOption } from "@/lib/itemSorting";
 import { formatPriceLabel } from "@/lib/utils";
 
 interface Category {
@@ -85,6 +86,7 @@ const RateRevision = () => {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<FilterMode>("To revise");
+  const [sort, setSort] = useState<ItemSortOption>("price-desc");
   const [loading, setLoading] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [undoConfirmOpen, setUndoConfirmOpen] = useState(false);
@@ -174,11 +176,11 @@ const RateRevision = () => {
   const cappedCount = rows.filter(({ result }) => result.capped).length;
   const applicableSelectedCount = readyRows.filter(({ item }) => selectedIds.has(item.id)).length;
   const query = search.trim().toLowerCase();
-  const visibleRows = rows.filter(({ item, calc }) => {
+  const visibleRows = sortByPriceOrItemCode(rows.filter(({ item, calc }) => {
     const matchesMode = filter === "All" || (filter === "To revise" ? calc.newPrice !== null : calc.newPrice === null);
     const matchesSearch = !query || item.item_code.toLowerCase().includes(query) || item.item_name.toLowerCase().includes(query) || (item.particulars || "").toLowerCase().includes(query);
     return matchesMode && matchesSearch;
-  });
+  }), sort, ({ item }) => ({ item_code: item.item_code, price: item.price }));
 
   const changeNumber = (key: Exclude<keyof RateRevisionSettings, "roundTo">, value: string) => {
     setSettings((current) => ({ ...current, [key]: value === "" ? 0 : Number(value) }));
@@ -395,6 +397,7 @@ const RateRevision = () => {
 
         <div className="flex flex-wrap items-center gap-2">
           {(["To revise", "Skipped", "All"] as const).map((mode) => <Button key={mode} variant={filter === mode ? "default" : "outline"} onClick={() => setFilter(mode)}>{mode}</Button>)}
+          <Select value={sort} onValueChange={(value) => setSort(value as ItemSortOption)}><SelectTrigger className="w-full sm:w-52" aria-label="Sort inventory"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="price-desc">Price: high to low</SelectItem><SelectItem value="price-asc">Price: low to high</SelectItem><SelectItem value="item-code">Item code</SelectItem></SelectContent></Select>
           <Input className="w-full sm:ml-auto sm:w-72" placeholder="Search code or name" aria-label="Search code or name" value={search} onChange={(event) => setSearch(event.target.value)} />
           <Button variant="outline" onClick={downloadCsv}><Download className="mr-2 h-4 w-4" />Preview CSV</Button>
           <Button variant="outline" disabled={undoLoading} onClick={() => setUndoConfirmOpen(true)}><RotateCcw className="mr-2 h-4 w-4" />Undo last</Button>

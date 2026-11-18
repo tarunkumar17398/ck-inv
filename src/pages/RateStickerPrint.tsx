@@ -18,6 +18,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
+import { sortByPriceOrItemCode, type ItemSortOption } from "@/lib/itemSorting";
 import { formatPriceLabel, formatSizeWithInches } from "@/lib/utils";
 
 interface Category { id: string; name: string; prefix: string }
@@ -44,6 +45,7 @@ const RateStickerPrint = () => {
   const [items, setItems] = useState<StickerItem[]>([]);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [search, setSearch] = useState("");
+  const [sort, setSort] = useState<ItemSortOption>("price-desc");
   const [cutLine, setCutLine] = useState(true);
   const [printBatch, setPrintBatch] = useState<StickerItem[]>([]);
   const [loading, setLoading] = useState(false);
@@ -110,6 +112,7 @@ const RateStickerPrint = () => {
     if (!term) return availableItems;
     return availableItems.filter((item) => item.item_code.toLowerCase().includes(term) || item.item_name.toLowerCase().includes(term) || (item.particulars || "").toLowerCase().includes(term));
   }, [availableItems, search]);
+  const sortedFilteredItems = useMemo(() => sortByPriceOrItemCode(filteredItems, sort, (item) => ({ item_code: item.item_code, price: item.price })), [filteredItems, sort]);
   const selectedItems = useMemo(() => availableItems.filter((item) => selectedIds.has(item.id)).sort((a, b) => a.item_code.localeCompare(b.item_code)), [availableItems, selectedIds]);
   const labels: RateLabel[] = useMemo(() => {
     const result: RateLabel[] = [];
@@ -197,6 +200,7 @@ const RateStickerPrint = () => {
         </section>
         <div className="flex flex-wrap items-center gap-2">
           <Input className="w-full sm:w-72" placeholder="Search code or name" aria-label="Search code or name" value={search} onChange={(event) => setSearch(event.target.value)} />
+          <Select value={sort} onValueChange={(value) => setSort(value as ItemSortOption)}><SelectTrigger className="w-full sm:w-52" aria-label="Sort inventory"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="price-desc">Price: high to low</SelectItem><SelectItem value="price-asc">Price: low to high</SelectItem><SelectItem value="item-code">Item code</SelectItem></SelectContent></Select>
           <Button variant="outline" onClick={selectNext50}>+50</Button><Button variant="outline" onClick={selectAll}>All</Button><Button variant="outline" onClick={clearSelection}>Clear</Button>
           <span className="text-sm text-muted-foreground">{selectedIds.size} selected / {filteredItems.length} available</span>
           <Button className="sm:ml-auto" onClick={generate}><Tags className="mr-2 h-4 w-4" />Generate</Button>
@@ -208,13 +212,13 @@ const RateStickerPrint = () => {
         <section className="overflow-hidden rounded-md border bg-card">
           <div className="max-h-[55vh] overflow-auto">
             <table className="w-full min-w-[680px] text-sm"><thead className="sticky top-0 bg-muted"><tr className="border-b text-left"><th className="w-10 px-3 py-3" aria-label="Select item" /><th className="px-3 py-3">Code</th><th className="px-3 py-3">Particulars</th><th className="px-3 py-3">Price</th><th className="px-3 py-3">Revised</th><th className="px-3 py-3">Sticker status</th></tr></thead>
-              <tbody>{loading ? <tr><td colSpan={6} className="px-4 py-10 text-center text-muted-foreground">Loading items…</td></tr> : filteredItems.map((item) => {
+              <tbody>{loading ? <tr><td colSpan={6} className="px-4 py-10 text-center text-muted-foreground">Loading items…</td></tr> : sortedFilteredItems.map((item) => {
                 const pending = item.price_revised_at && (!item.rate_label_printed_at || Date.parse(item.rate_label_printed_at) < Date.parse(item.price_revised_at));
                 return <tr key={item.id} className="border-b last:border-0"><td className="px-3 py-2"><Checkbox aria-label={`Select ${item.item_code}`} checked={selectedIds.has(item.id)} onCheckedChange={(checked) => toggleItem(item.id, checked === true)} /></td><td className="whitespace-nowrap px-3 py-2 font-medium">{item.item_code}</td><td className="max-w-72 px-3 py-2"><div className="truncate" title={item.particulars || item.item_name}>{item.particulars || item.item_name}</div></td><td className="whitespace-nowrap px-3 py-2">{item.price === null ? "—" : `₹${item.price.toLocaleString("en-IN")}`}</td><td className="whitespace-nowrap px-3 py-2">{item.price_revised_at ? new Date(item.price_revised_at).toLocaleDateString("en-GB") : "—"}</td><td className="px-3 py-2 text-muted-foreground">{pending ? "Sticker pending" : item.price_revised_at ? "Printed" : "Not revised"}</td></tr>;
               })}{!loading && filteredItems.length === 0 && <tr><td colSpan={6} className="px-4 py-10 text-center text-muted-foreground">No items in this list.</td></tr>}</tbody>
             </table>
           </div>
-          <div className="border-t px-4 py-3 text-sm text-muted-foreground">{filteredItems.length.toLocaleString()} items in this list</div>
+          <div className="border-t px-4 py-3 text-sm text-muted-foreground">{sortedFilteredItems.length.toLocaleString()} items in this list</div>
         </section>
 
         {printBatch.length > 0 && <section className="space-y-3">

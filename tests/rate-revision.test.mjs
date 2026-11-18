@@ -4,6 +4,7 @@ import {
   calculateRevisedPrice,
   DEFAULT_RATE_REVISION_SETTINGS,
 } from "../src/lib/rateRevision.ts";
+import { sortByPriceOrItemCode } from "../src/lib/itemSorting.ts";
 
 describe("calculateRevisedPrice", () => {
   test("recognizes legacy decimal kilograms from a plausible current price", () => {
@@ -75,5 +76,27 @@ describe("calculateRevisedPrice", () => {
     const result = applyManualPrice(calculated, 50, "99");
     expect(result.newPrice).toBeNull();
     expect(result.skipReason).toBe("Minimum price is ₹100");
+  });
+});
+
+describe("sortByPriceOrItemCode", () => {
+  const items = [
+    { id: "b", item_code: "B-2", price: 100 },
+    { id: "c", item_code: "A-3", price: 300 },
+    { id: "a", item_code: "A-1", price: 100 },
+    { id: "d", item_code: "D-4", price: null },
+  ];
+  const fields = (item) => ({ item_code: item.item_code, price: item.price });
+
+  test("sorts current prices high to low and leaves missing prices last", () => {
+    expect(sortByPriceOrItemCode(items, "price-desc", fields).map((item) => item.id)).toEqual(["c", "a", "b", "d"]);
+  });
+
+  test("sorts current prices low to high and leaves missing prices last", () => {
+    expect(sortByPriceOrItemCode(items, "price-asc", fields).map((item) => item.id)).toEqual(["a", "b", "c", "d"]);
+  });
+
+  test("sorts by item code", () => {
+    expect(sortByPriceOrItemCode(items, "item-code", fields).map((item) => item.id)).toEqual(["a", "c", "b", "d"]);
   });
 });
